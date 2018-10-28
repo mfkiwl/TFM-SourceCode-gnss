@@ -226,7 +226,7 @@ sub LoadConfiguration {
       if ( $config_content =~ /^RINEX Navigation GPS path +: +(.+)$/gim ) {
         my $rinex_g_nav_path = $1;
         if (-r $rinex_g_nav_path) {
-          $ref_config_hash->{RINEX_NAV_GPS_PATH} = $rinex_g_nav_path;
+          $ref_config_hash->{RINEX_NAV_PATH}{&RINEX_GPS_ID} = $rinex_g_nav_path;
         } else {
           RaiseError(*STDOUT, ERR_CANNOT_READ_FILE,
           "File \'$rinex_g_nav_path\' either cannot be read or does not exist");
@@ -238,7 +238,7 @@ sub LoadConfiguration {
       if ( $config_content =~ /^RINEX Navigation GAL path +: +(.+)$/gim ) {
         my $rinex_e_nav_path = $1;
         if (-r $rinex_e_nav_path) {
-          $ref_config_hash->{RINEX_NAV_GAL_PATH} = $rinex_e_nav_path;
+          $ref_config_hash->{RINEX_NAV_PATH}{&RINEX_GAL_ID} = $rinex_e_nav_path;
         } else {
           RaiseError(*STDOUT, ERR_CANNOT_READ_FILE,
           "File \'$rinex_e_nav_path\' either cannot be read or does not exist");
@@ -324,7 +324,7 @@ sub LoadConfiguration {
       if ( $config_content =~ /^GPS Signal Observation +: +(.+)$/gim ) {
         my $gps_signal = $1;
         if ( grep(/^$gps_signal$/, SUPPORTED_GPS_SIGNALS) ) {
-          $ref_config_hash->{SELECTED_GPS_SIGNAL} = $gps_signal;
+          $ref_config_hash->{SELECTED_SIGNALS}{&RINEX_GPS_ID} = $gps_signal;
         } else {
           RaiseError(*STDOUT, ERR_SIGNAL_NOT_SUPPORTED,
           "GPS signal \'$gps_signal\' is not supported",
@@ -337,7 +337,7 @@ sub LoadConfiguration {
       if ( $config_content =~ /^GAL Signal Observation +: +(.+)$/gim ) {
         my $gal_signal = $1;
         if ( grep(/^$gal_signal$/, SUPPORTED_GAL_SIGNALS) ) {
-          $ref_config_hash->{SELECTED_GAL_SIGNAL} = $gal_signal;
+          $ref_config_hash->{SELECTED_SIGNALS}{&RINEX_GAL_ID} = $gal_signal;
         } else {
           RaiseError(*STDOUT, ERR_SIGNAL_NOT_SUPPORTED,
           "GALILEO signal \'$gal_signal\' is not supported",
@@ -518,8 +518,7 @@ sub LoadConfiguration {
       }
     }
 
-  print Dumper $ref_config_hash;
-
+  return $ref_config_hash;
 }
 
 
