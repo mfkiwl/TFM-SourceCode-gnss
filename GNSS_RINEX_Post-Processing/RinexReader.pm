@@ -473,6 +473,9 @@ sub ReadObservationRinexV3 {
     return KILLED;
   }
 
+  # TODO: Check that selected signals from configuration are present in RINEX
+  #       file...
+
   # Init array to store observations:
   my @rinex_obs_arr;
 
@@ -513,7 +516,7 @@ sub ReadObservationRinexV3 {
         my $sat     = unpack( 'A3', $line );
         my $sat_sys = substr( $sat, 0,  1 );
 
-        # Only observations from supported constellations are read:
+        # TODO: read only those sat_sys selected in general configuration...
         if (grep(/^$sat_sys$/, SUPPORTED_SAT_SYS))
         {
           # Iterate over the number of observations of each constellation:
