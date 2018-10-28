@@ -109,7 +109,7 @@ sub ComputeTropoSaastamoinenDelay {
 }
 
 sub ComputeIonoKlobucharDelay {
-  my ( $ref_iono_alpha, $ref_iono_beta,
+  my ( $ref_gen_conf, $ref_iono_alpha, $ref_iono_beta,
        $ref_sat_position_ecef, $ref_rec_position_ecef, $gps_epoch ) = @_;
 
   # De-reference input arguments:
@@ -119,8 +119,8 @@ sub ComputeIonoKlobucharDelay {
   my @rec_position_ecef = @{ $ref_rec_position_ecef };
 
   # Preliminary steps:
-    # Set elipsoid:
-    my $elip = 'WGS84'; # TODO: retrieve elipsoid from configuration!
+    # Retrieve elipsoid from general configuration:
+    my $elip = $ref_gen_conf->{ELIPSOID};
 
     # Receiver coordinate transformation: ECEF --> Geodetic
     # Latitude [rad], Longitude [rad] and Elipsoidal Height [m]:
