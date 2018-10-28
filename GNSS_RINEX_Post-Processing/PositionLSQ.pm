@@ -135,7 +135,9 @@ sub ComputeSatPosition {
     my $obs_epoch = $ref_rinex_obs->{OBSERVATION}[$i]{EPOCH};
 
     # Check observation health status:
-    unless ( $ref_rinex_obs->{OBSERVATION}[$i]{STATUS} == 0 ) {
+    unless ( $ref_rinex_obs->{OBSERVATION}[$i]{STATUS} ==
+             HEALTHY_OBSERVATION_BLOCK )
+    {
       # Raise warning and jump to the next epoch:
       RasieWarning($fh_log, WARN_OBS_NOT_VALID,
         ("Observations from epoch: ".BiuldDateString(GPS2Date($obs_epoch))." ".
@@ -154,15 +156,14 @@ sub ComputeSatPosition {
       if (grep(/^$sat_sys$/, keys $ref_sat_sys_nav))
       {
         # Save constellation navigation data:
-        my $ref_nav_body =
-           $ref_sat_sys_nav->{$sat_sys}{NAVIGATION};
+        my $ref_nav_body = $ref_sat_sys_nav->{$sat_sys}{NAVIGATION};
 
         # Check that the navigation data is available for the selected
         # satellite:
         unless (exists $ref_nav_body->{$sat}) {
           # Raise warning and go to the next satellite:
           RaiseWarning($fh_log, WARN_NO_SAT_NAVIGATION,
-            "Navigation ephemerids for satellite $sat could not be found");
+            "Navigation ephemerids for satellite \'$sat\' could not be found");
           next;
         }
 
@@ -174,7 +175,7 @@ sub ComputeSatPosition {
         unless ($sat_eph_epoch != FALSE) {
           # If not, raise a warning and go to the next satellite:
           RaiseWarning($fh_log, WARN_NO_SAT_EPH_FOUND,
-            "No navigation ephemerids were selected for satellite $sat, ".
+            "No navigation ephemerids were selected for satellite \'$sat\', ".
             "at observation epoch: ".BuildDateString(GPS2Date($obs_epoch)));
           next;
         }
@@ -183,17 +184,25 @@ sub ComputeSatPosition {
         # coordinates:
         my $ref_sat_eph = $ref_nav_body->{$sat}{$sat_eph_epoch};
 
-        # TODO: Retrieve selected observation from configuration!
-        # TODO: Discard null observations!
+        # Retrieve observation measurement:
+        my $signal =
+           $ref_gen_conf->{SELECTED_SIGNALS}{$sat_sys};
         my $obs_meas =
-          $ref_rinex_obs->{OBSERVATION}[$i]{SAT_OBS}{$sat}{C1C};
+           $ref_rinex_obs->{OBSERVATION}[$i]{SAT_OBS}{$sat}{$signal};
 
-        # Compute satellite coordinates for observation epoch:
-        my @sat_coord =
-          ComputeSatelliteCoordinates( $obs_epoch, $obs_meas,
-                                       $sat, $ref_sat_eph );
+        # Init satelite coordinate array:
+        my @sat_coord;
+
+        # Do not compute satellite coordinates if the observation is not valid:
+        unless ( $obs_meas eq NULL_OBSERVATION ) {
+          # Compute satellite coordinates for observation epoch:
+          @sat_coord =
+            ComputeSatelliteCoordinates( $obs_epoch, $obs_meas,
+                                         $sat, $ref_sat_eph );
+        }
 
         # Save the satellite position in the observation hash:
+        # If the observation is null, satellite coordinates will be undefined...
         $ref_rinex_obs->{OBSERVATION}[$i]{SAT_NAV}{$sat} = \@sat_coord;
 
       } # end if grep($sat, SUPPORTED_SAT_SYS)
@@ -213,11 +222,19 @@ sub ComputeSatPosition {
 }
 
 sub ComputeRecPosition {
-  my ($ref_rinex_obs, $fh_log) = @_;
+  my ($ref_gen_conf, $ref_rinex_obs, $fh_log) = @_;
 
   # ************************* #
   # Input consistency checks: #
   # ************************* #
+
+    # Reference to general configuration must be hash type:
+    unless ( ref($ref_gen_conf) eq 'HASH' ) {
+      RaiseError($fh_log, ERR_WRONG_HASH_REF,
+        ("Input argument \'$ref_gen_conf\' is not HASH type"));
+      return KILLED;
+    }
+
     # Reference to RINEX observation must be hash type:
     unless (ref($ref_rinex_obs) eq 'HASH') {
       RaiseError($fh_log, ERR_WRONG_HASH_REF,
@@ -228,10 +245,10 @@ sub ComputeRecPosition {
   # ***************************************** #
   # Set estimation models from configuration: #
   # ***************************************** #
-    # Troposphere model switch case:
+    # TODO: Troposphere model switch case:
     my $ref_sub_troposphere;
 
-    # Ionosphere model switch case:
+    # TODO: Ionosphere model switch case:
     my ($ref_sub_gps_ionosphere, $ref_sub_gal_ionosphere);
 
 
@@ -246,7 +263,7 @@ sub ComputeRecPosition {
     for (my $i = 0; $i < scalar(@{$ref_rinex_obs->{OBSERVATION}}); $i += 1)
     {
       # Init receiver position solution info in observation hash:
-      $ref_rinex_obs->{OBSERVATION}[$i]{POSITION_SOLUTION}{ XYZD  } = undef;
+      $ref_rinex_obs->{OBSERVATION}[$i]{POSITION_SOLUTION}{ XYZDT } = undef;
       $ref_rinex_obs->{OBSERVATION}[$i]{POSITION_SOLUTION}{ SIGMA } = undef;
 
       # Save epoch and observation health status:
@@ -263,29 +280,30 @@ sub ComputeRecPosition {
         my @iter_solution;
 
         # Iterate until convergence criteria is reached or until the mixumum
-        # iterations allowed. TODO: retrieve max num iter from configuration
-        until ( $convergence_flag || $iteration == 6 )
+        # iterations allowed:
+        until ( $convergence_flag ||
+                $iteration == $ref_gen_conf->{LSQ_MAX_NUM_ITER} )
         {
           # Declare aproximate position parameters:
           my @rec_apx_xyz;
 
           # Selection of approximate position parameters:
-          if ( $iteration == 0 ) {
-
+          if ( $iteration == 0 )
+          {
             if ( $first_solution_flag ) {
-              # Approximate parameters come from previous epoch:
+              # Approximate position parameters come from previous epoch:
               # TODO: maybe the previous epoch was not successfully estimated
               #       --> apply while loop!
               @rec_apx_xyz =
-              @{$ref_rinex_obs->{OBSERVATION}[$i - 1]{POSITION_SOLUTION}{XYZD}};
+                @{ $ref_rinex_obs ->
+                    {OBSERVATION}[$i - 1]{POSITION_SOLUTION}{XYZDT} };
             } else {
-              # Approximate parameters come from RINEX header:
+              # Approximate position parameters come from RINEX header:
               # NOTE: Receiver clock bias is init to 0:
               @rec_apx_xyz = (@{$ref_rinex_obs->{HEADER}{APX_POSITION}}, 0);
             }
-
           } else {
-            # Approximate parameters come from previous iteration:
+            # Approximate position parameters come from previous iteration:
             @rec_apx_xyz = @{$iter_solution[$iteration - 1]};
           }
 
@@ -299,9 +317,10 @@ sub ComputeRecPosition {
             my $sat_sys = substr($sat, 0, 1);
 
             # Save receiver-satellite observation:
-            my $obs_id; # TODO: retrieve observation ID from configuration
+            my $signal  =
+               $ref_gen_conf->{SELECTED_SIGNALS}{$sat_sys};
             my $raw_obs =
-               $ref_rinex_obs->{OBSERVATION}[$i]{SAT_OBS}{$sat}{C1C};
+               $ref_rinex_obs->{OBSERVATION}[$i]{SAT_OBS}{$sat}{$signal};
 
             # Discard NULL observations:
             unless ( $raw_obs eq NULL_OBSERVATION )
@@ -321,12 +340,15 @@ sub ComputeRecPosition {
           my ($ref_parameter_matrix, $ref_covar_matrix) = SolveWeightedLSQ();
 
           # Apply differential corrections:
-          my @rec_est_xyz;
+          my @rec_est_xyz; # vector sum: @rec_apx_xyz + @parameter_matrix...
 
           # Save iteration solution:
           $iter_solution[$iteration] = @rec_est_xyz;
 
-          # TODO: Check for convergence criteria:
+          # TODO: subroutine for checking the convergence criteria:
+          $convergence_flag =
+            CheckConvergenceCriteria( $ref_covar_matrix,
+                                      $ref_gen_conf->{CONVERGENCE_THRESHOLD} );
 
           # Update number of elapsed iterations:
           $iteration += 1;
@@ -504,5 +526,11 @@ sub SatPositionFromEmission2Reception {
 }
 
 sub SetPseudorangeEquation {}
+
+sub CheckConvergenceCriteria {
+  my ($ref_covar_matrix, $threshold) = @_;
+
+  return FALSE;
+}
 
 TRUE;
