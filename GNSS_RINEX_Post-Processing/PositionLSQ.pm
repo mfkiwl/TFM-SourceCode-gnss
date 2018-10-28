@@ -73,16 +73,11 @@ BEGIN {
 # Time threshold for selecting navigation ephemerids:
 use constant TIME_THRESHOLD_NAV_EPH => (1.5 * SECONDS_IN_HOUR);
 
-# Module specific error codes:
-use constant {
-  ERR_NOT_ACCEPTED_SAT_SYS => 30301,
-};
-
 # Module specific warning codes:
 use constant {
-  WARN_OBS_NOT_VALID         => 90301,
-  WARN_NO_SAT_NAVIGATION     => 90303,
-  WARN_NO_SAT_EPH_FOUND      => 90304,
+  WARN_OBS_NOT_VALID     => 90301,
+  WARN_NO_SAT_NAVIGATION => 90303,
+  WARN_NO_SAT_EPH_FOUND  => 90304,
 };
 
 # ---------------------------------------------------------------------------- #
@@ -98,13 +93,6 @@ sub ComputeSatPosition {
   # Input consistency checks: #
   # ************************* #
 
-  # Check that $ref_sat_sys_nav is a hash:
-  unless ( ref($ref_rinex_obs) eq 'HASH' ) {
-    RaiseError($fh_log, ERR_WRONG_HASH_REF,
-      ("Input argument \'$ref_sat_sys_nav\' is not HASH type"));
-    return KILLED;
-  }
-
   # Check that $ref_rinex_obs is a hash:
   unless ( ref($ref_rinex_obs) eq 'HASH' ) {
     RaiseError($fh_log, ERR_WRONG_HASH_REF,
@@ -112,23 +100,11 @@ sub ComputeSatPosition {
     return KILLED;
   }
 
-  # NOTE: with GeneralConfiguration class, this check is redundant!
-  # Check that the keys in the satellite system navigation hash, point to
-  # supported constellations:
-  for (keys $ref_sat_sys_nav) {
-    unless ( grep(/^$_$/, SUPPORTED_SAT_SYS) ) {
-      if ( grep(/^$_$/, ACCEPTED_SAT_SYS) ) {
-        RaiseWarning($fh_log, WARN_NOT_SUPPORTED_SAT_SYS,
-          ("Satellite system \'$_\' was recognized but is not supported.",
-           "This satellite system will be ignored",
-           "Supported satellite systems are: ".join(', ', SUPPORTED_SAT_SYS)));
-      } else {
-        RaiseError($fh_log, ERR_NOT_ACCEPTED_SAT_SYS,
-          ("Satellite system \'$_\' was not recognized.",
-           "Supported satellite systems are: ".join(', ', SUPPORTED_SAT_SYS)));
-        return KILLED;
-      }
-    }
+  # Check that $ref_sat_sys_nav is a hash:
+  unless ( ref($ref_sat_sys_nav) eq 'HASH' ) {
+    RaiseError($fh_log, ERR_WRONG_HASH_REF,
+      ("Input argument \'$ref_sat_sys_nav\' is not HASH type"));
+    return KILLED;
   }
 
 
@@ -136,6 +112,7 @@ sub ComputeSatPosition {
   # Preliminary steps : #
   # ******************* #
 
+  # Read satellite navigation file and store its contents:
   for my $sat_sys (keys $ref_sat_sys_nav)
   {
     # Read file and build navigation hash which stores the navigation data:
@@ -287,8 +264,10 @@ sub ComputeRecPosition {
         {
           # Declare aproximate position parameters:
           my @rec_apx_xyz;
+
           # Selection of approximate position parameters:
           if ( $iteration == 0 ) {
+
             if ( $first_solution_flag ) {
               # Approximate parameters come from previous epoch:
               # TODO: maybe the previous epoch was not successfully estimated
@@ -300,6 +279,7 @@ sub ComputeRecPosition {
               # NOTE: Receiver clock bias is init to 0:
               @rec_apx_xyz = (@{$ref_rinex_obs->{HEADER}{APX_POSITION}}, 0);
             }
+
           } else {
             # Approximate parameters come from previous iteration:
             @rec_apx_xyz = @{$iter_solution[$iteration - 1]};
@@ -311,9 +291,8 @@ sub ComputeRecPosition {
           # Iterate over the observed satellites:
           for my $sat (keys $ref_rinex_obs->{OBSERVATION}[$i]{SAT_OBS})
           {
-            # Process those satellites selected on the configuration:
-            # NOTE: Maybe we can get rid of this step if in the RINEX module,
-            #       only the selected constellations are read...
+            # Identify constellation:
+            my $sat_sys = substr($sat, 0, 1);
 
             # Save receiver-satellite observation:
             my $obs_id; # TODO: retrieve observation ID from configuration
@@ -323,9 +302,6 @@ sub ComputeRecPosition {
             # Discard NULL observations:
             unless ( $raw_obs eq NULL_OBSERVATION )
             {
-              # Identify constellation:
-              my $sat_sys = substr($sat, 0, 1);
-
               # Save satellite coordinates:
               my @sat_xyz = @{$ref_rinex_obs->{OBSERVATION}[$i]{SAT_NAV}{$sat}};
 
@@ -346,7 +322,7 @@ sub ComputeRecPosition {
           # Save iteration solution:
           $iter_solution[$iteration] = @rec_est_xyz;
 
-          # Check for convergence criteria:
+          # TODO: Check for convergence criteria:
 
           # Update number of elapsed iterations:
           $iteration += 1;
