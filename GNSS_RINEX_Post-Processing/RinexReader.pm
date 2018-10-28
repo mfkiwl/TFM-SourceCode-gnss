@@ -189,8 +189,9 @@ use constant MAX_OBS_IN_HEADER_LINE => 13;
 
 # ERROR and WARNING codes:
 use constant {
-  ERR_WRONG_RINEX_TYPE     => 30101,
-  ERR_WRONG_RINEX_VERSION  => 30102,
+  ERR_WRONG_RINEX_TYPE          => 30101,
+  ERR_WRONG_RINEX_VERSION       => 30102,
+  ERR_SELECTED_SIGNAL_NOT_FOUND => 30103,
 };
 use constant {
   WARN_MISSING_MANDATORY_HEADER   => 90101,
@@ -457,28 +458,49 @@ sub ReadNavigationRinexHeader {
 }
 
 sub ReadObservationRinexV3 {
-  my ($file_path, $fh_log)  = @_;
+  my ($ref_gen_conf, $fh_log)  = @_;
+
+  # Check that reference to general configuration is a hash type:
+  unless ( ref($ref_gen_conf) eq 'HASH' ) {
+    RaiseError($fh_log, ERR_WRONG_HASH_REF,
+      "Input argument reference: \'$ref_gen_conf\' is not HASH type!");
+  }
 
   # Read and store header parameters:
-  my $ref_rinex_header = ReadObservationRinexHeader($file_path, $fh_log);
+  my $ref_rinex_header =
+    ReadObservationRinexHeader($ref_gen_conf->{RINEX_OBS_PATH}, $fh_log);
 
   # Check Rinex version:
   unless ( int($ref_rinex_header->{VERSION}) == 3 ) {
     # Write ERROR to log and return negative signal:
     RaiseError($fh_log, ERR_WRONG_RINEX_VERSION,
       "RINEX file version: \'".$ref_rinex_header->{VERSION}."\'".
-      " is not V3 at $file_path");
+      " is not V3 at ".$ref_gen_conf->{RINEX_OBS_PATH});
     return KILLED;
   }
 
-  # TODO: Check that selected signals from configuration are present in RINEX
-  #       file...
+  # Check that selected signals from configuration are present in RINEX header
+  for my $sat_sys (keys $ref_gen_conf->{SELECTED_SIGNALS})
+  {
+    my $sel_signal    = $ref_gen_conf->{SELECTED_SIGNALS}{$sat_sys};
+    my @avail_signals = @{$ref_rinex_header->{SYS_OBS_TYPES}{$sat_sys}{OBS}};
+
+    # Raise error if the configured signal is not found:
+    unless ( grep(/^$sel_signal$/, @avail_signals) ) {
+      RaiseError($fh_log, ERR_SELECTED_SIGNAL_NOT_FOUND,
+        "Signal \'$sel_signal\' for constellation \'$sat_sys\' could not be ".
+        "found in RINEX header", "Please consider to change the $sat_sys ".
+        "signal in configuration file for one of the following: ",
+        "\t".join(', ', @avail_signals));
+      return KILLED;
+    }
+  }
 
   # Init array to store observations:
   my @rinex_obs_arr;
 
   # Open Rinex file:
-  my $fh; open($fh, '<', $file_path) or die $!;
+  my $fh; open($fh, '<', $ref_gen_conf->{RINEX_OBS_PATH}) or die $!;
 
   # The header is skipped:
   SkipLines($fh, $ref_rinex_header->{END_OF_HEADER});
@@ -514,8 +536,8 @@ sub ReadObservationRinexV3 {
         my $sat     = unpack( 'A3', $line );
         my $sat_sys = substr( $sat, 0,  1 );
 
-        # TODO: read only those sat_sys selected in general configuration...
-        if (grep(/^$sat_sys$/, SUPPORTED_SAT_SYS))
+        # Read only those sat_sys selected in general configuration...
+        if ( grep(/^$sat_sys$/, @{$ref_gen_conf->{SELECTED_SAT_SYS}}) )
         {
           # Iterate over the number of observations of each constellation:
           my    $i;
@@ -554,7 +576,8 @@ sub ReadObservationRinexV3 {
 
     } else {
       RaiseWarning($fh_log, WARN_NO_OBS_AFTER_END_OF_HEADER,
-        "Observation Block was not found after END_OF_HEADER at $file_path");
+        "Observation Block was not found after END_OF_HEADER at ".
+        $ref_gen_conf->{RINEX_OBS_PATH});
     }
   }
 
