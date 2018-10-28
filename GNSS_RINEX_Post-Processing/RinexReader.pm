@@ -521,64 +521,76 @@ sub ReadObservationRinexV3 {
       # Compute epoch in GPS time scale:
       my $gps_epoch = Date2GPS( $yyyy, $mo, $dd, $hh, $mi, $ss );
 
-      # Fill observation block hash:
-      $obs_block_hash{ EPOCH   } = $gps_epoch;
-      $obs_block_hash{ STATUS  } = $epoch_status;
-      $obs_block_hash{ NUM_SAT } = $num_sat;
-
-      # Read the observations for each satellite:
-      for (my $j = 0; $j < $num_sat; $j++)
+      # Read epochs according to the time parameters from the general
+      # configuration:
+      if ( $gps_epoch >= $ref_gen_conf->{INI_EPOCH} &&
+           $gps_epoch <= $ref_gen_conf->{END_EPOCH} &&
+           $gps_epoch  % $ref_gen_conf->{INTERVAL} == 0)
       {
-        # Read the observation line and remove any carriage jumps:
-        $line = <$fh>; chomp $line;
+        # Fill observation block hash:
+        $obs_block_hash{ EPOCH   } = $gps_epoch;
+        $obs_block_hash{ STATUS  } = $epoch_status;
+        $obs_block_hash{ NUM_SAT } = $num_sat;
 
-        # Identify satellite and constellation:
-        my $sat     = unpack( 'A3', $line );
-        my $sat_sys = substr( $sat, 0,  1 );
-
-        # Read only those sat_sys selected in general configuration...
-        if ( grep(/^$sat_sys$/, @{$ref_gen_conf->{SELECTED_SAT_SYS}}) )
+        # Read the observations for each satellite:
+        for (my $j = 0; $j < $num_sat; $j++)
         {
-          # Iterate over the number of observations of each constellation:
-          my    $i;
-          for ( $i = 0;
-                $i < $ref_rinex_header->{SYS_OBS_TYPES}{$sat_sys}{NUM_OBS};
-                $i += 1 )
+          # Read the observation line and remove any carriage jumps:
+          $line = <$fh>; chomp $line;
+
+          # Identify satellite and constellation:
+          my $sat     = unpack( 'A3', $line );
+          my $sat_sys = substr( $sat, 0,  1 );
+
+          # Read only those sat_sys selected in general configuration...
+          if ( grep(/^$sat_sys$/, @{$ref_gen_conf->{SELECTED_SAT_SYS}}) )
           {
-            # Observation ID:
-            my $obs_id =
-               $ref_rinex_header->{SYS_OBS_TYPES}{$sat_sys}{OBS}[$i];
+            # Iterate over the number of observations of each constellation:
+            my    $i;
+            for ( $i = 0;
+                  $i < $ref_rinex_header->{SYS_OBS_TYPES}{$sat_sys}{NUM_OBS};
+                  $i += 1 )
+            {
+              # Observation ID:
+              my $obs_id =
+                 $ref_rinex_header->{SYS_OBS_TYPES}{$sat_sys}{OBS}[$i];
 
-            # Retreive observation from Rinex file:
-            # Magic number 3 is the length of the satellite ID at the begining
-            # of each observation line...
-            my $raw_obs;
-            my $index = 3 + $i*OBSERVATION_LENGTH;
+              # Retreive observation from Rinex file:
+              # Magic number 3 is the length of the satellite ID at the begining
+              # of each observation line...
+              my $raw_obs;
+              my $index = 3 + $i*OBSERVATION_LENGTH;
 
-            # Certain satellites may not have some observations. If so, the
-            # observation is flagged as NULL:
-            eval {
-              no warnings; # supress warnings when evaluating the statement...
-              $raw_obs = substr($line, $index, RAW_OBSERVATION_LENGTH)*1;
-            } or do {
-              $raw_obs = NULL_OBSERVATION;
-            };
+              # Certain satellites may not have some observations. If so, the
+              # observation is flagged as NULL:
+              eval {
+                no warnings; # supress warnings when evaluating the statement...
+                $raw_obs = substr($line, $index, RAW_OBSERVATION_LENGTH)*1;
+              } or do {
+                $raw_obs = NULL_OBSERVATION;
+              };
 
-            # Fill observation block hash:
-            $obs_block_hash{SAT_OBS}{$sat}{$obs_id} = $raw_obs;
-          } # enf id $sat_sys in SUPPORTED_SAT_SYS
+              # Fill observation block hash:
+              $obs_block_hash{SAT_OBS}{$sat}{$obs_id} = $raw_obs;
+            } # enf id $sat_sys in SUPPORTED_SAT_SYS
 
-        } # end for $num_obs
-      } # end for $num_sat
+          } # end for $num_obs
+        } # end for $num_sat
 
-      # Fill observation array:
-      push(@rinex_obs_arr, \%obs_block_hash);
+        # Fill observation array:
+        push(@rinex_obs_arr, \%obs_block_hash);
+
+      } else {
+        # If the epoch is not stored, skip as many lines as observed
+        # satellites in the epoch:
+        SkipLines($fh, $num_sat);
+      } # end if ($epoch >= $ref_gen_conf->{INI_EPOCH}...)
 
     } else {
       RaiseWarning($fh_log, WARN_NO_OBS_AFTER_END_OF_HEADER,
         "Observation Block was not found after END_OF_HEADER at ".
         $ref_gen_conf->{RINEX_OBS_PATH});
-    }
+    } # end if (index($line, OBSERVATION_BLOCK_ID) ... )
   }
 
   # Close Rinex file:
