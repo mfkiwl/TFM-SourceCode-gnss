@@ -192,6 +192,7 @@ use constant {
   ERR_WRONG_RINEX_TYPE          => 30101,
   ERR_WRONG_RINEX_VERSION       => 30102,
   ERR_SELECTED_SIGNAL_NOT_FOUND => 30103,
+  ERR_NO_EPOCHS_WERE_STORED     => 30104,
 };
 use constant {
   WARN_MISSING_MANDATORY_HEADER   => 90101,
@@ -591,6 +592,18 @@ sub ReadObservationRinexV3 {
         "Observation Block was not found after END_OF_HEADER at ".
         $ref_gen_conf->{RINEX_OBS_PATH});
     } # end if (index($line, OBSERVATION_BLOCK_ID) ... )
+  }
+
+  # Check if no epochs were read due to time parameters configuration:
+  unless (scalar(@rinex_obs_arr)) {
+    RaiseError($fh_log, ERR_NO_EPOCHS_WERE_STORED,
+      "No epochs were stored since any of them has acomplished the time ".
+      "parameter criteria", "Please, review time parameters in general ".
+      "cnfiguration", "Your time configuration for this executin was: ",
+      "\tInit epoch = ".BuildDateString(GPS2Date($ref_gen_conf->{INI_EPOCH})),
+      "\tEnd  epoch = ".BuildDateString(GPS2Date($ref_gen_conf->{END_EPOCH})),
+      "\tInterval   = ".$ref_gen_conf->{INTERVAL}." seconds");
+    return KILLED;
   }
 
   # Close Rinex file:
