@@ -86,11 +86,18 @@ use constant {
 # Public Subroutines: #
 # ............................................................................ #
 sub ComputeSatPosition {
-  my ($ref_rinex_obs, $ref_sat_sys_nav, $fh_log) = @_;
+  my ($ref_gen_conf, $ref_rinex_obs, $fh_log) = @_;
 
   # ************************* #
   # Input consistency checks: #
   # ************************* #
+
+  # Check that $ref_gen_conf is a hash:
+  unless ( ref($ref_gen_conf) eq 'HASH' ) {
+    RaiseError($fh_log, ERR_WRONG_HASH_REF,
+      ("Input argument \'$ref_gen_conf\' is not HASH type"));
+    return KILLED;
+  }
 
   # Check that $ref_rinex_obs is a hash:
   unless ( ref($ref_rinex_obs) eq 'HASH' ) {
@@ -99,24 +106,20 @@ sub ComputeSatPosition {
     return KILLED;
   }
 
-  # Check that $ref_sat_sys_nav is a hash:
-  unless ( ref($ref_sat_sys_nav) eq 'HASH' ) {
-    RaiseError($fh_log, ERR_WRONG_HASH_REF,
-      ("Input argument \'$ref_sat_sys_nav\' is not HASH type"));
-    return KILLED;
-  }
-
 
   # ******************* #
   # Preliminary steps : #
   # ******************* #
 
+  # Init hash to store navigation contents:
+  my %sat_sys_nav; my $ref_sat_sys_nav = \%sat_sys_nav;
+
   # Read satellite navigation file and store its contents:
-  for my $sat_sys (keys $ref_sat_sys_nav)
+  for my $sat_sys (keys $ref_gen_conf->{RINEX_NAV_PATH})
   {
     # Read file and build navigation hash which stores the navigation data:
-    $ref_sat_sys_nav->{$sat_sys}{RINEX_NAV} =
-      ReadNavigationRinex( $ref_sat_sys_nav->{$sat_sys}{FILE_PATH},
+    $ref_sat_sys_nav->{$sat_sys} =
+      ReadNavigationRinex( $ref_gen_conf->{RINEX_NAV_PATH}{$sat_sys},
                            $sat_sys, $fh_log );
   }
 
@@ -152,7 +155,7 @@ sub ComputeSatPosition {
       {
         # Save constellation navigation data:
         my $ref_nav_body =
-           $ref_sat_sys_nav->{$sat_sys}{RINEX_NAV}{NAVIGATION};
+           $ref_sat_sys_nav->{$sat_sys}{NAVIGATION};
 
         # Check that the navigation data is available for the selected
         # satellite:
@@ -204,7 +207,9 @@ sub ComputeSatPosition {
   # ephemerids and from it computes the satellite coordinates for the
   # selected PRN, in the observation epoch.
 
-  return TRUE;
+  # NOTE: do we need the navigation data to be returned. Satellite positons are
+  #       already in observation hash.
+  return $ref_sat_sys_nav;
 }
 
 sub ComputeRecPosition {
