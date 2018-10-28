@@ -594,7 +594,7 @@ sub ReadObservationRinexV3 {
     } # end if (index($line, OBSERVATION_BLOCK_ID) ... )
   }
 
-  # Check if no epochs were read due to time parameters configuration:
+  # Check if no epochs were read due to time configuration parameters:
   unless (scalar(@rinex_obs_arr)) {
     RaiseError($fh_log, ERR_NO_EPOCHS_WERE_STORED,
       "No epochs were stored since any of them has acomplished the time ".
@@ -739,7 +739,6 @@ sub CheckRinexHeaderOptional {
   # Return the status of the check:
   return $status;
 }
-
 
 
 # Private Subrutines: #
