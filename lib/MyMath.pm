@@ -68,6 +68,61 @@ sub LinearInterpolationFromTable {
   return ( ($y2 - $y1)/($x2 - $x1)*($x - $x1) + $y1 );
 }
 
-sub SolveWeightedLSQ {}
+sub SolveWeightedLSQ {
+  my ($a, $w, $p) = @_;
+
+  # A --> design matrix
+  # W --> independent term matrix
+  # P --> weight matrix
+
+  # ********************* #
+  # Prelimary operations: #
+  # ********************* #
+
+    # Retrieve A's dimensions:
+    #  m --> number of observations
+    #  n --> parameters to be estimated
+    #  *(m - n) --> system's freedom degrees
+    my ($n, $m) = dims($a);
+
+    # Dimension checks:
+    # For LSQ algorithm, matrixes must be:
+    #  - A(m,n)
+    #  - W(m,1)
+    #  - P(m,m)
+    my ($nw, $mw) = dims($w); return KILLED unless ($mw == $m || $nw ==  1);
+    my ($np, $mp) = dims($p); return KILLED unless ($mp == $m || $np == $m);
+
+
+  # ************************************ #
+  # Linear algebra computation sequence: #
+  # ************************************ #
+
+    # Co-factor matrix:
+    # Qxx = (At.P.A)^(-1):
+    my $qxx = inv(transpose($a) x $p x $a);
+
+    # Estimated parameter vector:
+    # X = (At.P.A)^(-1).At.P.W
+    my $x = $qxx x transpose($a) x $p x $w;
+
+    # Residuals vector:
+    # R = A.X - W:
+    my $r = $a x $x - $w;
+
+    # Ex-post variance estimator:
+    # S2_0 = (Rt.P.R) / (m - n):
+    my $sigma2_0 = (transpose($r) x $p x $r) / ($m - $n);
+
+    # Co-varince matrix:
+    # Sxx = sigma0 * Qxx:
+    my $sigma_xx = $sigma2_0 * $qxx;
+
+
+  # Return: estimated parameters, observation residuals,
+  #         co-variance matrix, ex-post variance estimator:
+  return ($x, $r, $sigma_xx, $sigma2_0);
+}
+
 
 1;
