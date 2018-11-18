@@ -72,7 +72,7 @@ sub LinearInterpolationFromTable {
 }
 
 sub SolveWeightedLSQ {
-  my ($a, $p, $w) = @_;
+  my ($a, $p_row, $w_row) = @_;
 
   # A --> design matrix
   # W --> independent term matrix
@@ -81,6 +81,12 @@ sub SolveWeightedLSQ {
   # ********************* #
   # Prelimary operations: #
   # ********************* #
+
+    # Independent term is input as a vector --> transpose it:
+    my $w = transpose( $w_row );
+
+    # Weights are input as a vector --> make diagonal matrix:
+    my $p = stretcher( $p_row );
 
     # Retrieve A's dimensions:
     #  m --> number of observations
@@ -91,13 +97,13 @@ sub SolveWeightedLSQ {
     # For LSQ algorithm:
       #   Observations must be greater than parameters:
       #    - m > n
-      return undef unless ( $m > $n );
+      return FALSE unless ( $m > $n );
       #   Matrix domensions must be:
       #    - A(m,n) for design matrix
       #    - W(m,1) for weight matrix
       #    - P(m,m) for independent term matrix
-      my ($nw, $mw) = dims($w); return undef unless ($mw == $m || $nw ==  1);
-      my ($np, $mp) = dims($p); return undef unless ($mp == $m || $np == $m);
+      my ($nw, $mw) = dims($w); return FALSE unless ($mw == $m || $nw ==  1);
+      my ($np, $mp) = dims($p); return FALSE unless ($mp == $m || $np == $m);
 
 
   # ************************************ #
@@ -127,7 +133,7 @@ sub SolveWeightedLSQ {
 
   # Return: estimated parameters, observation residuals,
   #         co-variance matrix, ex-post variance estimator:
-  return ($x, $r, $sigma_xx, $sigma2_0);
+  return (TRUE, $x, $r, $sigma_xx, $sigma2_0);
 }
 
 
