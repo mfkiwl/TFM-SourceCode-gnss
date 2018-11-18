@@ -140,8 +140,6 @@ sub ECEF2Geodetic {
   # Default iterations are set to 10 unless specified in the arguments:
   $iter = 10 unless $iter;
 
-  # TODO: Check elipsoid argument
-
   # Load elipsoid parameters:
   my $ref_elip_prm = &ELIPSOID_DATABASE->($elip);
   my ( $a2, $b2, $e2) =
@@ -174,16 +172,13 @@ sub ECEF2Geodetic {
 sub Geodetic2ECEF {
   my ($lat, $lon, $h, $elip) = @_;
 
-  # TODO: Check elipsoid argument
-
   # Init ECEF coordintes to return:
   my ($x, $y, $z);
 
   # Load elipsoid parameters:
   my $ref_elip_prm = &ELIPSOID_DATABASE->($elip);
-  my ($a, $b) =
-     ($ref_elip_prm->{SEMIMAJOR_AXIS},
-      $ref_elip_prm->{SEMIMINOR_AXIS});
+  my ($a, $b) = ($ref_elip_prm->{SEMIMAJOR_AXIS},
+                 $ref_elip_prm->{SEMIMINOR_AXIS});
 
   # Computation sequence:
     # Get prime's vertical curvature radius:
