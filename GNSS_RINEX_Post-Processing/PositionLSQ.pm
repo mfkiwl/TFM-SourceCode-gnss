@@ -317,6 +317,7 @@ sub ComputeRecPosition {
           # Init aproximate position parameters:
           my @rec_apx_xyzdt;
 
+          # TODO: Make private subroutine for apprixmate parameter selection!
           # Selection of approximate position parameters:
           if ( $iteration == 0 )
           {
@@ -347,14 +348,14 @@ sub ComputeRecPosition {
           } # end if ($iteration == 0)
 
           # Decalre LSQ matrix system as arrays:
-          my @design_matrix; my @weight_matrix; my @ind_term_matrix;
+          my @design_matrix; my @weight_vector; my @ind_term_vector;
 
           # Build LSQ matrix system array references:
           my ( $ref_design_matrix,
-               $ref_weight_matrix,
-               $ref_ind_term_matrix ) = ( \@design_matrix,
-                                          \@weight_matrix,
-                                          \@ind_term_matrix );
+               $ref_weight_vector,
+               $ref_ind_term_vector ) = ( \@design_matrix,
+                                          \@weight_vector,
+                                          \@ind_term_vector );
 
           # Iterate over the observed satellites:
           for my $sat (keys $ref_rinex_obs->{OBSERVATION}[$i]{SAT_OBS})
@@ -379,6 +380,7 @@ sub ComputeRecPosition {
               # Build pseudorange equation sequence: #
               # ************************************ #
 
+              # TODO: encompass steps 1 to 3 in a private subroutine!
               # 1. Retrieve satellite and receiver clock corrections:
               my ( $sat_clk_bias,
                    $rec_clk_bias ) = ( $sat_xyztc[3], $rec_apx_xyzdt[3] );
@@ -465,25 +467,26 @@ sub ComputeRecPosition {
                                         $rec_sat_elevation,
                                         # Outputs:
                                         $ref_design_matrix,
-                                        $ref_weight_matrix,
-                                        $ref_ind_term_matrix );
+                                        $ref_weight_vector,
+                                        $ref_ind_term_vector );
 
               } # end if $elevation >= mask
             } # end unless obs eq NULL
           } # end for $sat
 
           # LSQ position estimation:
-          my ( $pdl_parameter_vector,
+          my ( $lsq_status,
+               $pdl_parameter_vector,
                $pdl_residual_vector,
                $pdl_covariance_matrix,
                $pdl_variance_estimator ) = SolveWeightedLSQ (
                                              pdl $ref_design_matrix,
-                                             pdl $ref_weight_matrix,
-                                             pdl $ref_ind_term_matrix
+                                             pdl $ref_weight_vector,
+                                             pdl $ref_ind_term_vector
                                            );
 
           # Check for successful LSQ estimation:
-          if (defined $pdl_parameter_vector)
+          if ( $lsq_status )
           {
             # Update iteration status:
             $iter_status = TRUE;
@@ -738,7 +741,37 @@ sub SetPseudorangeEquation {
         $ionosphere_corr, $troposhpere_corr,
         $rec_sat_distance, $rec_sat_elevation,
        # Outputs:
-        $ref_design_matrix, $ref_weight_matrix, $ref_ind_term_matrix ) = @_;
+        $ref_design_matrix, $ref_weight_vector, $ref_ind_term_vector ) = @_;
+
+  # Preliminary: Compute receiver-satellite disatnce:
+  my $rec_sat_distance = ModulusNth( $ix, $iy, $iz );
+
+  # 1. Design matrix row elements:
+  my @design_row = ( -1*($ix/$rec_sat_distance),
+                     -1*($iy/$rec_sat_distance),
+                     -1*($iz/$rec_sat_distance),
+                      1 );
+
+  # 2. Weight term row element:
+  my $ep2 = 1.5*0.3; # TODO: Review Hofmann et al. 2008
+                     # Seems like a coeficient for P2 observable
+  my @weight_row = ( sin($rec_sat_elevation)**2/$ep2**2 );
+
+  # 3. Independent term row elements:
+  my @ind_term_row = ( $raw_obs - $rec_sat_distance -
+                       $rec_clk_bias + SPEED_OF_LIGHT*$sat_clk_bias -
+                       $troposhpere_corr - $ionosphere_corr );
+
+
+  # Append to matrix references:
+    # Compute current matrix dimensions:
+    my $size_design_matrix   = scalar( @{$ref_design_matrix}   );
+    my $size_weight_vector   = scalar( @{$ref_weight_vector}   );
+    my $size_ind_term_vector = scalar( @{$ref_ind_term_vector} );
+    # Append computed rows:
+    $ref_design_matrix   -> [$size_design_matrix   + 1] = \@design_row;
+    $ref_weight_vector   -> [$size_weight_vector   + 1] = \@weight_row;
+    $ref_ind_term_vector -> [$size_ind_term_vector + 1] = \@ind_term_row;
 
 }
 
