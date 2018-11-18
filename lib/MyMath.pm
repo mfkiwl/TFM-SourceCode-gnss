@@ -4,11 +4,14 @@
 package MyMath;
 
 # Import useful modules:
-use Carp;
-use strict;
-use warnings;
+use Carp;     # traced warnings and errors...
+use strict;   # enables perl strict syntax...
 
 use feature qq(say); # print method adding a carriage return...
+
+use PDL;        # loads Perl Data Language extension...
+use Math::Trig; # loads trigonometry methods...
+
 
 # Set package exportation properties:
 BEGIN {
@@ -69,7 +72,7 @@ sub LinearInterpolationFromTable {
 }
 
 sub SolveWeightedLSQ {
-  my ($a, $w, $p) = @_;
+  my ($a, $p, $w) = @_;
 
   # A --> design matrix
   # W --> independent term matrix
@@ -85,13 +88,16 @@ sub SolveWeightedLSQ {
     #  *(m - n) --> system's freedom degrees
     my ($n, $m) = dims($a);
 
-    # Dimension checks:
-    # For LSQ algorithm, matrixes must be:
-    #  - A(m,n)
-    #  - W(m,1)
-    #  - P(m,m)
-    my ($nw, $mw) = dims($w); return KILLED unless ($mw == $m || $nw ==  1);
-    my ($np, $mp) = dims($p); return KILLED unless ($mp == $m || $np == $m);
+    # For LSQ algorithm:
+      #   Observations must be greater than parameters:
+      #    - m > n
+      return undef unless ( $m > $n );
+      #   Matrix domensions must be:
+      #    - A(m,n) for design matrix
+      #    - W(m,1) for weight matrix
+      #    - P(m,m) for independent term matrix
+      my ($nw, $mw) = dims($w); return undef unless ($mw == $m || $nw ==  1);
+      my ($np, $mp) = dims($p); return undef unless ($mp == $m || $np == $m);
 
 
   # ************************************ #
@@ -102,7 +108,7 @@ sub SolveWeightedLSQ {
     # Qxx = (At.P.A)^(-1):
     my $qxx = inv(transpose($a) x $p x $a);
 
-    # Estimated parameter vector:
+    # Estimated parameters vector:
     # X = (At.P.A)^(-1).At.P.W
     my $x = $qxx x transpose($a) x $p x $w;
 
