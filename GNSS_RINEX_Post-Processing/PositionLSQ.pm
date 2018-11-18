@@ -282,15 +282,16 @@ sub ComputeRecPosition {
   # Position estimation routine: #
   # **************************** #
 
-    # Init succesfully estimated epoch flag:
-    my ($first_solution_flag, $solution_flag) = (FALSE, FALSE);
+    # Init first succesfully estimated epoch flag:
+    my $first_solution_flag = FALSE;
 
     # Iterate over the observation epochs:
     for (my $i = 0; $i < scalar(@{$ref_rinex_obs->{OBSERVATION}}); $i += 1)
     {
       # Init receiver position solution info in observation hash:
-      $ref_rinex_obs->{OBSERVATION}[$i]{POSITION_SOLUTION}{XYZDT} = undef;
-      $ref_rinex_obs->{OBSERVATION}[$i]{POSITION_SOLUTION}{SIGMA} = undef;
+      $ref_rinex_obs->{OBSERVATION}[$i]{POSITION_SOLUTION}{ STATUS } = FALSE;
+      $ref_rinex_obs->{OBSERVATION}[$i]{POSITION_SOLUTION}{ XYZDT  } = undef;
+      $ref_rinex_obs->{OBSERVATION}[$i]{POSITION_SOLUTION}{ SIGMA  } = undef;
 
       # Save epoch and observation health status:
       my ($epoch, $epoch_status) = ($ref_rinex_obs->{OBSERVATION}[$i]{EPOCH},
@@ -299,29 +300,37 @@ sub ComputeRecPosition {
       # Discard invalid epochs:
       if ( $epoch_status == HEALTHY_OBSERVATION_BLOCK )
       {
-        # Init solution convergence flag and iteration counter:
-        my ($iteration, $convergence_flag) = (0, FALSE);
-
         # Init 2D matrix to save the iteration solutions:
         my @iter_solution;
 
-        # Iterate until convergence criteria is reached or until the mixumum
+        # Init iteration solution status:
+        my $iter_status = FALSE;
+
+        # Init solution convergence flag and iteration counter:
+        my ($iteration, $convergence_flag) = (0, FALSE);
+
+        # Iterate until convergence criteria is reached or until the maximum
         # iterations allowed:
         until ( $convergence_flag ||
                 $iteration == $ref_gen_conf->{LSQ_MAX_NUM_ITER} )
         {
-          # Declare aproximate position parameters:
+          # Init aproximate position parameters:
           my @rec_apx_xyzdt;
 
           # Selection of approximate position parameters:
           if ( $iteration == 0 )
           {
-            if ( $first_solution_flag ) {
-              # Approximate position parameters come from previous epoch:
+            # Approximate parametrs are extracted from a previous epoch or from
+            # the rinex header:
+            if ( $first_solution_flag )
+            {
+              # Count back until a valid position solution is found:
               my $count = 1;
-              until (defined $ref_rinex_obs->{OBSERVATION}[$i-$count]
-                               {POSITION_SOLUTION}{XYZDT} ) { $count += 1; }
+              until ( $ref_rinex_obs ->
+                       {OBSERVATION}[$i - $count]{POSITION_SOLUTION}{STATUS} )
+              { $count += 1; }
 
+              # Set found position solution as approximate parameters:
               @rec_apx_xyzdt =
                 @{ $ref_rinex_obs ->
                     {OBSERVATION}[$i - $count]{POSITION_SOLUTION}{XYZDT} };
@@ -330,16 +339,17 @@ sub ComputeRecPosition {
               # Approximate position parameters come from RINEX header:
               # NOTE: Receiver clock bias is init to 0:
               @rec_apx_xyzdt = (@{$ref_rinex_obs->{HEADER}{APX_POSITION}}, 0);
-            }
+            } # end if ($first_solution_flag)
+
           } else {
             # Approximate position parameters come from previous iteration:
             @rec_apx_xyzdt = @{$iter_solution[$iteration - 1]};
-          }
+          } # end if ($iteration == 0)
 
           # Decalre LSQ matrix system as arrays:
           my @design_matrix; my @weight_matrix; my @ind_term_matrix;
 
-          # Build array references:
+          # Build LSQ matrix system array references:
           my ( $ref_design_matrix,
                $ref_weight_matrix,
                $ref_ind_term_matrix ) = ( \@design_matrix,
@@ -440,7 +450,7 @@ sub ComputeRecPosition {
                       $ref_sat_sys_nav->{$sat_sys}{NAV_HEADER}{ ION_ALPHA },
                       $ref_sat_sys_nav->{$sat_sys}{NAV_HEADER}{ ION_BETA  } );
 
-                # 6. Set pseudorange equation:
+                # 6. TODO: Set pseudorange equation:
                 # WARNING: test how to append to array reference
                 SetPseudorangeEquation( # Inputs:
                                         $raw_obs,
@@ -475,8 +485,8 @@ sub ComputeRecPosition {
           # Check for successful LSQ estimation:
           if (defined $pdl_parameter_vector)
           {
-            # Update first solution flag:
-            $solution_flag = TRUE;
+            # Update iteration status:
+            $iter_status = TRUE;
 
             # Apply differential corrections to the receiver's position:
             my @rec_est_xyz = list($pdl_parameter_vector + $pdl_rec_apx_xyz);
@@ -501,21 +511,23 @@ sub ComputeRecPosition {
               CheckConvergenceCriteria($rec_var_x, $rec_var_y, $rec_var_z,
                                        $ref_gen_conf->{CONVERGENCE_THRESHOLD});
 
-          } else # if defined $pdl_parameter_vector
-          {
+          } else {
             # If LSQ estimation was not successful, raise a warning and last
             # the iteration loop, so the next epoch can be processed:
             RaiseWarning($fh_log, WARN_NOT_SUCCESSFUL_LSQ_ESTIMATION,
               "Least squeares estimation routine was not successful at ".
               "observation epoch $epoch",
-              "This is most likely due to a non-redundancy LSQ matrix system ".
+              "This is most likely due to a non-redundant LSQ matrix system, ".
               "where the number of observations are equal or less than the ".
-              "number of parameters to be estimated."); last;
+              "number of parameters to be estimated.");
+            # Set iteration status and exit the iteration loop:
+            $iter_status = FALSE; last;
           } # end if defined $pdl_parameter_vector
 
-        } # end until $convergence_flag or $iteration
+        } # end until $convergence_flag or $iteration == MAX_NUM_ITER
 
-        if ($solution_flag)
+        # Fill estimated solution in rinex observation hash:
+        if ($iter_status)
         {
           # Update first solution flag:
           # NOTE: This means that a solution which has acomplished the number
@@ -532,11 +544,13 @@ sub ComputeRecPosition {
           # NOTE: receiver solution and standard deviations come from last
           #       iteration solution
           $ref_rinex_obs ->
-            {OBSERVATION}[$i]{POSITION_SOLUTION}{XYZDT} = $iter_solution[-1];
+            {OBSERVATION}[$i]{POSITION_SOLUTION}{ STATUS } = TRUE;
           $ref_rinex_obs ->
-            {OBSERVATION}[$i]{POSITION_SOLUTION}{SIGMA} = \@rec_sigma;
+            {OBSERVATION}[$i]{POSITION_SOLUTION}{ XYZDT  } = $iter_solution[-1];
+          $ref_rinex_obs ->
+            {OBSERVATION}[$i]{POSITION_SOLUTION}{ SIGMA  } = \@rec_sigma;
 
-        } # end if $solution_flag
+        } # end if $iter_status
 
       } # end if $epoch_status == HEALTHY_OBSERVATION_BLOCK
     } # end for $i
