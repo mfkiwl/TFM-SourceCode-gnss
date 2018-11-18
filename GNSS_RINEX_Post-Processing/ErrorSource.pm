@@ -109,35 +109,16 @@ sub ComputeTropoSaastamoinenDelay {
 }
 
 sub ComputeIonoKlobucharDelay {
-  my ( $ref_gen_conf, $ref_iono_alpha, $ref_iono_beta,
-       $ref_sat_position_ecef, $ref_rec_position_ecef, $gps_epoch ) = @_;
+  my ( $gps_epoch,
+       $lat_rec, $lon_rec,
+       $azimut, $elevation,
+       $ref_iono_alpha, $ref_iono_beta, ) = @_;
 
   # De-reference input arguments:
-  my @iono_alpha_prm    = @{ $ref_iono_alpha        };
-  my @iono_beta_prm     = @{ $ref_iono_beta         };
-  my @sat_position_ecef = @{ $ref_sat_position_ecef };
-  my @rec_position_ecef = @{ $ref_rec_position_ecef };
+  my @iono_alpha_prm = @{ $ref_iono_alpha };
+  my @iono_beta_prm  = @{ $ref_iono_beta  };
 
   # Preliminary steps:
-    # Retrieve elipsoid from general configuration:
-    my $elip = $ref_gen_conf->{ELIPSOID};
-
-    # Receiver coordinate transformation: ECEF --> Geodetic
-    # Latitude [rad], Longitude [rad] and Elipsoidal Height [m]:
-    my ($lat_rec, $lon_rec, $h_rec) = ECEF2Geodetic(@rec_position_ecef, $elip);
-
-    # Vector transformation: Rec-Sat ECEF --> Rec-Sat ENU [m]
-    my ($ie, $in, $iu) =
-       Vxyz2Venu(($rec_position_ecef[0] - $sat_position_ecef[0]),
-                 ($rec_position_ecef[1] - $sat_position_ecef[1]),
-                 ($rec_position_ecef[2] - $sat_position_ecef[2]),
-                  $lat_rec, $lon_rec);
-
-    # Vector transformation:
-    #  Local ENU vector to Azimut [rad], Zenital [rad] and Distance [m]:
-    my ($azimut, $zenital, $geom_dist) = Venu2AzZeDs($ie, $in, $iu);
-    my $elevation = pi/2 - $zenital; # receiver-satellite elevation angle...
-
     # Elevation from rad to semicircles:
     $elevation /= pi;
 
@@ -212,7 +193,12 @@ sub ComputeIonoKlobucharDelay {
   return ($iono_delay_l1, $iono_delay_l2)
 }
 
-sub ComputeIonoNeQuickDelay {}
+sub ComputeIonoNeQuickDelay {
+  my ( $gps_epoch,
+       $lat_rec, $lon_rec,
+       $azimut, $elevation,
+       $ref_iono_alpha, $ref_iono_beta, ) = @_;
+}
 
 # Private Subroutines: #
 # ............................................................................ #
