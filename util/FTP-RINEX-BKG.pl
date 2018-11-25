@@ -65,7 +65,8 @@ foreach my $station (@stations_list) {
   qx(wget $rinex_url);
 
   # Fill file status hash:
-  $rinex_list{$station."-OBS"} = (-e $rinex) ? qw(DOWNLOADED) : qw(NOT DOWNLOADED);
+  $rinex_list{$station."-OBS"} =
+    (-e $rinex) ? qw(DOWNLOADED) : qw(NOT DOWNLOADED);
 
   # Move the downloaded files to storage path if defined:
   qx(mv $rinex $storage_path) if $storage_path;
