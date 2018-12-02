@@ -55,7 +55,7 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
   my $ref_gen_conf = LoadConfiguration($path_conf_file);
 
   if ($ref_gen_conf == KILLED) {
-    croak "*** ERROR *** Failed to read configuration file: $path_conf_file"
+    croak "*** ERROR *** Failed when reading configuration file: $path_conf_file"
   }
 
 # Open output log file:
@@ -66,17 +66,32 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
 # ---------------------------------------------------------------------------- #
 
 # RINEX reading:
-  PrintTitle3($FH_LOG, "Reading RINEX observation data");
-  my $ref_obs_rinex = ReadObservationRinexV3($ref_gen_conf, $FH_LOG);
+  PrintTitle2($FH_LOG, "Reading RINEX observation data");
+  my $ref_obs_rinex = ReadObservationRinexV3( $ref_gen_conf,
+                                              $FH_LOG );
 
   # print Dumper $ref_obs_rinex;
 
 # Compute satellite positions:
-  # my $ref_gps_nav_rinex = ComputeSatPosition();
-
+  PrintTitle2($FH_LOG, "Reading RINEX navigation data");
+  my $ref_gps_nav_rinex = ComputeSatPosition( $ref_gen_conf,
+                                              $ref_obs_rinex,
+                                              $FH_LOG );
 
 # Close output log file:
   close($FH_LOG);
 
+
+# Terminal:
+  # Report memory usage:
+  PrintTitle2(*STDOUT, 'Memory Usage report:');
+  $mem_usage->dump();
+
+  # Stop script clock and report elapsed time:
+  my $script_stop  = [gettimeofday];
+  my $elapsed_time = tv_interval($script_start, $script_stop);
+
+  say ""; PrintTitle3( *STDOUT, sprintf("Elapsed script time : %.2f seconds",
+                                        $elapsed_time) ); say "";
 
 PrintTitle1( *STDOUT, "Script $0 has finished" );
