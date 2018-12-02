@@ -168,7 +168,8 @@ sub ComputeSatPosition {
 
         # Determine best ephemerids to compute satellite coordinates:
         my $sat_eph_epoch =
-          SelectNavigationBlock($obs_epoch, sort( keys $ref_nav_body->{$sat} ));
+          SelectNavigationBlock( $ref_gen_conf->{EPH_TIME_THRESHOLD},
+                                 $obs_epoch, sort(keys $ref_nav_body->{$sat}) );
 
         # Check that the ephemerids have been selected:
         unless ($sat_eph_epoch != FALSE) {
@@ -225,7 +226,7 @@ sub ComputeSatPosition {
 # Private Subroutines:                                                         #
 # ............................................................................ #
 sub SelectNavigationBlock {
-  my ($obs_epoch, @sat_nav_epochs) = @_;
+  my ($time_threshold, $obs_epoch, @sat_nav_epochs) = @_;
 
   # Init as undefined the selected navigation epoch:
   my $selected_nav_epoch;
@@ -234,7 +235,7 @@ sub SelectNavigationBlock {
   for my $nav_epoch (@sat_nav_epochs)
   {
     # The ephemerids epoch is selected if the time threshold is acomplished:
-    if ( abs($obs_epoch - $nav_epoch) < TIME_THRESHOLD_NAV_EPH ) {
+    if ( abs($obs_epoch - $nav_epoch) < $time_threshold ) {
       return $nav_epoch;
     }
   }
