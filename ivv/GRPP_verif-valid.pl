@@ -29,9 +29,8 @@ use GeneralConfiguration qq(:ALL);
 # ---------------------------------------------------------------------------- #
 use lib qq(/home/ppinto/TFM/src/GNSS_RINEX_Post-Processing/);
 use RinexReader qq(:ALL);
-# use ErrorSource qq(:ALL);
 use SatPosition qq(:ALL);
-# use RecPosition qq(:ALL);
+use RecPosition qq(:ALL);
 
 # ============================================================================ #
 
@@ -66,26 +65,48 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
 # ---------------------------------------------------------------------------- #
 
 # RINEX reading:
+  my $ini_rinex_obs_time_stamp = [gettimeofday];
+
   PrintTitle2($FH_LOG, "Reading RINEX observation data");
   my $ref_obs_rinex = ReadObservationRinexV3( $ref_gen_conf,
                                               $FH_LOG );
 
-  # print Dumper $ref_obs_rinex;
+  ReportElapsedTime([gettimeofday], $ini_rinex_obs_time_stamp, "OBS RINEX");
+  $MEM_USAGE->record('After storing RINEX observation data');
 
 # Compute satellite positions:
+  my $ini_rinex_nav_time_stamp = [gettimeofday];
+
   PrintTitle2($FH_LOG, "Reading RINEX navigation data");
   my $ref_gps_nav_rinex = ComputeSatPosition( $ref_gen_conf,
                                               $ref_obs_rinex,
                                               $FH_LOG );
 
-# Close output log file:
-  close($FH_LOG);
+  ReportElapsedTime([gettimeofday], $ini_rinex_nav_time_stamp, "NAV RINEX");
+  $MEM_USAGE->record('After storing RINEX navigation data');
+
+# Compute Receiver positions:
+  my $ini_rec_positon_time_stamp = [gettimeofday];
+
+  PrintTitle2($FH_LOG, "Computing Receiver positions");
+  my $rec_position_status = ComputeRecPosition( $ref_gen_conf,
+                                                $ref_rinex_obs,
+                                                $ref_gps_nav_rinex,
+                                                $FH_LOG );
+
+  ReportElapsedTime([gettimeofday], $ini_rec_position_time_stamp, "REC POSITION");
+  $MEM_USAGE->record('After receiver positions');
+
+  print Dumper $ref_rinex_obs->{OBSERVATION}[0];
 
 
 # Terminal:
+  # Close output log file:
+    close($FH_LOG);
+
   # Report memory usage:
   PrintTitle2(*STDOUT, 'Memory Usage report:');
-  $mem_usage->dump();
+  $MEM_USAGE->dump();
 
   # Stop script clock and report elapsed time:
   my $script_stop  = [gettimeofday];
@@ -95,3 +116,13 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
                                         $elapsed_time) ); say "";
 
 PrintTitle1( *STDOUT, "Script $0 has finished" );
+
+
+sub ReportElapsedTime {
+  my ($current_time_stamp, $ref_time_stamp, $label) = @_;
+
+  say "";
+    PrintTitle3( *STDOUT, sprintf("Elapsed time for $label %.2f seconds",
+                          tv_interval($ref_time_stamp, $current_time_stamp)) );
+  say "";
+}
