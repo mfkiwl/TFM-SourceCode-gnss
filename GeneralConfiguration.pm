@@ -117,7 +117,7 @@ use constant SUPPORTED_GAL_SIGNALS => qw( C1C C1A C1B
                                           C8I C8Q C8X );
 
 # Supported time formats:
-use constant SUPPORTED_TIME_FORMATS => qw( GPS UTC );
+use constant SUPPORTED_TIME_FORMATS => qw( GPS );
 
 # Supported atmospheric correction models:
 use constant SUPPORTED_IONO_MODELS  => qw(Klobuchar NeQuick);
