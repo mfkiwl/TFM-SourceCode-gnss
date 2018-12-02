@@ -10,7 +10,7 @@ use strict;   # enables perl strict syntax...
 use feature qq(say); # print method adding a carriage return...
 
 use PDL;        # loads Perl Data Language extension...
-use Math::Trig; # loads trigonometry methods...
+# use Math::Trig; # loads trigonometry methods...
 
 
 # Set package exportation properties:
@@ -97,13 +97,13 @@ sub SolveWeightedLSQ {
     # For LSQ algorithm:
       #   Observations must be greater than parameters:
       #    - m > n
-      return FALSE unless ( $m > $n );
+      return 0 unless ( $m > $n );
       #   Matrix domensions must be:
       #    - A(m,n) for design matrix
       #    - W(m,1) for weight matrix
       #    - P(m,m) for independent term matrix
-      my ($nw, $mw) = dims($w); return FALSE unless ($mw == $m || $nw ==  1);
-      my ($np, $mp) = dims($p); return FALSE unless ($mp == $m || $np == $m);
+      my ($nw, $mw) = dims($w); return 0 unless ($mw == $m || $nw ==  1);
+      my ($np, $mp) = dims($p); return 0 unless ($mp == $m || $np == $m);
 
 
   # ************************************ #
@@ -133,7 +133,7 @@ sub SolveWeightedLSQ {
 
   # Return: estimated parameters, observation residuals,
   #         co-variance matrix, ex-post variance estimator:
-  return (TRUE, $x, $r, $sigma_xx, $sigma2_0);
+  return (1, $x, $r, $sigma_xx, $sigma2_0);
 }
 
 
