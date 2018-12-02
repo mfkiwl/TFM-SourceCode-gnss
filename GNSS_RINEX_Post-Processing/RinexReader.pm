@@ -119,7 +119,6 @@ use constant {
 };
 
 # RINEX hash parameters constants:
-# These parameters are selected by the programmer...
 use constant
   OBS_MANDATORY_HEADER_PARAMETERS => qw( VERSION
                                          TYPE
