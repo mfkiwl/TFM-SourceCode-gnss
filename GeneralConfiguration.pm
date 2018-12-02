@@ -357,6 +357,20 @@ sub LoadConfiguration {
       }
     }
 
+    # Satellite Navigation sub-section:
+    if ( $config_content =~ /^Ephemerid Time Threshold \[h\] +: +(.+)$/gim ) {
+      my $eph_time_threshold = $1;
+      if ( looks_like_number($eph_time_threshold) ) {
+        $ref_config_hash ->
+          {EPH_TIME_THRESHOLD} = $eph_time_threshold * SECONDS_IN_HOUR;
+      } else {
+        RaiseError(*STDOUT, ERR_OPTION_IS_NOT_NUMERIC,
+          "Ephemerid time threshold \'$eph_time_threshold\' ".
+          "is not a numeric value!");
+        return KILLED;
+      }
+    }
+
     # Atmosphere model sub-section:
     if ( grep(/^${\RINEX_GPS_ID}$/, @{$ref_config_hash->{SELECTED_SAT_SYS}}) ) {
       if ( $config_content =~ /^Ionosphere Model GPS +: +(.+)$/gim ) {
