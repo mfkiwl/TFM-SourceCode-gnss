@@ -42,6 +42,7 @@ BEGIN {
 
 # Subroutines:
 # ---------------------------------------------------------------------------- #
+# TODO: unitary test for this function!
 sub LinearInterpolationFromTable {
   my ( $x, $ref_domain, $ref_range ) = @_;
 
