@@ -1,12 +1,12 @@
-#!/usr/bin/perl
+#!/usr/bin/perl -w
 
 # Package declaration:
 package Geodetic;
 
 # Import useful modules:
 use strict;      # enables strict syntax...
-use warnings;    # enables script warnings...
-use diagnostics; # enables script diagnostics...
+
+use Data::Dumper;
 
 use Math::Trig;      # trigonometry functions...
 use feature qq(say); # same as print but adding a carriage jump...
@@ -85,18 +85,18 @@ sub LoadElipsoidEntries {
   {
     my ($a, $f) =
        ($ref_elip_entries->{$elip}{SEMIMAJOR_AXIS},
-        $ref_elip_entries->{$elip}{SEMIMAJOR_AXIS});
+        $ref_elip_entries->{$elip}{FLATTENING});
 
     # Semi-minor axis:
-    my $b = $a*(1 - $f);
+    my $b = $a - ($f*$a);
     $ref_elip_entries->{$elip}{SEMIMINOR_AXIS} = $b;
 
     # First eccentricity:
-    my $e_first = ($a**2 - $b**2)**0.5/$a;
+    my $e_first = (($a**2 - $b**2)**0.5)/$a;
     $ref_elip_entries->{$elip}{FIRST_ECCENTRICITY} = $e_first;
 
     # Second eccentricity:
-    my $e_second = ($a**2 - $b**2)**0.5/$b;
+    my $e_second = (($a**2 - $b**2)**0.5)/$b;
     $ref_elip_entries->{$elip}{SECOND_ECCENTRICITY} = $e_second;
   }
 
@@ -141,7 +141,7 @@ sub ECEF2Geodetic {
   $iter = 10 unless $iter;
 
   # Load elipsoid parameters:
-  my $ref_elip_prm = &ELIPSOID_DATABASE->($elip);
+  my $ref_elip_prm = &ELIPSOID_DATABASE->{$elip};
   my ( $a2, $b2, $e2) =
      ( $ref_elip_prm->{SEMIMAJOR_AXIS}**2,
        $ref_elip_prm->{SEMIMINOR_AXIS}**2,
@@ -160,7 +160,7 @@ sub ECEF2Geodetic {
     # Latitude and height are computed using an iterative process:
     $lat = atan( ($z/$p)*(1/(1 - $e2)) ); # first value...
     for (1..$iter) {
-      my $n    = ( $a2/( $a2*cos($lat)**2 + $b2*sin($lat)**2 )**0.5 );
+      my $n    = $a2/( $a2*cos($lat)**2 + $b2*sin($lat)**2 )**0.5;
          $h    = ($p/cos($lat)) - $n;
          $lat  = atan( ($z/$p)*(1/(1 - $e2*( $n/($n + $h) ))) );
     }
