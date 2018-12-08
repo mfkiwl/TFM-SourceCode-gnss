@@ -68,7 +68,7 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
   my $ini_rinex_obs_time_stamp = [gettimeofday];
 
   PrintTitle2($FH_LOG, "Reading RINEX observation data");
-  my $ref_obs_rinex = ReadObservationRinexV3( $ref_gen_conf,
+  my $ref_obs_data = ReadObservationRinexV3( $ref_gen_conf,
                                               $FH_LOG );
 
   ReportElapsedTime([gettimeofday], $ini_rinex_obs_time_stamp, "OBS RINEX");
@@ -79,25 +79,29 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
 
   PrintTitle2($FH_LOG, "Reading RINEX navigation data");
   my $ref_gps_nav_rinex = ComputeSatPosition( $ref_gen_conf,
-                                              $ref_obs_rinex,
+                                              $ref_obs_data,
                                               $FH_LOG );
 
   ReportElapsedTime([gettimeofday], $ini_rinex_nav_time_stamp, "NAV RINEX");
   $MEM_USAGE->record('After storing RINEX navigation data');
 
+  # Print satellite position for epoch '1':
+  print Dumper $ref_obs_data->{OBSERVATION}[0];
+
+
 # Compute Receiver positions:
-  my $ini_rec_positon_time_stamp = [gettimeofday];
+  my $ini_rec_position_time_stamp = [gettimeofday];
 
   PrintTitle2($FH_LOG, "Computing Receiver positions");
   my $rec_position_status = ComputeRecPosition( $ref_gen_conf,
-                                                $ref_rinex_obs,
+                                                $ref_obs_data,
                                                 $ref_gps_nav_rinex,
                                                 $FH_LOG );
 
   ReportElapsedTime([gettimeofday], $ini_rec_position_time_stamp, "REC POSITION");
   $MEM_USAGE->record('After receiver positions');
 
-  print Dumper $ref_rinex_obs->{OBSERVATION}[0];
+  print Dumper $ref_obs_data->{OBSERVATION}[0];
 
 
 # Terminal:
