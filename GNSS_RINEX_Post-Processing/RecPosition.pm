@@ -12,11 +12,12 @@ package RecPosition;
 use strict;   # enables strict syntax...
 
 use PDL;                                # loads Perl Data Language extension...
-use Math::Trig;                         # load trigonometry methods...
+use PDL::Constants qw(PI);
 use Scalar::Util qq(looks_like_number); # scalar utility...
 
-use feature qq(say); # print adding carriage return...
-use Data::Dumper;    # enables pretty print...
+use feature qq(say);    # print adding carriage return...
+use feature qq(switch); # switch functionality...
+use Data::Dumper;       # enables pretty print...
 
 # Import configuration and common interface module:
 use lib qq(/home/ppinto/TFM/src/); # TODO: this should be an enviroment!
@@ -151,6 +152,10 @@ sub ComputeRecPosition {
       $ref_epoch_hash->{POSITION_SOLUTION}{ XYZDT  } = undef;
       $ref_epoch_hash->{POSITION_SOLUTION}{ SIGMA  } = undef;
 
+      # Init references to hold estimated position and associated
+      # variances:
+      my ($ref_rec_est_xyzdt, $ref_rec_var_xyzdt);
+
       # Save epoch and observation health status:
       my ($epoch, $epoch_status) = ($ref_epoch_hash->{EPOCH},
                                     $ref_epoch_hash->{STATUS});
@@ -158,14 +163,9 @@ sub ComputeRecPosition {
       # Discard invalid epochs:
       if ( $epoch_status == HEALTHY_OBSERVATION_BLOCK )
       {
-        # Init 2D matrix to save the iteration solutions:
-        my @iter_solution;
-
-        # Init iteration solution status:
-        my $iter_status = FALSE;
-
-        # Init solution convergence flag and iteration counter:
-        my ($iteration, $convergence_flag) = (0, FALSE);
+        # Init iteration information:
+        my @iter_solution; # 2D matrix to save the iteration solutions...
+        my ($iteration, $iter_status, $convergence_flag) = (0, FALSE, FALSE);
 
         # Iterate until convergence criteria is reached or until the maximum
         # iterations allowed:
@@ -174,10 +174,11 @@ sub ComputeRecPosition {
         {
           # Select approximate parameters:
           my @rec_apx_xyzdt =
-            SelectApproximateParameters( $first_solution_flag, $iteration,
-                                         $ref_rinex_obs, \@iter_solution );
+            SelectApproximateParameters( $first_solution_flag,
+                                         $ref_rinex_obs, $i,
+                                         \@iter_solution, $iteration );
 
-          # Decalre LSQ matrix system as arrays:
+          # Init LSQ matrix system as arrays:
           my @design_matrix; my @weight_vector; my @ind_term_vector;
 
           # Build LSQ matrix system array references:
@@ -193,7 +194,7 @@ sub ComputeRecPosition {
             # Identify GNSS constellation:
             my $sat_sys = substr($sat, 0, 1);
 
-            # Save receiver-satellite observation:
+            # Get receiver-satellite observation measurement:
             my $signal  = $ref_gen_conf->{SELECTED_SIGNALS}{$sat_sys};
             my $raw_obs = $ref_epoch_hash->{SAT_OBS}{$sat}{$signal};
 
@@ -224,7 +225,7 @@ sub ComputeRecPosition {
               # 3. Receiver-Satellite line of sight:
               my ($rec_lat, # REC geodetic coordinates
                   $rec_lon,
-                  $rec_h,
+                  $rec_helip,
                   $rec_sat_ix, # REC-SAT ECEF vector
                   $rec_sat_iy,
                   $rec_sat_iz,
@@ -235,7 +236,32 @@ sub ComputeRecPosition {
                                                              \@sat_xyz_recep );
 
               # Elevation angle is computed as follows:
-              my $rec_sat_elevation = pi/2 - $rec_sat_zenital;
+              my $rec_sat_elevation = PI/2 - $rec_sat_zenital;
+
+              PrintTitle2(*STDOUT, "Rec-Sat ($sat) LoS at $epoch ($i):");
+
+              PrintTitle3(*STDOUT, "Receiver geodetic coordinates:");
+              PrintBulletedInfo(*STDOUT, "\t - ",
+                "Receiver Lat  = ".($rec_lat * 180/PI),
+                "Receiver Lon  = ".($rec_lon * 180/PI),
+                "Receiver help = ".$rec_helip);
+
+              PrintTitle3(*STDOUT, "Satellite ECEF coordinetes at reception:");
+              PrintBulletedInfo(*STDOUT, "\t - ",
+                "X = $sat_xyz_recep[0]",
+                "Y = $sat_xyz_recep[1]",
+                "Z = $sat_xyz_recep[2]");
+
+              PrintTitle3(*STDOUT, "Rec-Sat ECEF vector components:");
+              PrintBulletedInfo(*STDOUT, "\t - ", "(IX, IY, IZ) = ".
+                join(', ', ($rec_sat_ix, $rec_sat_iy, $rec_sat_iz)));
+
+              PrintTitle3(*STDOUT, "Rec-Sat polar coordinates:");
+              PrintBulletedInfo(*STDOUT, "\t - ",
+                "Azimut    = ".($rec_sat_azimut * 180/PI),
+                "Zenital   = ".($rec_sat_zenital * 180/PI),
+                "Elevation = ".($rec_sat_elevation * 180/PI),
+                "Distance  = ".($rec_sat_distance * 180/PI));
 
               # 4. Mask filtering:
               if ( $rec_sat_elevation >= $ref_gen_conf->{SAT_MASK} )
@@ -274,6 +300,10 @@ sub ComputeRecPosition {
             } # end unless obs eq NULL
           } # end for $sat
 
+          print Dumper $ref_design_matrix;
+          print Dumper $ref_weight_vector;
+          print Dumper $ref_ind_term_vector;
+
           # ************************ #
           # LSQ position estimation: #
           # ************************ #
@@ -294,12 +324,12 @@ sub ComputeRecPosition {
             $iter_status = TRUE;
 
             # Get estimated receiver position and solution variances:
-            my ( $ref_rec_est_xyzdt,
-                 $ref_rec_var_xyzdt ) = GetReceiverPositionSolution(
-                                          pdl \@rec_apx_xyzdt,
-                                          $pdl_parameter_vector,
-                                          $pdl_covar_matrix
-                                        );
+            ( $ref_rec_est_xyzdt,
+              $ref_rec_var_xyzdt ) = GetReceiverPositionSolution(
+                                        pdl \@rec_apx_xyzdt,
+                                        $pdl_parameter_vector,
+                                        $pdl_covariance_matrix
+                                      );
 
             # Save iteration solution:
             $iter_solution[$iteration] = $ref_rec_est_xyzdt;
@@ -349,7 +379,7 @@ sub ComputeRecPosition {
           # NOTE: receiver solution and standard deviations come from last
           #       iteration solution
           $ref_epoch_hash->{POSITION_SOLUTION}{ STATUS } = TRUE;
-          $ref_epoch_hash->{POSITION_SOLUTION}{ XYZDT  } = $iter_solution[-1];
+          $ref_epoch_hash->{POSITION_SOLUTION}{ XYZDT  } = $ref_rec_est_xyzdt;
           $ref_epoch_hash->{POSITION_SOLUTION}{ SIGMA  } = \@rec_sigma;
 
         } # end if $iter_status
@@ -364,7 +394,9 @@ sub ComputeRecPosition {
 # Private Subroutines:                                                         #
 # ............................................................................ #
 sub SelectApproximateParameters {
-  my ( $first_solution_flag, $iter, $ref_rinex_obs, $ref_iter_solution ) = @_;
+  my ( $first_solution_flag,
+       $ref_rinex_obs, $epoch_index,
+       $ref_iter_solution, $iter ) = @_;
 
   # Init aproximate position parameters:
   my @rec_apx_xyzdt;
@@ -377,19 +409,19 @@ sub SelectApproximateParameters {
     if ( $first_solution_flag ) {
       # Count back until a valid position solution is found:
       my $count = 1;
-      until ( $ref_rinex_obs ->
-               {OBSERVATION}[$i - $count]{POSITION_SOLUTION}{STATUS} )
+      until ($ref_rinex_obs ->
+              {OBSERVATION}[$epoch_index - $count]{POSITION_SOLUTION}{STATUS})
       { $count += 1; }
 
       # Set found position solution as approximate parameters:
       @rec_apx_xyzdt =
         @{ $ref_rinex_obs ->
-            {OBSERVATION}[$i - $count]{POSITION_SOLUTION}{XYZDT} };
+            {OBSERVATION}[$epoch_index - $count]{POSITION_SOLUTION}{XYZDT} };
 
     } else {
       # Approximate position parameters come from RINEX header:
       # NOTE: Receiver clock bias is init to 0:
-      @rec_apx_xyzdt = (@{$ref_rinex_obs->{HEADER}{APX_POSITION}}, 0);
+      @rec_apx_xyzdt = (@{$ref_rinex_obs->{OBS_HEADER}{APX_POSITION}}, 0);
     } # end if ($first_solution_flag)
 
   } else {
@@ -401,7 +433,7 @@ sub SelectApproximateParameters {
 }
 
 sub ReceiverSatelliteLoS {
-  my ( $ref_gen_conf, $ref_rec_xyz, $rec_sat_xyz ) = @_;
+  my ( $ref_gen_conf, $ref_rec_xyz, $ref_sat_xyz ) = @_;
 
   # Retrieve satellite coordinates:
   my ( $sat_x, $sat_y, $sat_z ) =
@@ -412,9 +444,9 @@ sub ReceiverSatelliteLoS {
   # Receiver-Satellite ECEF vector:
   my ( $rec_sat_ix,
        $rec_sat_iy,
-       $rec_sat_iz ) = ( $rec_x - $sat_x,
-                         $rec_y - $sat_y,
-                         $rec_z - $sat_z );
+       $rec_sat_iz ) = ( $sat_x - $rec_x,
+                         $sat_y - $rec_y,
+                         $sat_z - $rec_z );
 
   # Receiver's ECEF to Geodetic coordinate transformation:
   my ( $rec_lat,
@@ -441,7 +473,7 @@ sub ReceiverSatelliteLoS {
                                           $rec_sat_in,
                                           $rec_sat_iu );
 
-  return ( $rec_lat, $rec_lon, $rec_h,
+  return ( $rec_lat, $rec_lon, $rec_helip,
            $rec_sat_ix, $rec_sat_iy, $rec_sat_iz,
            $rec_sat_azimut, $rec_sat_zenital, $rec_sat_distance );
 }
@@ -461,7 +493,7 @@ sub SatPositionFromEmission2Reception {
   # NOTE: Apply Z's rotation matrix in ECEF Z axis:
   return (    $sat_x*cos($earth_rotation) + $sat_y*sin($earth_rotation),
            -1*$sat_x*sin($earth_rotation) + $sat_y*cos($earth_rotation),
-                                                                $z_sat);
+                                                                $sat_z);
 }
 
 sub SetPseudorangeEquation {
@@ -473,9 +505,6 @@ sub SetPseudorangeEquation {
         $rec_sat_distance, $rec_sat_elevation,
        # Outputs:
         $ref_design_matrix, $ref_weight_vector, $ref_ind_term_vector ) = @_;
-
-  # Preliminary: Compute receiver-satellite disatnce:
-  my $rec_sat_distance = ModulusNth( $ix, $iy, $iz );
 
   # 1. Design matrix row elements:
   my @design_row = ( -1*($ix/$rec_sat_distance),
@@ -527,7 +556,7 @@ sub CheckConvergenceCriteria {
   my $status;
 
   # Determine convergence criteria by computing the square root sumatory:
-  $status = ( ($var_x + $var_y + $var_z)**0.5 ) <= $threshold : TRUE : FALSE;
+  $status = ( ($var_x + $var_y + $var_z)**0.5 <= $threshold ) ? TRUE : FALSE;
 
   # Return boolean answer:
   return $status;
