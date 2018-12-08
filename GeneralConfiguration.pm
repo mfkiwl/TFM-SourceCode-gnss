@@ -374,9 +374,9 @@ sub LoadConfiguration {
     # Atmosphere model sub-section:
     if ( grep(/^${\RINEX_GPS_ID}$/, @{$ref_config_hash->{SELECTED_SAT_SYS}}) ) {
       if ( $config_content =~ /^Ionosphere Model GPS +: +(.+)$/gim ) {
-        my $gps_iono_model = $1;
+        my $gps_iono_model = lc $1;
         if ( grep(/^$gps_iono_model$/i, SUPPORTED_IONO_MODELS) ) {
-          $ref_config_hash->{GPS_IONOSPHERE_MODEL} = lc $gps_iono_model;
+          $ref_config_hash->{IONOSPHERE_MODEL}{&RINEX_GPS_ID} = $gps_iono_model;
         } else {
           RaiseError(*STDOUT, ERR_MODEL_NOT_SUPPORTED,
             "GPS Ionospheric Model \'$gps_iono_model\' is not supported",
@@ -387,9 +387,9 @@ sub LoadConfiguration {
     }
     if ( grep(/^${\RINEX_GAL_ID}$/, @{$ref_config_hash->{SELECTED_SAT_SYS}}) ) {
       if ( $config_content =~ /^Ionosphere Model GAL +: +(.+)$/gim ) {
-        my $gal_iono_model = $1;
+        my $gal_iono_model = lc $1;
         if ( grep(/^$gal_iono_model$/i, SUPPORTED_IONO_MODELS) ) {
-          $ref_config_hash->{GAL_IONOSPHERE_MODEL} = lc $gal_iono_model;
+          $ref_config_hash->{IONOSPHERE_MODEL}{&RINEX_GAL_ID} = $gal_iono_model;
         } else {
           RaiseError(*STDOUT, ERR_MODEL_NOT_SUPPORTED,
             "GALILEO Ionospheric Model \'$gal_iono_model\' is not supported",
