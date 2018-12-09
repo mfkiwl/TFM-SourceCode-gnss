@@ -238,19 +238,23 @@ sub ComputeRecPosition {
               # Elevation angle is computed as follows:
               my $rec_sat_elevation = PI/2 - $rec_sat_zenital;
 
-              PrintTitle2(*STDOUT, "Rec-Sat ($sat) LoS at $epoch ($i):");
+              PrintTitle2(*STDOUT,
+                "Rec-Sat ($sat) LoS at $epoch --> ".
+                BuildDateString(GPS2Date($epoch))." (index = $i):");
 
               PrintTitle3(*STDOUT, "Receiver geodetic coordinates:");
               PrintBulletedInfo(*STDOUT, "\t - ",
                 "Receiver Lat  = ".($rec_lat * 180/PI),
                 "Receiver Lon  = ".($rec_lon * 180/PI),
-                "Receiver help = ".$rec_helip);
+                "Receiver help = ".$rec_helip,
+                "Rec CLK Bias  = $rec_clk_bias");
 
               PrintTitle3(*STDOUT, "Satellite ECEF coordinetes at reception:");
               PrintBulletedInfo(*STDOUT, "\t - ",
                 "X = $sat_xyz_recep[0]",
                 "Y = $sat_xyz_recep[1]",
-                "Z = $sat_xyz_recep[2]");
+                "Z = $sat_xyz_recep[2]",
+                "Sat CLK Bias = $sat_clk_bias");
 
               PrintTitle3(*STDOUT, "Rec-Sat ECEF vector components:");
               PrintBulletedInfo(*STDOUT, "\t - ", "(IX, IY, IZ) = ".
@@ -271,13 +275,18 @@ sub ComputeRecPosition {
                   &{$ref_sub_troposphere}( $rec_sat_zenital, $rec_helip );
 
                 # 6. Ionospheric delay correction:
-                my $ionosphere_corr =
+                my ($ionosphere_corr, $ionosphere_corr_l2) =
                   &{$ref_sub_iono->{$sat_sys}}
                     ( $epoch,
                       $rec_lat, $rec_lon,
                       $rec_sat_azimut, $rec_sat_elevation,
                       $ref_sat_sys_nav->{$sat_sys}{NAV_HEADER}{ ION_ALPHA },
                       $ref_sat_sys_nav->{$sat_sys}{NAV_HEADER}{ ION_BETA  } );
+
+                PrintTitle3(*STDOUT, "Tropo/Iono corrections");
+                PrintBulletedInfo(*STDOUT, "\t - ",
+                  "Troposphere correction = $troposhpere_corr",
+                  "Ionosphere correction  = $ionosphere_corr");
 
                 # 7. Set pseudorange equation:
                 SetPseudorangeEquation( # Inputs:
@@ -300,21 +309,22 @@ sub ComputeRecPosition {
             } # end unless obs eq NULL
           } # end for $sat
 
-          print Dumper $ref_design_matrix;
-          print Dumper $ref_weight_vector;
-          print Dumper $ref_ind_term_vector;
-
           # ************************ #
           # LSQ position estimation: #
           # ************************ #
+
+          my $pdl_design_matrix = pdl $ref_design_matrix;
+          my $pdl_weight_vector = pdl $ref_weight_vector;
+          my $pdl_ind_term_vector = pdl $ref_ind_term_vector;
+
           my ( $lsq_status,
                $pdl_parameter_vector,
                $pdl_residual_vector,
                $pdl_covariance_matrix,
                $pdl_variance_estimator ) = SolveWeightedLSQ (
-                                             pdl $ref_design_matrix,
-                                             pdl $ref_weight_vector,
-                                             pdl $ref_ind_term_vector
+                                             $pdl_design_matrix,
+                                             $pdl_weight_vector,
+                                             $pdl_ind_term_vector
                                            );
 
           # Check for successful LSQ estimation:
@@ -522,16 +532,10 @@ sub SetPseudorangeEquation {
                        $rec_clk_bias + SPEED_OF_LIGHT*$sat_clk_bias -
                        $troposhpere_corr - $ionosphere_corr );
 
-
   # Append to matrix references:
-    # Compute current matrix dimensions:
-    my $size_design_matrix   = scalar( @{$ref_design_matrix}   );
-    my $size_weight_vector   = scalar( @{$ref_weight_vector}   );
-    my $size_ind_term_vector = scalar( @{$ref_ind_term_vector} );
-    # Append computed rows:
-    $ref_design_matrix   -> [$size_design_matrix   + 1] = \@design_row;
-    $ref_weight_vector   -> [$size_weight_vector   + 1] = \@weight_row;
-    $ref_ind_term_vector -> [$size_ind_term_vector + 1] = \@ind_term_row;
+    push($ref_design_matrix  , \@design_row);
+    push($ref_weight_vector  , \@weight_row);
+    push($ref_ind_term_vector, \@ind_term_row);
 
 }
 
