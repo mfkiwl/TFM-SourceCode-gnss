@@ -10,7 +10,9 @@ package ErrorSource;
 # ---------------------------------------------------------------------------- #
 use strict;   # enables strict syntax...
 
-use Math::Trig;                         # load trigonometry methods...
+use PDL;
+use PDL::GSL::INTERP;
+use PDL::Constants qw(PI);
 use Scalar::Util qq(looks_like_number); # scalar utility...
 
 use feature qq(say); # print adding carriage return...
@@ -25,6 +27,7 @@ use lib qq(/home/ppinto/TFM/src/lib/); # TODO: this should be an enviroment!
 use MyUtil   qq(:ALL); # useful subs and constants...
 use MyMath   qq(:ALL); # useful mathematical methods...
 use MyPrint  qq(:ALL); # error and warning utilities...
+use Geodetic qq(:ALL); # geodesy methods and constants...
 use TimeGNSS qq(:ALL); # GNSS time transforming utilities...
 
 # Set package exportation properties:
@@ -93,9 +96,17 @@ sub ComputeTropoSaastamoinenDelay {
     my $pwv = ($humd*0.01)*exp(-37.2465 + 0.213166 - (0.000256908*$temp**2));
 
     # Interpolation of 'B' [m] --> correction acounting for elipsoidal height:
-    my $b_prm = LinearInterpolationFromTable( $height,
-                                              SAASTAMOINEN_B_DOMAIN,
-                                              SAASTAMOINEN_B_RANGE );
+      # Define as PDL piddles B parameter's domain and range
+      my $pdl_b_range  = pdl SAASTAMOINEN_B_RANGE;
+      my $pdl_b_domain = pdl SAASTAMOINEN_B_DOMAIN;
+
+      # Define B interpolation function (linear interpolation):
+      my $pdl_interp_func = PDL::GSL::INTERP->init('linear',
+                                                   $pdl_b_domain,
+                                                   $pdl_b_range);
+
+      # Interpolate B parameter:
+      my $b_prm = $pdl_interp_func->eval($height);
 
   # Troposhperic delay correction is computed as follows:
     # Auxiliar variables:
@@ -103,6 +114,15 @@ sub ComputeTropoSaastamoinenDelay {
     my $aux2 = (1255/$temp) + 0.05;
     # Computed delay:
     my $dtropo = $aux1*($press + $aux2*$pwv - $b_prm*(tan($zenital))**2);
+
+    PrintTitle3(*STDOUT, "Troposphere Saastamoinen computed parameters:");
+    PrintBulletedInfo(*STDOUT, "\t\t - ",
+      "Temperature = $temp",
+      "Pressure    = $press",
+      "Humidity    = $humd",
+      "Water vapor's pressure = $pwv",
+      "'B' Parameter interpolated = $b_prm",
+      "Tropo correction  = $dtropo");
 
   # Return tropospheric delay:
   return $dtropo; # [m]
@@ -119,20 +139,16 @@ sub ComputeIonoKlobucharDelay {
   my @iono_beta_prm  = @{ $ref_iono_beta  };
 
   # Preliminary steps:
-    # Elevation from rad to semicircles:
-    $elevation /= pi;
+    # Elevation from [rad] --> [semicircles]:
+    $elevation /= PI;
+
+    # Receiver latitude and longitude: [rad] --> [semicircles]
+    $lat_rec /= PI; $lon_rec /= PI;
 
     # Time transfomation: GPS --> Num_week, Num_day, ToW [s]
     my ($week, $day, $tow) = GPS2ToW($gps_epoch);
 
   # Computation sequence:
-    # Necessary transformations:
-      # Receiver latitude and longitude: [rad] --> [semicircles]
-      $lat_rec /= pi; $lon_rec /= pi;
-
-      # Receiver-Satellite elevation: [rad] --> [semicircles]
-      $elevation /= pi;
-
     # Compute earth center angle [semicircles]:
     my $earth_center_angle = (0.0137/($elevation + 0.11)) - 0.022;
 
@@ -147,11 +163,11 @@ sub ComputeIonoKlobucharDelay {
       # IPP's longitude [semicircles]:
       # NOTE: Cosine's argument is transformaed [semicircles] --> [rad]
       my $lon_ipp =
-         $lon_rec + ( $earth_center_angle*sin($azimut) )/( cos($lat_ipp*pi) );
+         $lon_rec + ( $earth_center_angle*sin($azimut) )/( cos($lat_ipp*PI) );
 
       # IPP's geomagnetic latitude [semicircles]:
       # NOTE: Sinus's argument is transformed [semicircles] --> [rad]
-      my $geomag_lat_ipp = $lat_ipp + 0.064*cos( ($lon_ipp - 1.617)*pi );
+      my $geomag_lat_ipp = $lat_ipp + 0.064*cos( ($lon_ipp - 1.617)*PI );
 
       # Local time at IPP [s]:
       my $time_ipp  = SECONDS_IN_DAY/2 * $lon_ipp + $tow;
@@ -169,7 +185,7 @@ sub ComputeIonoKlobucharDelay {
        $iono_period  = 72000 if ($iono_period < 72000);
 
     # Compute ionospheric delay phase [rad]:
-    my $iono_phase = ( 2*pi*($time_ipp - 50400) ) / $iono_period;
+    my $iono_phase = ( 2*PI*($time_ipp - 50400) ) / $iono_period;
 
     # Compute slant factor delay [m¿?]:
     my $slant_fact = 1.0 + 16.0*(0.53 - $elevation)**3;
@@ -185,8 +201,22 @@ sub ComputeIonoKlobucharDelay {
       $iono_delay_l1 = 5.1e-9 * $slant_fact;
     }
 
+    # Transform ionospheric time delay into meters:
+    $iono_delay_l1 *= SPEED_OF_LIGHT;
+
     # TODO: Compute ionospheric time delay for L2 [m]:
     my $iono_delay_l2;
+
+    PrintTitle3(*STDOUT, "Ionosphere Klobuchar computed parameters:");
+    PrintBulletedInfo(*STDOUT, "\t\t - ",
+      "Earth center angle = $earth_center_angle",
+      "IPP's lat    = $lat_ipp",
+      "IPP's lon    = $lon_ipp",
+      "IPP's GM lat = $geomag_lat_ipp",
+      "Iono delay amplitude = $iono_amplitude",
+      "Iono delay period    = $iono_period",
+      "Slant factor         = $slant_fact",
+      "Iono delay at L1     = $iono_delay_l1");
 
 
   # Return ionospheric delays for both frequencies:
