@@ -7,11 +7,7 @@ package MyMath;
 use Carp;     # traced warnings and errors...
 use strict;   # enables perl strict syntax...
 
-use feature qq(say); # print method adding a carriage return...
-
-use PDL;        # loads Perl Data Language extension...
-# use Math::Trig; # loads trigonometry methods...
-
+use PDL; # loads Perl Data Language extension...
 
 # Set package exportation properties:
 BEGIN {
@@ -78,20 +74,17 @@ sub SolveWeightedLSQ {
   # W --> independent term matrix
   # P --> weight matrix
 
-  my $a     = pdl $ref_design_matrix;
-  my $w     = pdl $ref_ind_term_vector;
-  my $p_row = pdl $ref_weight_vector;
+  # Set input references as PDL piddles:
+    my $a     = pdl $ref_design_matrix;
+    my $w     = pdl $ref_ind_term_vector;
+    my $p_row = pdl $ref_weight_vector;
 
   # ********************* #
   # Prelimary operations: #
   # ********************* #
-  
+
     # Weights are input as a vector --> make diagonal matrix:
     my $p = stretcher( transpose($p_row) );
-
-    # say "Design matrix : ", $a;
-    # say "Weight's matrix : ", $p;
-    # say "Ind Term matrix : ", $w;
 
     # Retrieve A's dimensions:
     #  m --> number of observations
