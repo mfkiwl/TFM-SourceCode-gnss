@@ -115,14 +115,14 @@ sub ComputeTropoSaastamoinenDelay {
     # Computed delay:
     my $dtropo = $aux1*($press + $aux2*$pwv - $b_prm*(tan($zenital))**2);
 
-    PrintTitle3(*STDOUT, "Troposphere Saastamoinen computed parameters:");
-    PrintBulletedInfo(*STDOUT, "\t\t - ",
-      "Temperature = $temp",
-      "Pressure    = $press",
-      "Humidity    = $humd",
-      "Water vapor's pressure = $pwv",
-      "'B' Parameter interpolated = $b_prm",
-      "Tropo correction  = $dtropo");
+    # PrintTitle3(*STDOUT, "Troposphere Saastamoinen computed parameters:");
+    # PrintBulletedInfo(*STDOUT, "\t\t - ",
+    #   "Temperature = $temp",
+    #   "Pressure    = $press",
+    #   "Humidity    = $humd",
+    #   "Water vapor's pressure = $pwv",
+    #   "'B' Parameter interpolated = $b_prm",
+    #   "Tropo correction  = $dtropo");
 
   # Return tropospheric delay:
   return $dtropo; # [m]
@@ -207,16 +207,16 @@ sub ComputeIonoKlobucharDelay {
     # TODO: Compute ionospheric time delay for L2 [m]:
     my $iono_delay_l2;
 
-    PrintTitle3(*STDOUT, "Ionosphere Klobuchar computed parameters:");
-    PrintBulletedInfo(*STDOUT, "\t\t - ",
-      "Earth center angle = $earth_center_angle",
-      "IPP's lat    = $lat_ipp",
-      "IPP's lon    = $lon_ipp",
-      "IPP's GM lat = $geomag_lat_ipp",
-      "Iono delay amplitude = $iono_amplitude",
-      "Iono delay period    = $iono_period",
-      "Slant factor         = $slant_fact",
-      "Iono delay at L1     = $iono_delay_l1");
+    # PrintTitle3(*STDOUT, "Ionosphere Klobuchar computed parameters:");
+    # PrintBulletedInfo(*STDOUT, "\t\t - ",
+    #   "Earth center angle = $earth_center_angle",
+    #   "IPP's lat    = $lat_ipp",
+    #   "IPP's lon    = $lon_ipp",
+    #   "IPP's GM lat = $geomag_lat_ipp",
+    #   "Iono delay amplitude = $iono_amplitude",
+    #   "Iono delay period    = $iono_period",
+    #   "Slant factor         = $slant_fact",
+    #   "Iono delay at L1     = $iono_delay_l1");
 
 
   # Return ionospheric delays for both frequencies:
