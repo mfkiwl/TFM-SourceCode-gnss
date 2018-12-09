@@ -42,7 +42,6 @@ BEGIN {
 
 # Subroutines:
 # ---------------------------------------------------------------------------- #
-# TODO: unitary test for this function!
 sub LinearInterpolationFromTable {
   my ( $x, $ref_domain, $ref_range ) = @_;
 
@@ -73,25 +72,26 @@ sub LinearInterpolationFromTable {
 }
 
 sub SolveWeightedLSQ {
-  my ($a, $p_row, $w_row) = @_;
+  my ($ref_design_matrix, $ref_weight_vector, $ref_ind_term_vector) = @_;
 
   # A --> design matrix
   # W --> independent term matrix
   # P --> weight matrix
 
+  my $a     = pdl $ref_design_matrix;
+  my $w     = pdl $ref_ind_term_vector;
+  my $p_row = pdl $ref_weight_vector;
+
   # ********************* #
   # Prelimary operations: #
   # ********************* #
-
-    say "Design Matrix = ", $a;
-    say "Weight vector = ", $p_row;
-    say "Ind term vector = ", $w_row;
-
-    # Independent term is input as a vector --> transpose it:
-    my $w = transpose( $w_row );
-
+  
     # Weights are input as a vector --> make diagonal matrix:
-    my $p = stretcher( $p_row );
+    my $p = stretcher( transpose($p_row) );
+
+    # say "Design matrix : ", $a;
+    # say "Weight's matrix : ", $p;
+    # say "Ind Term matrix : ", $w;
 
     # Retrieve A's dimensions:
     #  m --> number of observations
