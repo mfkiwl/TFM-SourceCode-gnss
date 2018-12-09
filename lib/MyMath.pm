@@ -28,8 +28,8 @@ BEGIN {
   our @EXPORT = ();
 
   # All subroutines and constats to export:
-  our @EXPORT_OK = qw( SolveWeightedLSQ
-                       LinearInterpolationFromTable );
+  our @EXPORT_OK = qw( &SolveWeightedLSQ
+                       &LinearInterpolationFromTable );
 
   # Define export tags:
   our %EXPORT_TAGS = ( DEFAULT => [],
@@ -82,6 +82,10 @@ sub SolveWeightedLSQ {
   # ********************* #
   # Prelimary operations: #
   # ********************* #
+
+    say "Design Matrix = ", $a;
+    say "Weight vector = ", $p_row;
+    say "Ind term vector = ", $w_row;
 
     # Independent term is input as a vector --> transpose it:
     my $w = transpose( $w_row );
