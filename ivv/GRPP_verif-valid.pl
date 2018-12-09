@@ -19,6 +19,7 @@ use Time::HiRes qw(gettimeofday tv_interval);
 use lib qq(/home/ppinto/TFM/src/lib/);
 use MyUtil  qq(:ALL);
 use MyPrint qq(:ALL);
+use TimeGNSS qq(:ALL);
 
 # Configuration and common interface module:
 # ---------------------------------------------------------------------------- #
@@ -85,9 +86,6 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
   ReportElapsedTime([gettimeofday], $ini_rinex_nav_time_stamp, "NAV RINEX");
   $MEM_USAGE->record('After storing RINEX navigation data');
 
-  # Print satellite position for epoch '1':
-  print Dumper $ref_obs_data->{OBSERVATION}[0];
-
 
 # Compute Receiver positions:
   my $ini_rec_position_time_stamp = [gettimeofday];
@@ -101,7 +99,19 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
   ReportElapsedTime([gettimeofday], $ini_rec_position_time_stamp, "REC POSITION");
   $MEM_USAGE->record('After receiver positions');
 
-  print Dumper $ref_obs_data->{OBSERVATION}[0];
+  for (0..3) {
+    say "Observation epoch : ".
+      BuildDateString(GPS2Date($ref_obs_data->{OBSERVATION}[$_]{EPOCH}));
+    print Dumper $ref_obs_data->{OBSERVATION}[$_]{POSITION_SOLUTION};
+  }
+
+  say "\n[...]\n";
+
+  for (-4..-1) {
+    say "Observation epoch : ".
+      BuildDateString(GPS2Date($ref_obs_data->{OBSERVATION}[$_]{EPOCH}));
+    print Dumper $ref_obs_data->{OBSERVATION}[$_]{POSITION_SOLUTION};
+  }
 
 
 # Terminal:
