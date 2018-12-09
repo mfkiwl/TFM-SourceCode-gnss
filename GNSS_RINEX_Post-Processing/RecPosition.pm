@@ -238,35 +238,6 @@ sub ComputeRecPosition {
               # Elevation angle is computed as follows:
               my $rec_sat_elevation = PI/2 - $rec_sat_zenital;
 
-              PrintTitle2(*STDOUT,
-                "Rec-Sat ($sat) LoS at $epoch --> ".
-                BuildDateString(GPS2Date($epoch))." (index = $i):");
-
-              PrintTitle3(*STDOUT, "Receiver geodetic coordinates:");
-              PrintBulletedInfo(*STDOUT, "\t - ",
-                "Receiver Lat  = ".($rec_lat * 180/PI),
-                "Receiver Lon  = ".($rec_lon * 180/PI),
-                "Receiver help = ".$rec_helip,
-                "Rec CLK Bias  = $rec_clk_bias");
-
-              PrintTitle3(*STDOUT, "Satellite ECEF coordinetes at reception:");
-              PrintBulletedInfo(*STDOUT, "\t - ",
-                "X = $sat_xyz_recep[0]",
-                "Y = $sat_xyz_recep[1]",
-                "Z = $sat_xyz_recep[2]",
-                "Sat CLK Bias = $sat_clk_bias");
-
-              PrintTitle3(*STDOUT, "Rec-Sat ECEF vector components:");
-              PrintBulletedInfo(*STDOUT, "\t - ", "(IX, IY, IZ) = ".
-                join(', ', ($rec_sat_ix, $rec_sat_iy, $rec_sat_iz)));
-
-              PrintTitle3(*STDOUT, "Rec-Sat polar coordinates:");
-              PrintBulletedInfo(*STDOUT, "\t - ",
-                "Azimut    = ".($rec_sat_azimut * 180/PI),
-                "Zenital   = ".($rec_sat_zenital * 180/PI),
-                "Elevation = ".($rec_sat_elevation * 180/PI),
-                "Distance  = ".($rec_sat_distance * 180/PI));
-
               # 4. Mask filtering:
               if ( $rec_sat_elevation >= $ref_gen_conf->{SAT_MASK} )
               {
@@ -282,11 +253,6 @@ sub ComputeRecPosition {
                       $rec_sat_azimut, $rec_sat_elevation,
                       $ref_sat_sys_nav->{$sat_sys}{NAV_HEADER}{ ION_ALPHA },
                       $ref_sat_sys_nav->{$sat_sys}{NAV_HEADER}{ ION_BETA  } );
-
-                PrintTitle3(*STDOUT, "Tropo/Iono corrections");
-                PrintBulletedInfo(*STDOUT, "\t - ",
-                  "Troposphere correction = $troposhpere_corr",
-                  "Ionosphere correction  = $ionosphere_corr");
 
                 # 7. Set pseudorange equation:
                 SetPseudorangeEquation( # Inputs:
@@ -312,19 +278,14 @@ sub ComputeRecPosition {
           # ************************ #
           # LSQ position estimation: #
           # ************************ #
-
-          my $pdl_design_matrix = pdl $ref_design_matrix;
-          my $pdl_weight_vector = pdl $ref_weight_vector;
-          my $pdl_ind_term_vector = pdl $ref_ind_term_vector;
-
           my ( $lsq_status,
                $pdl_parameter_vector,
                $pdl_residual_vector,
                $pdl_covariance_matrix,
                $pdl_variance_estimator ) = SolveWeightedLSQ (
-                                             $pdl_design_matrix,
-                                             $pdl_weight_vector,
-                                             $pdl_ind_term_vector
+                                             $ref_design_matrix,
+                                             $ref_weight_vector,
+                                             $ref_ind_term_vector
                                            );
 
           # Check for successful LSQ estimation:
@@ -333,10 +294,13 @@ sub ComputeRecPosition {
             # Update iteration status:
             $iter_status = TRUE;
 
+            # Set Receiver's approximate parameters as PDL piddle:
+            my $pdl_rec_apx_xyzdt = pdl @rec_apx_xyzdt;
+
             # Get estimated receiver position and solution variances:
             ( $ref_rec_est_xyzdt,
               $ref_rec_var_xyzdt ) = GetReceiverPositionSolution(
-                                        pdl \@rec_apx_xyzdt,
+                                        $pdl_rec_apx_xyzdt,
                                         $pdl_parameter_vector,
                                         $pdl_covariance_matrix
                                       );
@@ -355,6 +319,7 @@ sub ComputeRecPosition {
                                        $ref_gen_conf->{CONVERGENCE_THRESHOLD});
 
           } else {
+
             # If LSQ estimation was not successful, raise a warning and last
             # the iteration loop, so the next epoch can be processed:
             RaiseWarning($fh_log, WARN_NOT_SUCCESSFUL_LSQ_ESTIMATION,
@@ -363,10 +328,11 @@ sub ComputeRecPosition {
               "This is most likely due to a non-redundant LSQ matrix system, ".
               "where the number of observations are equal or less than the ".
               "number of parameters to be estimated.");
+
             # Set iteration status and exit the iteration loop:
             $iter_status = FALSE; last;
-          } # end if defined $pdl_parameter_vector
 
+          } # end if defined $pdl_parameter_vector
         } # end until $convergence_flag or $iteration == MAX_NUM_ITER
 
 
@@ -542,7 +508,8 @@ sub SetPseudorangeEquation {
 sub GetReceiverPositionSolution {
   my ($pdl_apx_parameters, $pdl_parameter_vector, $pdl_covar_matrix ) = @_;
 
-  my @rec_est_xyzdt = list($pdl_apx_parameters + $pdl_parameter_vector);
+  my @rec_est_xyzdt =
+    list($pdl_apx_parameters + transpose($pdl_parameter_vector));
 
   # Retrieve estimated parameter variances from covariance matrix:
   my @rec_var_xyzdt = ( list($pdl_covar_matrix->slice('0,0')),
