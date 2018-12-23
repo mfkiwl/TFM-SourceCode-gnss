@@ -81,7 +81,7 @@ sub LoadElipsoidEntries {
   $ref_elip_entries->{HAYFORD} = \%hayford;
 
   # Compute rest of elipsoid parameters for all entries:
-  for my $elip (keys $ref_elip_entries)
+  for my $elip (keys %{$ref_elip_entries})
   {
     my ($a, $f) =
        ($ref_elip_entries->{$elip}{SEMIMAJOR_AXIS},

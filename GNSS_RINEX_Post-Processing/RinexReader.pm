@@ -480,7 +480,7 @@ sub ReadObservationRinexV3 {
   }
 
   # Check that selected signals from configuration are present in RINEX header
-  for my $sat_sys (keys $ref_gen_conf->{SELECTED_SIGNALS})
+  for my $sat_sys (keys %{$ref_gen_conf->{SELECTED_SIGNALS}})
   {
     my $sel_signal    = $ref_gen_conf->{SELECTED_SIGNALS}{$sat_sys};
     my @avail_signals = @{$ref_rinex_header->{SYS_OBS_TYPES}{$sat_sys}{OBS}};
@@ -698,7 +698,7 @@ sub CheckRinexHeaderMandatory {
   my $status = TRUE;
 
   # Check that all mandatory parameters are defined:
-  for my $parameter ( keys $ref_rinex_header ) {
+  for my $parameter ( keys %{$ref_rinex_header} ) {
     unless (defined $ref_rinex_header->{$parameter}) {
       # Raise warning into log file:
       $status = FALSE;

@@ -82,7 +82,7 @@ use constant SAASTAMOINEN_B_RANGE  =>
 sub ComputeTropoSaastamoinenDelay {
   my ($zenital, $height) = @_; # [rad], [m]
 
-  # Computation seuquence:
+  # Computation sequence:
     # Temperature estimation [K]:
     my $temp = 291.15 - 0.0065*$height;
 

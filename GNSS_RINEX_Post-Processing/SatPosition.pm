@@ -114,7 +114,7 @@ sub ComputeSatPosition {
   my %sat_sys_nav; my $ref_sat_sys_nav = \%sat_sys_nav;
 
   # Read satellite navigation file and store its contents:
-  for my $sat_sys (keys $ref_gen_conf->{RINEX_NAV_PATH})
+  for my $sat_sys (keys %{$ref_gen_conf->{RINEX_NAV_PATH}})
   {
     # Read file and build navigation hash which stores the navigation data:
     $ref_sat_sys_nav->{$sat_sys} =
@@ -152,7 +152,7 @@ sub ComputeSatPosition {
       my $sat_sys = substr($sat, 0, 1);
 
       # Look for this constellation in the navigation hash:
-      if (grep(/^$sat_sys$/, keys $ref_sat_sys_nav))
+      if (grep(/^$sat_sys$/, keys %{$ref_sat_sys_nav}))
       {
         # Save constellation navigation data:
         my $ref_nav_body = $ref_sat_sys_nav->{$sat_sys}{NAVIGATION};
@@ -167,9 +167,10 @@ sub ComputeSatPosition {
         }
 
         # Determine best ephemerids to compute satellite coordinates:
-        my $sat_eph_epoch =
-          SelectNavigationBlock( $ref_gen_conf->{EPH_TIME_THRESHOLD},
-                                 $obs_epoch, sort(keys $ref_nav_body->{$sat}) );
+        my $sat_eph_epoch = SelectNavigationBlock(
+                              $ref_gen_conf->{EPH_TIME_THRESHOLD},
+                              $obs_epoch, sort(keys %{$ref_nav_body->{$sat}})
+                            );
 
         # Check that the ephemerids have been selected:
         unless ($sat_eph_epoch != FALSE) {

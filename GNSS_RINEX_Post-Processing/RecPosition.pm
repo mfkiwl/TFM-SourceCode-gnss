@@ -189,7 +189,7 @@ sub ComputeRecPosition {
                                           \@ind_term_vector );
 
           # Iterate over the observed satellites:
-          for my $sat (keys $ref_epoch_hash->{SAT_OBS})
+          for my $sat (keys %{$ref_epoch_hash->{SAT_OBS}})
           {
             # Identify GNSS constellation:
             my $sat_sys = substr($sat, 0, 1);
@@ -499,9 +499,9 @@ sub SetPseudorangeEquation {
                        $troposhpere_corr - $ionosphere_corr );
 
   # Append to matrix references:
-    push($ref_design_matrix  , \@design_row);
-    push($ref_weight_vector  , \@weight_row);
-    push($ref_ind_term_vector, \@ind_term_row);
+    push(@{$ref_design_matrix}  , \@design_row);
+    push(@{$ref_weight_vector}  , \@weight_row);
+    push(@{$ref_ind_term_vector}, \@ind_term_row);
 
 }
 
