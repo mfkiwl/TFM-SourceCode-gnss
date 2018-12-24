@@ -128,14 +128,13 @@ sub ComputeSatPosition {
   # ****************************** #
 
   # Iterate over the observation epochs:
-  for (my $i = 0; $i < scalar(@{$ref_rinex_obs->{OBSERVATION}}); $i++)
+  for (my $i = 0; $i < scalar(@{$ref_rinex_obs->{BODY}}); $i++)
   {
     # Save observation epoch:
-    my $obs_epoch = $ref_rinex_obs->{OBSERVATION}[$i]{EPOCH};
+    my $obs_epoch = $ref_rinex_obs->{BODY}[$i]{EPOCH};
 
     # Check observation health status:
-    unless ( $ref_rinex_obs->{OBSERVATION}[$i]{STATUS} ==
-             HEALTHY_OBSERVATION_BLOCK )
+    unless ( $ref_rinex_obs->{BODY}[$i]{STATUS} == HEALTHY_OBSERVATION_BLOCK )
     {
       # Raise warning and jump to the next epoch:
       RasieWarning($fh_log, WARN_OBS_NOT_VALID,
@@ -146,7 +145,7 @@ sub ComputeSatPosition {
     }
 
     # Iterate over the observed satellites in the epoch:
-    for my $sat (keys %{$ref_rinex_obs->{OBSERVATION}[$i]{SAT_OBS}})
+    for my $sat (keys %{$ref_rinex_obs->{BODY}[$i]{SAT_OBS}})
     {
       # Save constellation:
       my $sat_sys = substr($sat, 0, 1);
@@ -155,7 +154,7 @@ sub ComputeSatPosition {
       if (grep(/^$sat_sys$/, keys %{$ref_sat_sys_nav}))
       {
         # Save constellation navigation data:
-        my $ref_nav_body = $ref_sat_sys_nav->{$sat_sys}{NAVIGATION};
+        my $ref_nav_body = $ref_sat_sys_nav->{$sat_sys}{BODY};
 
         # Check that the navigation data is available for the selected
         # satellite:
@@ -189,7 +188,7 @@ sub ComputeSatPosition {
         my $signal =
            $ref_gen_conf->{SELECTED_SIGNALS}{$sat_sys};
         my $obs_meas =
-           $ref_rinex_obs->{OBSERVATION}[$i]{SAT_OBS}{$sat}{$signal};
+           $ref_rinex_obs->{BODY}[$i]{SAT_OBS}{$sat}{$signal};
 
         # Init satelite coordinate array:
         my @sat_coord;
@@ -204,7 +203,7 @@ sub ComputeSatPosition {
 
         # Save the satellite position in the observation hash:
         # If the observation is null, satellite coordinates will be undefined...
-        $ref_rinex_obs->{OBSERVATION}[$i]{SAT_NAV}{$sat} = \@sat_coord;
+        $ref_rinex_obs->{BODY}[$i]{SAT_NAV}{$sat} = \@sat_coord;
 
       } # end if grep($sat, SUPPORTED_SAT_SYS)
 
