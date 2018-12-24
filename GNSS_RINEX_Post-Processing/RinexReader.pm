@@ -496,6 +496,13 @@ sub ReadObservationRinexV3 {
     }
   }
 
+  # TODO:
+  # Check for time configuration against time intervals in rinex header:
+    # Time of first obs vs. Start time: (WARNING)
+    # Time of last obs vs. End time:    (WARNING)
+    # RINEX interval vs. configured interval: (WARNING & set RINEX interval)
+
+
   # Init array to store observations:
   my @rinex_obs_arr;
 
@@ -609,8 +616,8 @@ sub ReadObservationRinexV3 {
   close($fh);
 
   # Combine header and observation hashes:
-  my %rinex_hash = ( OBS_HEADER  => $ref_rinex_header,
-                     OBSERVATION => \@rinex_obs_arr );
+  my %rinex_hash = ( HEAD => $ref_rinex_header,
+                     BODY => \@rinex_obs_arr );
 
   return \%rinex_hash;
 }
@@ -618,8 +625,8 @@ sub ReadObservationRinexV3 {
 sub ReadNavigationRinex {
   my ($file_path, $sat_sys, $fh_log) = @_;
 
-  # Init navigation hash to fill:
-  my (%nav_hash, %nav_body_hash); my $ref_nav_body = \%nav_body_hash;
+  # Init navigation body hash to fill:
+  my %nav_body_hash; my $ref_nav_body = \%nav_body_hash;
 
   # Read navigation header:
   my $ref_nav_header = ReadNavigationRinexHeader($file_path, $fh_log);
@@ -684,13 +691,14 @@ sub ReadNavigationRinex {
   close($fh);
 
   # Fill navigation hash with the header and body hashes:
-  $nav_hash{NAV_HEADER} = $ref_nav_header;
-  $nav_hash{NAVIGATION} = $ref_nav_body;
+  my %nav_hash = ( HEAD => $ref_nav_header,
+                   BODY => $ref_nav_body );
 
   # Subroutine returns the reference to the navigation hash:
   return \%nav_hash;
 }
 
+# TODO: review this sub!
 sub CheckRinexHeaderMandatory {
   my ($ref_rinex_header, $fh_log) = @_;
 
@@ -711,6 +719,7 @@ sub CheckRinexHeaderMandatory {
   return $status;
 }
 
+# TODO: review this sub!
 sub CheckRinexHeaderOptional {
   my ($ref_rinex_header, $fh_log) = @_;
 
