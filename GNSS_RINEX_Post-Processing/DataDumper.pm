@@ -147,7 +147,7 @@ sub DumpObservationData {
   {
     # Observation identifiers:
     my @obs =
-       @{$ref_obs_rinex->{OBS_HEADER}{SYS_OBS_TYPES}{$sat_sys}{OBS}};
+       @{$ref_obs_rinex->{HEAD}{SYS_OBS_TYPES}{$sat_sys}{OBS}};
 
     # Observations for each constellation:
     my $obs_string = "OBS-$sat_sys: ".join($delimiter, @obs);
@@ -164,13 +164,13 @@ sub DumpObservationData {
   }
 
   # Write observations for each constellation:
-  for (my $i = 0; $i < scalar(@{$ref_obs_rinex->{OBSERVATION}}); $i++)
+  for (my $i = 0; $i < scalar(@{$ref_obs_rinex->{BODY}}); $i++)
   {
     # Write epoch and measurements status only when a new epoch is selected:
     my $new_epoch_falg = TRUE;
     my ( $epoch, $satus ) =
-       ( $ref_obs_rinex->{OBSERVATION}[$i]{EPOCH},
-         $ref_obs_rinex->{OBSERVATION}[$i]{STATUS} );
+       ( $ref_obs_rinex->{BODY}[$i]{EPOCH},
+         $ref_obs_rinex->{BODY}[$i]{STATUS} );
 
     # Switch case for epoch format:
     given ($epoch_format) {
@@ -182,7 +182,7 @@ sub DumpObservationData {
 
     print $fh join($delimiter, ( $epoch, $satus ));
 
-    for my $sat (keys $ref_obs_rinex->{OBSERVATION}[$i]{SAT_OBS})
+    for my $sat (keys $ref_obs_rinex->{BODY}[$i]{SAT_OBS})
     {
       # Retrieve contellation:
       my $sat_sys = substr($sat, 0, 1);
@@ -193,12 +193,12 @@ sub DumpObservationData {
       {
         # Observations identifiers:
         my @obs =
-          @{$ref_obs_rinex->{OBS_HEADER}{SYS_OBS_TYPES}{$sat_sys}{OBS}};
+          @{$ref_obs_rinex->{HEAD}{SYS_OBS_TYPES}{$sat_sys}{OBS}};
 
         # Array containing the satellite measurements:
         my @arranged_obs;
         push(@arranged_obs,
-          $ref_obs_rinex->{OBSERVATION}[$i]{SAT_OBS}{$sat}{$_}) for (@obs);
+          $ref_obs_rinex->{BODY}[$i]{SAT_OBS}{$sat}{$_}) for (@obs);
 
         # Write measurments:
         if ( $new_epoch_falg ) {
