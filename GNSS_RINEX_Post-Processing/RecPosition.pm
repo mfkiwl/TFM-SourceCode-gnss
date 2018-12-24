@@ -142,10 +142,10 @@ sub ComputeRecPosition {
     my $first_solution_flag = FALSE;
 
     # Iterate over the observation epochs:
-    for (my $i = 0; $i < scalar(@{$ref_rinex_obs->{OBSERVATION}}); $i += 1)
+    for (my $i = 0; $i < scalar(@{$ref_rinex_obs->{BODY}}); $i += 1)
     {
       #
-      my $ref_epoch_hash = $ref_rinex_obs->{OBSERVATION}[$i];
+      my $ref_epoch_hash = $ref_rinex_obs->{BODY}[$i];
 
       # Init receiver position solution info in observation hash:
       $ref_epoch_hash->{POSITION_SOLUTION}{ STATUS } = FALSE;
@@ -246,13 +246,16 @@ sub ComputeRecPosition {
                   &{$ref_sub_troposphere}( $rec_sat_zenital, $rec_helip );
 
                 # 6. Ionospheric delay correction:
+                # TODO: NAV RINEX V3 does not include IONO_ALPHA and IONO_BETA
+                #       parametes. Furthermore, it depends if they sat is
+                #       GAL or GPS
                 my ($ionosphere_corr, $ionosphere_corr_l2) =
                   &{$ref_sub_iono->{$sat_sys}}
                     ( $epoch,
                       $rec_lat, $rec_lon,
                       $rec_sat_azimut, $rec_sat_elevation,
-                      $ref_sat_sys_nav->{$sat_sys}{NAV_HEADER}{ ION_ALPHA },
-                      $ref_sat_sys_nav->{$sat_sys}{NAV_HEADER}{ ION_BETA  } );
+                      $ref_sat_sys_nav->{$sat_sys}{HEAD}{ ION_ALPHA },
+                      $ref_sat_sys_nav->{$sat_sys}{HEAD}{ ION_BETA  } );
 
                 # 7. Set pseudorange equation:
                 SetPseudorangeEquation( # Inputs:
@@ -386,18 +389,18 @@ sub SelectApproximateParameters {
       # Count back until a valid position solution is found:
       my $count = 1;
       until ($ref_rinex_obs ->
-              {OBSERVATION}[$epoch_index - $count]{POSITION_SOLUTION}{STATUS})
+              {BODY}[$epoch_index - $count]{POSITION_SOLUTION}{STATUS})
       { $count += 1; }
 
       # Set found position solution as approximate parameters:
       @rec_apx_xyzdt =
         @{ $ref_rinex_obs ->
-            {OBSERVATION}[$epoch_index - $count]{POSITION_SOLUTION}{XYZDT} };
+            {BODY}[$epoch_index - $count]{POSITION_SOLUTION}{XYZDT} };
 
     } else {
       # Approximate position parameters come from RINEX header:
       # NOTE: Receiver clock bias is init to 0:
-      @rec_apx_xyzdt = (@{$ref_rinex_obs->{OBS_HEADER}{APX_POSITION}}, 0);
+      @rec_apx_xyzdt = (@{$ref_rinex_obs->{HEAD}{APX_POSITION}}, 0);
     } # end if ($first_solution_flag)
 
   } else {
