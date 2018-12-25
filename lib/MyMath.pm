@@ -7,6 +7,8 @@ package MyMath;
 use Carp;     # traced warnings and errors...
 use strict;   # enables perl strict syntax...
 
+use feature qq(say);
+
 use PDL; # loads Perl Data Language extension...
 
 # Set package exportation properties:
@@ -68,23 +70,20 @@ sub LinearInterpolationFromTable {
 }
 
 sub SolveWeightedLSQ {
-  my ($ref_design_matrix, $ref_weight_vector, $ref_ind_term_vector) = @_;
+  my ($ref_design_matrix, $ref_weight_matrix, $ref_ind_term_matrix) = @_;
 
   # A --> design matrix
   # W --> independent term matrix
   # P --> weight matrix
 
   # Set input references as PDL piddles:
-    my $a     = pdl $ref_design_matrix;
-    my $w     = pdl $ref_ind_term_vector;
-    my $p_row = pdl $ref_weight_vector;
+    my $a = pdl $ref_design_matrix;
+    my $p = pdl $ref_weight_matrix;
+    my $w = pdl $ref_ind_term_matrix;
 
   # ********************* #
   # Prelimary operations: #
   # ********************* #
-
-    # Weights are input as a vector --> make diagonal matrix:
-    my $p = stretcher( transpose($p_row) );
 
     # Retrieve A's dimensions:
     #  m --> number of observations
