@@ -145,20 +145,21 @@ sub ComputeRecPosition {
     for (my $i = 0; $i < scalar(@{$ref_rinex_obs->{BODY}}); $i += 1)
     {
       #
-      my $ref_epoch_hash = $ref_rinex_obs->{BODY}[$i];
+      my $ref_epoch_info = $ref_rinex_obs->{BODY}[$i];
 
       # Init receiver position solution info in observation hash:
-      $ref_epoch_hash->{POSITION_SOLUTION}{ STATUS } = FALSE;
-      $ref_epoch_hash->{POSITION_SOLUTION}{ XYZDT  } = undef;
-      $ref_epoch_hash->{POSITION_SOLUTION}{ SIGMA  } = undef;
+      $ref_epoch_info->{POSITION_SOLUTION}{ STATUS      } = FALSE;
+      $ref_epoch_info->{POSITION_SOLUTION}{ XYZDT       } = undef;
+      $ref_epoch_info->{POSITION_SOLUTION}{ APX_XYZDT   } = undef;
+      $ref_epoch_info->{POSITION_SOLUTION}{ SIGMA_XYZDT } = undef;
 
       # Init references to hold estimated position and associated
       # variances:
       my ($ref_rec_est_xyzdt, $ref_rec_var_xyzdt);
 
       # Save epoch and observation health status:
-      my ($epoch, $epoch_status) = ($ref_epoch_hash->{EPOCH},
-                                    $ref_epoch_hash->{STATUS});
+      my ($epoch, $epoch_status) = ($ref_epoch_info->{EPOCH},
+                                    $ref_epoch_info->{STATUS});
 
       # Discard invalid epochs:
       if ( $epoch_status == HEALTHY_OBSERVATION_BLOCK )
@@ -178,6 +179,9 @@ sub ComputeRecPosition {
                                          $ref_rinex_obs, $i,
                                          \@iter_solution, $iteration );
 
+          # Fill approximate parameters in epoch info hash:
+          $ref_epoch_info->{POSITION_SOLUTION}{APX_XYZDT} = \@rec_apx_xyzdt;
+
           # Init LSQ matrix system as arrays:
           my @design_matrix; my @weight_vector; my @ind_term_vector;
 
@@ -189,20 +193,20 @@ sub ComputeRecPosition {
                                           \@ind_term_vector );
 
           # Iterate over the observed satellites:
-          for my $sat (keys %{$ref_epoch_hash->{SAT_OBS}})
+          for my $sat (keys %{$ref_epoch_info->{SAT_OBS}})
           {
             # Identify GNSS constellation:
             my $sat_sys = substr($sat, 0, 1);
 
             # Get receiver-satellite observation measurement:
             my $signal  = $ref_gen_conf->{SELECTED_SIGNALS}{$sat_sys};
-            my $raw_obs = $ref_epoch_hash->{SAT_OBS}{$sat}{$signal};
+            my $raw_obs = $ref_epoch_info->{SAT_OBS}{$sat}{$signal};
 
             # Discard NULL observations:
             unless ( $raw_obs eq NULL_OBSERVATION )
             {
               # Save satellite coordinates:
-              my @sat_xyztc = @{ $ref_epoch_hash->{SAT_NAV}{$sat} };
+              my @sat_xyztc = @{ $ref_epoch_info->{SAT_NAV}{$sat} };
 
               # ************************************ #
               # Build pseudorange equation sequence: #
@@ -357,9 +361,9 @@ sub ComputeRecPosition {
           # observation rinex hash:
           # NOTE: receiver solution and standard deviations come from last
           #       iteration solution
-          $ref_epoch_hash->{POSITION_SOLUTION}{ STATUS } = TRUE;
-          $ref_epoch_hash->{POSITION_SOLUTION}{ XYZDT  } = $ref_rec_est_xyzdt;
-          $ref_epoch_hash->{POSITION_SOLUTION}{ SIGMA  } = \@rec_sigma;
+          $ref_epoch_info->{POSITION_SOLUTION}{ STATUS } = TRUE;
+          $ref_epoch_info->{POSITION_SOLUTION}{ XYZDT  } = $ref_rec_est_xyzdt;
+          $ref_epoch_info->{POSITION_SOLUTION}{ SIGMA_XYZDT } = \@rec_sigma;
 
         } # end if $iter_status
 
