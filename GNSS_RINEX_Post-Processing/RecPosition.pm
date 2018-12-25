@@ -72,6 +72,9 @@ BEGIN {
 # GLobal contants:
 # ---------------------------------------------------------------------------- #
 
+# Number of position parameters to estimate with LSQ algorithm:
+use constant NUM_PARAMETERS_TO_ESTIMATE => 4;
+
 # Module specific warning codes:
 use constant {
   WARN_OBS_NOT_VALID                 => 90301,
@@ -144,7 +147,7 @@ sub ComputeRecPosition {
     # Iterate over the observation epochs:
     for (my $i = 0; $i < scalar(@{$ref_rinex_obs->{BODY}}); $i += 1)
     {
-      #
+      # Set reference to epoch information:
       my $ref_epoch_info = $ref_rinex_obs->{BODY}[$i];
 
       # Init receiver position solution info in observation hash:
@@ -164,6 +167,18 @@ sub ComputeRecPosition {
       # Discard invalid epochs:
       if ( $epoch_status == HEALTHY_OBSERVATION_BLOCK )
       {
+        # Build list of satellites to enter LSQ algorithm:
+        my @sat_to_lsq = SelectSatForLSQ( $ref_gen_conf,
+                                          $ref_epoch_info,
+                                          $first_solution_flag,
+                                          $ref_rinex_obs, $i );
+
+        # NOTE: temporal print
+        say "At epoch $epoch (".BuildDateString(GPS2Date($epoch)).") : ";
+        say "Sats in obs     : ", join(', ', (keys %{$ref_epoch_info->{SAT_OBS}}));
+        say "Sats for LSQ    : ", join(', ', @sat_to_lsq);
+        say "*Num of sat     : ", scalar(@sat_to_lsq);
+
         # Init iteration information:
         my @iter_solution; # 2D matrix to save the iteration solutions...
         my ($iteration, $iter_status, $convergence_flag) = (0, FALSE, FALSE);
@@ -182,105 +197,34 @@ sub ComputeRecPosition {
           # Fill approximate parameters in epoch info hash:
           $ref_epoch_info->{POSITION_SOLUTION}{APX_XYZDT} = \@rec_apx_xyzdt;
 
-          # Init LSQ matrix system as arrays:
-          my @design_matrix; my @weight_vector; my @ind_term_vector;
-
-          # Build LSQ matrix system array references:
+          # Initialize LSQ matrix system:
           my ( $ref_design_matrix,
-               $ref_weight_vector,
-               $ref_ind_term_vector ) = ( \@design_matrix,
-                                          \@weight_vector,
-                                          \@ind_term_vector );
+               $ref_weight_matrix,
+               $ref_ind_term_matrix ) = InitLSQ( scalar(@sat_to_lsq),
+                                                 NUM_PARAMETERS_TO_ESTIMATE );
 
-          # Iterate over the observed satellites:
-          for my $sat (keys %{$ref_epoch_info->{SAT_OBS}})
-          {
-            # Identify GNSS constellation:
-            my $sat_sys = substr($sat, 0, 1);
+          # NOTE: temporal print
+          say "Initialized LSQ matrix system : ";
+          say "Design matrix:"; print Dumper $ref_design_matrix;
+          say "Weight matrix:"; print Dumper $ref_weight_matrix;
+          say "Ind. Term matrix:"; print Dumper $ref_ind_term_matrix;
 
-            # Get receiver-satellite observation measurement:
-            my $signal  = $ref_gen_conf->{SELECTED_SIGNALS}{$sat_sys};
-            my $raw_obs = $ref_epoch_info->{SAT_OBS}{$sat}{$signal};
+          # Build up LSQ matrix system:
+          BuildLSQMatrixSystem(
+            $ref_gen_conf,
+            $ref_sat_sys_nav,
+            $epoch, $ref_epoch_info,
+            \@rec_apx_xyzdt, \@sat_to_lsq,
+            $ref_sub_iono, $ref_sub_troposphere,
+            $ref_design_matrix, $ref_weight_matrix, $ref_ind_term_matrix
+          );
 
-            # Discard NULL observations:
-            unless ( $raw_obs eq NULL_OBSERVATION )
-            {
-              # Save satellite coordinates:
-              my @sat_xyztc = @{ $ref_epoch_info->{SAT_NAV}{$sat} };
+          # NOTE: temporal print
+          say "Filled LSQ matrix system : ";
+          say "Design matrix:"; print Dumper $ref_design_matrix;
+          say "Weight matrix:"; print Dumper $ref_weight_matrix;
+          say "Ind. Term matrix:"; print Dumper $ref_ind_term_matrix;
 
-              # ************************************ #
-              # Build pseudorange equation sequence: #
-              # ************************************ #
-
-              # 1. Retrieve satellite and receiver clock corrections:
-              my ( $sat_clk_bias,
-                   $rec_clk_bias ) = ( $sat_xyztc[3], $rec_apx_xyzdt[3] );
-
-              # 2. Propagate satellite position to the epoch when the receiver
-              #    started to receive its signal
-              my @sat_xyz_recep =
-                 SatPositionFromEmission2Reception( $sat_xyztc     [0],
-                                                    $sat_xyztc     [1],
-                                                    $sat_xyztc     [2],
-                                                    $rec_apx_xyzdt [0],
-                                                    $rec_apx_xyzdt [1],
-                                                    $rec_apx_xyzdt [2], );
-
-              # 3. Receiver-Satellite line of sight:
-              my ($rec_lat, # REC geodetic coordinates
-                  $rec_lon,
-                  $rec_helip,
-                  $rec_sat_ix, # REC-SAT ECEF vector
-                  $rec_sat_iy,
-                  $rec_sat_iz,
-                  $rec_sat_azimut, # REC-SAT polar coordiantes
-                  $rec_sat_zenital,
-                  $rec_sat_distance) = ReceiverSatelliteLoS( $ref_gen_conf,
-                                                             \@rec_apx_xyzdt,
-                                                             \@sat_xyz_recep );
-
-              # Elevation angle is computed as follows:
-              my $rec_sat_elevation = PI/2 - $rec_sat_zenital;
-
-              # 4. Mask filtering:
-              if ( $rec_sat_elevation >= $ref_gen_conf->{SAT_MASK} )
-              {
-                # 5. Tropospheric delay correction:
-                my $troposhpere_corr =
-                  &{$ref_sub_troposphere}( $rec_sat_zenital, $rec_helip );
-
-                # 6. Ionospheric delay correction:
-                # TODO: NAV RINEX V3 does not include IONO_ALPHA and IONO_BETA
-                #       parametes. Furthermore, it depends if they sat is
-                #       GAL or GPS
-                my ($ionosphere_corr, $ionosphere_corr_l2) =
-                  &{$ref_sub_iono->{$sat_sys}}
-                    ( $epoch,
-                      $rec_lat, $rec_lon,
-                      $rec_sat_azimut, $rec_sat_elevation,
-                      $ref_sat_sys_nav->{$sat_sys}{HEAD}{ ION_ALPHA },
-                      $ref_sat_sys_nav->{$sat_sys}{HEAD}{ ION_BETA  } );
-
-                # 7. Set pseudorange equation:
-                SetPseudorangeEquation( # Inputs:
-                                        $raw_obs,
-                                        $rec_sat_ix,
-                                        $rec_sat_iy,
-                                        $rec_sat_iz,
-                                        $sat_clk_bias,
-                                        $rec_clk_bias,
-                                        $ionosphere_corr,
-                                        $troposhpere_corr,
-                                        $rec_sat_distance,
-                                        $rec_sat_elevation,
-                                        # Outputs:
-                                        $ref_design_matrix,
-                                        $ref_weight_vector,
-                                        $ref_ind_term_vector );
-
-              } # end if $elevation >= mask
-            } # end unless obs eq NULL
-          } # end for $sat
 
           # ************************ #
           # LSQ position estimation: #
@@ -291,16 +235,16 @@ sub ComputeRecPosition {
                $pdl_covariance_matrix,
                $pdl_variance_estimator ) = SolveWeightedLSQ (
                                              $ref_design_matrix,
-                                             $ref_weight_vector,
-                                             $ref_ind_term_vector
+                                             $ref_weight_matrix,
+                                             $ref_ind_term_matrix
                                            );
+
+          # Update iteration status:
+          $iter_status = $lsq_status;
 
           # Check for successful LSQ estimation:
           if ( $lsq_status )
           {
-            # Update iteration status:
-            $iter_status = TRUE;
-
             # Set Receiver's approximate parameters as PDL piddle:
             my $pdl_rec_apx_xyzdt = pdl @rec_apx_xyzdt;
 
@@ -336,8 +280,8 @@ sub ComputeRecPosition {
               "where the number of observations are equal or less than the ".
               "number of parameters to be estimated.");
 
-            # Set iteration status and exit the iteration loop:
-            $iter_status = FALSE; last;
+            # Exit iteration loop:
+            last;
 
           } # end if defined $pdl_parameter_vector
         } # end until $convergence_flag or $iteration == MAX_NUM_ITER
@@ -456,9 +400,13 @@ sub ReceiverSatelliteLoS {
                                           $rec_sat_in,
                                           $rec_sat_iu );
 
+  # Rec-Sat elevation is computed as follows:
+  my $rec_sat_elevation = PI - $rec_sat_zenital;
+
   return ( $rec_lat, $rec_lon, $rec_helip,
            $rec_sat_ix, $rec_sat_iy, $rec_sat_iz,
-           $rec_sat_azimut, $rec_sat_zenital, $rec_sat_distance );
+           $rec_sat_azimut, $rec_sat_zenital,
+           $rec_sat_distance, $rec_sat_elevation );
 }
 
 sub SatPositionFromEmission2Reception {
@@ -479,37 +427,235 @@ sub SatPositionFromEmission2Reception {
                                                                 $sat_z);
 }
 
+sub SelectSatForLSQ {
+  my ($ref_gen_conf, $ref_epoch_info,
+      $first_solution_flag, $ref_rinex_obs, $i, ) = @_;
+
+  # Init arrays for storing selected and non-selected satellites for LSQ
+  # algorithm:
+  my @sat_to_lsq;
+  my @sat_not_to_lsq;
+
+  # Iterate over observed satellites:
+  for my $sat (keys %{$ref_epoch_info->{SAT_OBS}})
+  {
+    # Save satellite navigation coordinates:
+    my @sat_xyztc = @{$ref_epoch_info->{SAT_NAV}{$sat}};
+
+    # Select aproximate recevier position:
+    my @rec_apx_xyzdt =
+      SelectApproximateParameters( $first_solution_flag,
+                                   $ref_rinex_obs, $i,
+                                   undef, FALSE );
+
+    # Propagate satellite coordinates due to the signal flight time:
+    my @sat_xyz_recep =
+      SatPositionFromEmission2Reception( $sat_xyztc     [0],
+                                         $sat_xyztc     [1],
+                                         $sat_xyztc     [2],
+                                         $rec_apx_xyzdt [0],
+                                         $rec_apx_xyzdt [1],
+                                         $rec_apx_xyzdt [2] );
+
+    # Save propagated coordinates in epoch info hash:
+    $ref_epoch_info->{SAT_POS}{$sat} = [ @sat_xyztc, $sat_xyztc[3] ];
+
+    # Compute Rec-Sat LoS info:
+    my ($rec_lat, # REC geodetic coordinates
+        $rec_lon,
+        $rec_helip,
+        $rec_sat_ix, # REC-SAT ECEF vector
+        $rec_sat_iy,
+        $rec_sat_iz,
+        $rec_sat_azimut, # REC-SAT polar coordiantes
+        $rec_sat_zenital,
+        $rec_sat_distance,
+        $rec_sat_elevation) = ReceiverSatelliteLoS( $ref_gen_conf,
+                                                   \@rec_apx_xyzdt,
+                                                   \@sat_xyz_recep );
+
+    # 3. Determine if sat accomplishes selection criteria:
+    #    Mask criteria is only assumed
+    if ($rec_sat_elevation >= $ref_gen_conf->{SAT_MASK}) {
+      push(@sat_to_lsq, $sat);
+    } else {
+      push(@sat_not_to_lsq, $sat);
+    }
+
+  } # end for $sat
+
+  # Return list of selected satellites:
+  return @sat_to_lsq;
+}
+
+sub InitLSQ {
+  my ($num_obs, $num_prm, $init_value) = @_;
+
+  # Default init value:
+  $init_value = 0 unless $init_value;
+
+  # Deisgn Matrix [ nobs x nprm ]:
+  my @design_matrix;
+  for (my $i = 0; $i < $num_obs; $i += 1) {
+    for (my $j = 0; $j < $num_prm; $j += 1) {
+      $design_matrix[$i][$j] = $init_value;
+    }
+  }
+
+  # Weight matrix [ nobs x nobs ]:
+  my @weight_matrix;
+  for (my $i = 0; $i < $num_obs; $i += 1) {
+    for (my $j = 0; $j < $num_obs; $j += 1) {
+      $weight_matrix[$i][$j] = $init_value;
+    }
+  }
+
+  # Independent term matrix [ nobs x 1 ]:
+  my @ind_term_matrix;
+  for (my $i = 0; $i < $num_obs; $i += 1) {
+    for (my $j = 0; $j < 1; $j += 1) {
+      $ind_term_matrix[$i][$j] = $init_value;
+    }
+  }
+
+  # Return marix references:
+  return ( \@design_matrix, \@weight_matrix, \@ind_term_matrix );
+}
+
+sub BuildLSQMatrixSystem {
+  my ($ref_gen_conf,
+      $ref_sat_sys_nav,
+      $epoch, $ref_epoch_info,
+      $ref_rec_apx_xyzdt, $ref_sat_to_lsq,
+      $ref_sub_iono, $ref_sub_troposphere,
+      $ref_design_matrix, $ref_weight_matrix, $ref_ind_term_matrix) = @_;
+
+  # De-reference input arguments:
+  my @sat_to_lsq = @{$ref_sat_to_lsq};
+  my @rec_apx_xyzdt = @{$ref_rec_apx_xyzdt};
+
+  # Iterate over the selected satellites for LSQ:
+  for (my $j = 0; $j < scalar(@sat_to_lsq); $j += 1)
+  {
+    # Identify satellite ID and constellation:
+    my $sat = $sat_to_lsq[$j];
+    my $sat_sys = substr($sat, 0, 1);
+
+    # Get receiver-satellite observation measurement:
+    my $signal  = $ref_gen_conf   -> {SELECTED_SIGNALS}{$sat_sys};
+    my $raw_obs = $ref_epoch_info -> {SAT_OBS}{$sat}{$signal};
+
+    # Discard NULL observations:
+    unless ( $raw_obs eq NULL_OBSERVATION )
+    {
+      # Save satellite coordinates:
+      my @sat_xyztc = @{ $ref_epoch_info->{SAT_POS}{$sat} };
+
+      # ************************************ #
+      # Build pseudorange equation sequence: #
+      # ************************************ #
+
+      # 1. Retrieve satellite and receiver clock corrections:
+      my ( $sat_clk_bias,
+           $rec_clk_bias ) = ( $sat_xyztc[3], $rec_apx_xyzdt[3] );
+
+      # 2. Receiver-Satellite line of sight:
+      my ($rec_lat, # REC geodetic coordinates
+          $rec_lon,
+          $rec_helip,
+          $rec_sat_ix, # REC-SAT ECEF vector
+          $rec_sat_iy,
+          $rec_sat_iz,
+          $rec_sat_azimut, # REC-SAT polar coordiantes
+          $rec_sat_zenital,
+          $rec_sat_distance,
+          $rec_sat_elevation) = ReceiverSatelliteLoS( $ref_gen_conf,
+                                                      \@rec_apx_xyzdt,
+                                                      \@sat_xyztc );
+
+      # 3. Tropospheric delay correction:
+      my $troposhpere_corr =
+        &{$ref_sub_troposphere}( $rec_sat_zenital, $rec_helip );
+
+      # 4. Ionospheric delay correction:
+      # TODO: NAV RINEX V3 does not include IONO_ALPHA and IONO_BETA
+      #       parametes. Furthermore, it depends if they sat is
+      #       GAL or GPS
+      my ($ionosphere_corr, $ionosphere_corr_l2) =
+        &{$ref_sub_iono->{$sat_sys}}
+          ( $epoch,
+            $rec_lat, $rec_lon,
+            $rec_sat_azimut, $rec_sat_elevation,
+            $ref_sat_sys_nav->{$sat_sys}{HEAD}{ ION_ALPHA },
+            $ref_sat_sys_nav->{$sat_sys}{HEAD}{ ION_BETA  } );
+
+      # Save LoS data in epoch info hash:
+      # TODO: consider a sub for this task
+      # TODO: also, consider to init SAT_LOS for each sat
+      $ref_epoch_info->{SAT_LOS}{$sat}->{AZIMUT} = $rec_sat_azimut;
+      $ref_epoch_info->{SAT_LOS}{$sat}->{ZENITAL} = $rec_sat_zenital;
+      $ref_epoch_info->{SAT_LOS}{$sat}->{DISTANCE} = $rec_sat_distance;
+      $ref_epoch_info->{SAT_LOS}{$sat}->{ELEVATION} = $rec_sat_elevation;
+      $ref_epoch_info->{SAT_LOS}{$sat}->{IONO_CORR} = $ionosphere_corr;
+      $ref_epoch_info->{SAT_LOS}{$sat}->{TROPO_CORR} = $troposhpere_corr;
+      $ref_epoch_info->{SAT_LOS}{$sat}->{ECEF_VECTOR} =
+        [ $rec_sat_ix, $rec_sat_iy, $rec_sat_iz ];
+
+      # NOTE: temporal print
+      say "Satellite $sat LoS Data:";
+      print Dumper $ref_epoch_info;
+
+      # 5. Set pseudorange equation:
+      SetPseudorangeEquation( # Inputs:
+                              $j,
+                              $raw_obs,
+                              $rec_sat_ix,
+                              $rec_sat_iy,
+                              $rec_sat_iz,
+                              $sat_clk_bias,
+                              $rec_clk_bias,
+                              $ionosphere_corr,
+                              $troposhpere_corr,
+                              $rec_sat_distance,
+                              $rec_sat_elevation,
+                              # Outputs:
+                              $ref_design_matrix,
+                              $ref_weight_matrix,
+                              $ref_ind_term_matrix );
+
+    } # end unless obs eq NULL
+  } # end for $sat
+
+
+}
+
 sub SetPseudorangeEquation {
   my ( # Inputs:
+        $iobs,
         $raw_obs,
         $ix, $iy, $iz,
         $sat_clk_bias, $rec_clk_bias,
         $ionosphere_corr, $troposhpere_corr,
         $rec_sat_distance, $rec_sat_elevation,
        # Outputs:
-        $ref_design_matrix, $ref_weight_vector, $ref_ind_term_vector ) = @_;
+        $ref_design_matrix, $ref_weight_matrix, $ref_ind_term_matrix ) = @_;
 
   # 1. Design matrix row elements:
-  my @design_row = ( -1*($ix/$rec_sat_distance),
-                     -1*($iy/$rec_sat_distance),
-                     -1*($iz/$rec_sat_distance),
-                      1 );
+  $ref_design_matrix->[$iobs][0] = -1*($ix/$rec_sat_distance);
+  $ref_design_matrix->[$iobs][1] = -1*($iy/$rec_sat_distance);
+  $ref_design_matrix->[$iobs][2] = -1*($iz/$rec_sat_distance);
+  $ref_design_matrix->[$iobs][3] =  1;
 
   # 2. Weight term row element:
   my $ep2 = 1.5*0.3; # TODO: Review Hofmann et al. 2008
                      # Seems like a coeficient for P2 observable
-  my @weight_row = ( sin($rec_sat_elevation)**2/$ep2**2 );
+  $ref_weight_matrix->[$iobs][$iobs] = sin($rec_sat_elevation)**2/$ep2**2;
 
   # 3. Independent term row elements:
-  my @ind_term_row = ( $raw_obs - $rec_sat_distance -
-                       $rec_clk_bias + SPEED_OF_LIGHT*$sat_clk_bias -
-                       $troposhpere_corr - $ionosphere_corr );
-
-  # Append to matrix references:
-    push(@{$ref_design_matrix}  , \@design_row);
-    push(@{$ref_weight_vector}  , \@weight_row);
-    push(@{$ref_ind_term_vector}, \@ind_term_row);
-
+  my $ind_term = ( $raw_obs - $rec_sat_distance -
+                   $rec_clk_bias + SPEED_OF_LIGHT*$sat_clk_bias -
+                   $troposhpere_corr - $ionosphere_corr );
+  $ref_ind_term_matrix->[$iobs][0] = $ind_term;
 }
 
 sub GetReceiverPositionSolution {
