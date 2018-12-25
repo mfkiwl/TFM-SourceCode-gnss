@@ -125,7 +125,7 @@ sub ComputeTropoSaastamoinenDelay {
     #   "Tropo correction  = $dtropo");
 
   # Return tropospheric delay:
-  return $dtropo; # [m]
+  return list($dtropo); # [m]
 }
 
 sub ComputeIonoKlobucharDelay {
