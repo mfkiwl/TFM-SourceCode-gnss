@@ -173,12 +173,6 @@ sub ComputeRecPosition {
                                           $first_solution_flag,
                                           $ref_rinex_obs, $i );
 
-        # NOTE: temporal print
-        say "At epoch $epoch (".BuildDateString(GPS2Date($epoch)).") : ";
-        say "Sats in obs     : ", join(', ', (keys %{$ref_epoch_info->{SAT_OBS}}));
-        say "Sats for LSQ    : ", join(', ', @sat_to_lsq);
-        say "*Num of sat     : ", scalar(@sat_to_lsq);
-
         # Init iteration information:
         my @iter_solution; # 2D matrix to save the iteration solutions...
         my ($iteration, $iter_status, $convergence_flag) = (0, FALSE, FALSE);
@@ -203,12 +197,6 @@ sub ComputeRecPosition {
                $ref_ind_term_matrix ) = InitLSQ( scalar(@sat_to_lsq),
                                                  NUM_PARAMETERS_TO_ESTIMATE );
 
-          # NOTE: temporal print
-          say "Initialized LSQ matrix system : ";
-          say "Design matrix:"; print Dumper $ref_design_matrix;
-          say "Weight matrix:"; print Dumper $ref_weight_matrix;
-          say "Ind. Term matrix:"; print Dumper $ref_ind_term_matrix;
-
           # Build up LSQ matrix system:
           BuildLSQMatrixSystem(
             $ref_gen_conf,
@@ -218,13 +206,6 @@ sub ComputeRecPosition {
             $ref_sub_iono, $ref_sub_troposphere,
             $ref_design_matrix, $ref_weight_matrix, $ref_ind_term_matrix
           );
-
-          # NOTE: temporal print
-          say "Filled LSQ matrix system : ";
-          say "Design matrix:"; print Dumper $ref_design_matrix;
-          say "Weight matrix:"; print Dumper $ref_weight_matrix;
-          say "Ind. Term matrix:"; print Dumper $ref_ind_term_matrix;
-
 
           # ************************ #
           # LSQ position estimation: #
@@ -439,49 +420,64 @@ sub SelectSatForLSQ {
   # Iterate over observed satellites:
   for my $sat (keys %{$ref_epoch_info->{SAT_OBS}})
   {
-    # Save satellite navigation coordinates:
-    my @sat_xyztc = @{$ref_epoch_info->{SAT_NAV}{$sat}};
+    # Get constellation:
+    my $sat_sys = substr($sat, 0, 1);
+    
+    # Get receiver-satellite observation measurement:
+    my $signal  = $ref_gen_conf   -> {SELECTED_SIGNALS}{$sat_sys};
+    my $raw_obs = $ref_epoch_info -> {SAT_OBS}{$sat}{$signal};
 
-    # Select aproximate recevier position:
-    my @rec_apx_xyzdt =
-      SelectApproximateParameters( $first_solution_flag,
-                                   $ref_rinex_obs, $i,
-                                   undef, FALSE );
+    # Discard NULL observations:
+    unless ( $raw_obs eq NULL_OBSERVATION )
+    {
+      # Save satellite navigation coordinates:
+      my @sat_xyztc = @{$ref_epoch_info->{SAT_NAV}{$sat}};
 
-    # Propagate satellite coordinates due to the signal flight time:
-    my @sat_xyz_recep =
-      SatPositionFromEmission2Reception( $sat_xyztc     [0],
-                                         $sat_xyztc     [1],
-                                         $sat_xyztc     [2],
-                                         $rec_apx_xyzdt [0],
-                                         $rec_apx_xyzdt [1],
-                                         $rec_apx_xyzdt [2] );
+      unless (@sat_xyztc) {
+        say "Sat XYZ for $sat, at ", $ref_epoch_info->{EPOCH};
+        print Dumper $ref_epoch_info;
+      }
 
-    # Save propagated coordinates in epoch info hash:
-    $ref_epoch_info->{SAT_POS}{$sat} = [ @sat_xyztc, $sat_xyztc[3] ];
+      # Select aproximate recevier position:
+      my @rec_apx_xyzdt =
+        SelectApproximateParameters( $first_solution_flag,
+                                     $ref_rinex_obs, $i,
+                                     undef, FALSE );
 
-    # Compute Rec-Sat LoS info:
-    my ($rec_lat, # REC geodetic coordinates
-        $rec_lon,
-        $rec_helip,
-        $rec_sat_ix, # REC-SAT ECEF vector
-        $rec_sat_iy,
-        $rec_sat_iz,
-        $rec_sat_azimut, # REC-SAT polar coordiantes
-        $rec_sat_zenital,
-        $rec_sat_distance,
-        $rec_sat_elevation) = ReceiverSatelliteLoS( $ref_gen_conf,
-                                                   \@rec_apx_xyzdt,
-                                                   \@sat_xyz_recep );
+      # Propagate satellite coordinates due to the signal flight time:
+      my @sat_xyz_recep =
+        SatPositionFromEmission2Reception( $sat_xyztc     [0],
+                                           $sat_xyztc     [1],
+                                           $sat_xyztc     [2],
+                                           $rec_apx_xyzdt [0],
+                                           $rec_apx_xyzdt [1],
+                                           $rec_apx_xyzdt [2] );
 
-    # 3. Determine if sat accomplishes selection criteria:
-    #    Mask criteria is only assumed
-    if ($rec_sat_elevation >= $ref_gen_conf->{SAT_MASK}) {
-      push(@sat_to_lsq, $sat);
-    } else {
-      push(@sat_not_to_lsq, $sat);
-    }
+      # Save propagated coordinates in epoch info hash:
+      $ref_epoch_info->{SAT_POS}{$sat} = [ @sat_xyztc, $sat_xyztc[3] ];
 
+      # Compute Rec-Sat LoS info:
+      my ($rec_lat, # REC geodetic coordinates
+          $rec_lon,
+          $rec_helip,
+          $rec_sat_ix, # REC-SAT ECEF vector
+          $rec_sat_iy,
+          $rec_sat_iz,
+          $rec_sat_azimut, # REC-SAT polar coordiantes
+          $rec_sat_zenital,
+          $rec_sat_distance,
+          $rec_sat_elevation) = ReceiverSatelliteLoS( $ref_gen_conf,
+                                                     \@rec_apx_xyzdt,
+                                                     \@sat_xyz_recep );
+
+      # 3. Determine if sat accomplishes selection criteria:
+      #    Mask criteria is only assumed
+      if ($rec_sat_elevation >= $ref_gen_conf->{SAT_MASK}) {
+        push(@sat_to_lsq, $sat);
+      } else {
+        push(@sat_not_to_lsq, $sat);
+      }
+    } # end unless $raw_obs eq NULL_OBSERVATION
   } # end for $sat
 
   # Return list of selected satellites:
@@ -600,10 +596,6 @@ sub BuildLSQMatrixSystem {
       $ref_epoch_info->{SAT_LOS}{$sat}->{TROPO_CORR} = $troposhpere_corr;
       $ref_epoch_info->{SAT_LOS}{$sat}->{ECEF_VECTOR} =
         [ $rec_sat_ix, $rec_sat_iy, $rec_sat_iz ];
-
-      # NOTE: temporal print
-      say "Satellite $sat LoS Data:";
-      print Dumper $ref_epoch_info;
 
       # 5. Set pseudorange equation:
       SetPseudorangeEquation( # Inputs:
