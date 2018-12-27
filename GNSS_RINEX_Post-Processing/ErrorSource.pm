@@ -73,6 +73,8 @@ use constant SAASTAMOINEN_B_DOMAIN =>
 use constant SAASTAMOINEN_B_RANGE  =>
   [1.156, 1.079, 1.006, 0.938, 0.874, 0.813, 0.757, 0.654, 0.563]; # [m]
 
+use constant GPS_SQUARED_L1_L2_DIVISION => ( GPS_L1_FREQ / GPS_L2_FREQ )**2;
+
 # ---------------------------------------------------------------------------- #
 # Subroutines:
 # ---------------------------------------------------------------------------- #
@@ -125,7 +127,8 @@ sub ComputeTropoSaastamoinenDelay {
     #   "Tropo correction  = $dtropo");
 
   # Return tropospheric delay:
-  return list($dtropo); # [m]
+  # NOTE: apply piddle to scalar transformation
+  return sclr($dtropo); # [m]
 }
 
 sub ComputeIonoKlobucharDelay {
@@ -205,7 +208,8 @@ sub ComputeIonoKlobucharDelay {
     $iono_delay_l1 *= SPEED_OF_LIGHT;
 
     # TODO: Compute ionospheric time delay for L2 [m]:
-    my $iono_delay_l2;
+    #       How to handle this?
+    my $iono_delay_l2 = GPS_SQUARED_L1_L2_DIVISION*$iono_delay_l1;
 
     # PrintTitle3(*STDOUT, "Ionosphere Klobuchar computed parameters:");
     # PrintBulletedInfo(*STDOUT, "\t\t - ",
@@ -216,7 +220,8 @@ sub ComputeIonoKlobucharDelay {
     #   "Iono delay amplitude = $iono_amplitude",
     #   "Iono delay period    = $iono_period",
     #   "Slant factor         = $slant_fact",
-    #   "Iono delay at L1     = $iono_delay_l1");
+    #   "Iono delay at L1     = $iono_delay_l1",
+    #   "Iono delay at L2     = $iono_delay_l2");
 
 
   # Return ionospheric delays for both frequencies:
