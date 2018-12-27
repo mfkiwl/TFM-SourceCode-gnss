@@ -203,23 +203,14 @@ sub ComputeSatPosition {
 
         # Save the satellite position in the observation hash:
         # If the observation is null, satellite coordinates will be undefined...
-        $ref_rinex_obs->{BODY}[$i]{SAT_NAV}{$sat} = \@sat_coord;
+        $ref_rinex_obs->{BODY}[$i]{SAT_XYZTC}{$sat}{NAV} = \@sat_coord;
 
       } # end if grep($sat, SUPPORTED_SAT_SYS)
 
     } # end for $sat
   } # end for $i
 
-  # NOTE: Iterate over the satellites of the selected constellation from
-  # $ref_sat_sys_list and those stored in the observation hash. For every
-  # epoch and each satellite, the algorithm determines the most appropiate
-  # ephemerids and from it computes the satellite coordinates for the
-  # selected PRN, in the observation epoch.
-
-  # NOTE: do we need the navigation data to be returned? Satellite positons are
-  #       already in observation hash.
-  # NOTE: yes we do, we also need the navigation header parameters of each
-  #       satellite system
+  # Return contellation navigation data hash:
   return $ref_sat_sys_nav;
 }
 
@@ -362,13 +353,13 @@ sub ComputeSatelliteCoordinates {
       $ref_eph->{ECCENTRICITY}*sin($e);
 
     # Total group delay correction:
-    # Frequencies are selected based on... # NOTE: how to handle this?
-    my ( $freq1, $freq2 ) = ( 1, 1 );
+    # TODO: Frequencies are selected based on... # NOTE: how to handle this?
+    #       This must be based on the constellation and the selected signal
+    my ( $freq1, $freq2 ) = ( GPS_L1_FREQ, GPS_L2_FREQ );
     my $delta_tgd = (($freq1/$freq2)**2)*$ref_eph->{TGD};
-    $delta_tgd = 0; # WARNING: set to 0, peding to evalute method!
 
     # Compute final time correction:
-    my $time_corr = $time_corr2 + $delta_trel + $delta_tgd;
+    my $time_corr = $time_corr2 + $delta_trel - $delta_tgd;
 
 
   # Return final satellite coordinates and time correction:
