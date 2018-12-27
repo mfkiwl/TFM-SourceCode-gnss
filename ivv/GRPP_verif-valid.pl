@@ -54,7 +54,7 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
 # Load general configuration:
   my $ref_gen_conf = LoadConfiguration($path_conf_file);
 
-  print Dumper $ref_gen_conf;
+  # print Dumper $ref_gen_conf;
 
   if ($ref_gen_conf == KILLED) {
     croak "*** ERROR *** Failed when reading configuration file: $path_conf_file"
@@ -77,8 +77,8 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
   ReportElapsedTime([gettimeofday], $ini_rinex_obs_time_stamp, "OBS RINEX");
   $MEM_USAGE->record('After storing RINEX observation data');
 
-  print Dumper $ref_obs_data->{HEAD};
-  print Dumper $ref_obs_data->{BODY}[0];
+  # print Dumper $ref_obs_data->{HEAD};
+  # print Dumper $ref_obs_data->{BODY}[0];
 
 # Compute satellite positions:
   my $ini_rinex_nav_time_stamp = [gettimeofday];
@@ -91,14 +91,14 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
   ReportElapsedTime([gettimeofday], $ini_rinex_nav_time_stamp, "NAV RINEX");
   $MEM_USAGE->record('After storing RINEX navigation data');
 
-  print Dumper $ref_gps_nav_rinex->{G}{HEAD};
-  say "GPS SV with ephemerids data: ",
-    join(', ', (keys %{$ref_gps_nav_rinex->{G}{BODY}}));
-  say "GPS PRN 12 ephemerids epochs: ",
-    join(', ', (keys %{$ref_gps_nav_rinex->{G}{BODY}{G12}}));
-  print Dumper $ref_gps_nav_rinex->{G}{BODY}{G12}{982922400};
-
-  print Dumper $ref_obs_data->{BODY}[0];
+  # print Dumper $ref_gps_nav_rinex->{G}{HEAD};
+  # say "GPS SV with ephemerids data: ",
+  #   join(', ', (keys %{$ref_gps_nav_rinex->{G}{BODY}}));
+  # say "GPS PRN 12 ephemerids epochs: ",
+  #   join(', ', (keys %{$ref_gps_nav_rinex->{G}{BODY}{G12}}));
+  # print Dumper $ref_gps_nav_rinex->{G}{BODY}{G12}{982922400};
+  #
+  # print Dumper $ref_obs_data->{BODY}[0];
 
 # Compute Receiver positions:
   my $ini_rec_position_time_stamp = [gettimeofday];
@@ -126,7 +126,16 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
     print Dumper $ref_obs_data->{BODY}[$_]{POSITION_SOLUTION};
   }
 
-  print Dumper $ref_obs_data->{BODY}[0];
+  # print Dumper $ref_obs_data->{BODY}[0];
+
+
+  # say "\nLSQ iterations:";
+  # for (sort(keys %{$ref_obs_data->{BODY}[0]{LSQ_INFO}})) {
+  #   say $_;
+  #   print Dumper $ref_obs_data->{BODY}[0]{LSQ_INFO}{$_};
+  # }
+  # say "\nPOSTION SOLUTION:";
+  # print Dumper $ref_obs_data->{BODY}[0]{POSITION_SOLUTION}; exit 0;
 
 # Terminal:
   # Close output log file:
