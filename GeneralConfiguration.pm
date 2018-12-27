@@ -424,12 +424,10 @@ sub LoadConfiguration {
     }
 
     # Position convergenece sub-section:
-    # NOTE: iterations will range from 0 to iterations - 1. Thus, the number of
-    #       saved iterations will decrease in one unit.
     if ( $config_content =~ /^LSQ Maximum Number Iterations +: +(.+)$/gim ) {
       my $max_num_iter = $1;
       if (looks_like_number($max_num_iter)) {
-        $ref_config_hash->{LSQ_MAX_NUM_ITER} = $max_num_iter - 1;
+        $ref_config_hash->{LSQ_MAX_NUM_ITER} = $max_num_iter;
       } else {
         RaiseError(*STDOUT, ERR_OPTION_IS_NOT_NUMERIC,
           "Maximum-Number-Iterations parameter \'$max_num_iter\' ".
