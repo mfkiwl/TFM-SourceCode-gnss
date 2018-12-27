@@ -147,8 +147,6 @@ use constant
                                         LEAP_SECONDS );
 
 # Observation properties:
-use constant HEALTHY_OBSERVATION_BLOCK => 0;
-
 use constant {
   OBSERVATION_ID_LENGTH     =>   4,
   OBSERVATION_LENGTH        =>  16,
@@ -198,7 +196,6 @@ use constant {
   WARN_MISSING_OPTIONAL_HEADER    => 90102,
   WARN_NO_OBS_AFTER_END_OF_HEADER => 90103,
   WARN_NO_NAV_BLOCK_FOUND         => 90104,
-  WARN_NOT_SUPPORTED_SAT_SYS      => 90105,
 };
 
 
