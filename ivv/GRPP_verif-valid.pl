@@ -21,7 +21,7 @@ use MyUtil  qq(:ALL);
 use MyPrint qq(:ALL);
 use TimeGNSS qq(:ALL);
 
-# Configuration and common interface module:
+# Configuration and common interfaces module:
 # ---------------------------------------------------------------------------- #
 use lib qq(/home/ppinto/TFM/src/);
 use GeneralConfiguration qq(:ALL);
@@ -43,7 +43,7 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
 
   # Init memory usage report:
   our $MEM_USAGE = Memory::Usage->new();
-      $MEM_USAGE->record('Script start. All modules have been loaded!');
+      $MEM_USAGE->record('->Imports');
 
 # ---------------------------------------------------------------------------- #
 
@@ -75,10 +75,7 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
                                               $FH_LOG );
 
   ReportElapsedTime([gettimeofday], $ini_rinex_obs_time_stamp, "OBS RINEX");
-  $MEM_USAGE->record('After storing RINEX observation data');
-
-  # print Dumper $ref_obs_data->{HEAD};
-  # print Dumper $ref_obs_data->{BODY}[0];
+  $MEM_USAGE->record('->ReadObsRinex');
 
 # Compute satellite positions:
   my $ini_rinex_nav_time_stamp = [gettimeofday];
@@ -89,16 +86,7 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
                                               $FH_LOG );
 
   ReportElapsedTime([gettimeofday], $ini_rinex_nav_time_stamp, "NAV RINEX");
-  $MEM_USAGE->record('After storing RINEX navigation data');
-
-  # print Dumper $ref_gps_nav_rinex->{G}{HEAD};
-  # say "GPS SV with ephemerids data: ",
-  #   join(', ', (keys %{$ref_gps_nav_rinex->{G}{BODY}}));
-  # say "GPS PRN 12 ephemerids epochs: ",
-  #   join(', ', (keys %{$ref_gps_nav_rinex->{G}{BODY}{G12}}));
-  # print Dumper $ref_gps_nav_rinex->{G}{BODY}{G12}{982922400};
-  #
-  # print Dumper $ref_obs_data->{BODY}[0];
+  $MEM_USAGE->record('->ComputeSatPosition');
 
 # Compute Receiver positions:
   my $ini_rec_position_time_stamp = [gettimeofday];
@@ -110,8 +98,10 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
                                                 $FH_LOG );
 
   ReportElapsedTime([gettimeofday], $ini_rec_position_time_stamp, "REC POSITION");
-  $MEM_USAGE->record('After receiver positions');
+  $MEM_USAGE->record('->ComputeRecPosition');
 
+  # Print position solutions for validating GRPP functionality:
+  PrintTitle2(*STDOUT, "Position solutions");
   for (0..3) {
     say "Observation epoch : ".
       BuildDateString(GPS2Date($ref_obs_data->{BODY}[$_]{EPOCH}));
@@ -126,16 +116,6 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
     print Dumper $ref_obs_data->{BODY}[$_]{POSITION_SOLUTION};
   }
 
-  # print Dumper $ref_obs_data->{BODY}[0];
-
-
-  # say "\nLSQ iterations:";
-  # for (sort(keys %{$ref_obs_data->{BODY}[0]{LSQ_INFO}})) {
-  #   say $_;
-  #   print Dumper $ref_obs_data->{BODY}[0]{LSQ_INFO}{$_};
-  # }
-  # say "\nPOSTION SOLUTION:";
-  # print Dumper $ref_obs_data->{BODY}[0]{POSITION_SOLUTION}; exit 0;
 
 # Terminal:
   # Close output log file:
