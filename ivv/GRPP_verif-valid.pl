@@ -74,7 +74,8 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
   my $ref_obs_data = ReadObservationRinexV3( $ref_gen_conf,
                                               $FH_LOG );
 
-  ReportElapsedTime([gettimeofday], $ini_rinex_obs_time_stamp, "OBS RINEX");
+  ReportElapsedTime([gettimeofday],
+                    $ini_rinex_obs_time_stamp, "ReadObservationRinex()");
   $MEM_USAGE->record('->ReadObsRinex');
 
 # Compute satellite positions:
@@ -85,7 +86,8 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
                                               $ref_obs_data,
                                               $FH_LOG );
 
-  ReportElapsedTime([gettimeofday], $ini_rinex_nav_time_stamp, "NAV RINEX");
+  ReportElapsedTime([gettimeofday],
+                    $ini_rinex_nav_time_stamp, "ComputeSatPosition()");
   $MEM_USAGE->record('->ComputeSatPosition');
 
 # Compute Receiver positions:
@@ -97,23 +99,55 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
                                                 $ref_gps_nav_rinex,
                                                 $FH_LOG );
 
-  ReportElapsedTime([gettimeofday], $ini_rec_position_time_stamp, "REC POSITION");
+  ReportElapsedTime([gettimeofday],
+                    $ini_rec_position_time_stamp, "ComputeRecPosition()");
   $MEM_USAGE->record('->ComputeRecPosition');
 
   # Print position solutions for validating GRPP functionality:
-  PrintTitle2(*STDOUT, "Position solutions");
+  PrintTitle3(*STDOUT, "Position solutions. ",
+                       "first 4 and last 4 observation epochs:");
   for (0..3) {
-    say "Observation epoch : ".
-      BuildDateString(GPS2Date($ref_obs_data->{BODY}[$_]{EPOCH}));
-    print Dumper $ref_obs_data->{BODY}[$_]{POSITION_SOLUTION};
+    PrintComment( *STDOUT, "Observation epoch : ".
+      BuildDateString(GPS2Date($ref_obs_data->{BODY}[$_]{EPOCH})) );
+    PrintBulletedInfo(*STDOUT, "  - ",
+      "Status = ".
+      ($ref_obs_data->{BODY}[$_]{POSITION_SOLUTION}{STATUS} ? "TRUE":"FALSE"),
+      "|  X |  Y |  Z =".
+        join(' | ',
+          sprintf( " %12.3f |" x 3,
+                   @{$ref_obs_data->
+                      {BODY}[$_]{POSITION_SOLUTION}{XYZDT}}[0..2] )
+        ),
+      "| sX | sY | sZ =".
+        join(' | ',
+          sprintf(" %12.3f |" x 3,
+                  @{$ref_obs_data->
+                      {BODY}[$_]{POSITION_SOLUTION}{SIGMA_XYZDT}}[0..2])
+        )
+      );
   }
 
-  say "\n[...]\n";
+  say "[...]\n";
 
   for (-4..-1) {
-    say "Observation epoch : ".
-      BuildDateString(GPS2Date($ref_obs_data->{BODY}[$_]{EPOCH}));
-    print Dumper $ref_obs_data->{BODY}[$_]{POSITION_SOLUTION};
+    PrintComment( *STDOUT, "Observation epoch : ".
+      BuildDateString(GPS2Date($ref_obs_data->{BODY}[$_]{EPOCH})) );
+    PrintBulletedInfo(*STDOUT, "  - ",
+      "Status = ".
+      ($ref_obs_data->{BODY}[$_]{POSITION_SOLUTION}{STATUS} ? "TRUE":"FALSE"),
+      "|  X |  Y |  Z =".
+        join(' | ',
+          sprintf( " %12.3f |" x 3,
+                   @{$ref_obs_data->
+                      {BODY}[$_]{POSITION_SOLUTION}{XYZDT}}[0..2] )
+        ),
+      "| sX | sY | sZ =".
+        join(' | ',
+          sprintf(" %12.3f |" x 3,
+                  @{$ref_obs_data->
+                      {BODY}[$_]{POSITION_SOLUTION}{SIGMA_XYZDT}}[0..2])
+        )
+      );
   }
 
 
@@ -129,7 +163,7 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
   my $script_stop  = [gettimeofday];
   my $elapsed_time = tv_interval($script_start, $script_stop);
 
-  say ""; PrintTitle3( *STDOUT, sprintf("Elapsed script time : %.2f seconds",
+  say ""; PrintTitle2( *STDOUT, sprintf("Elapsed script time : %.2f seconds",
                                         $elapsed_time) ); say "";
 
 PrintTitle1( *STDOUT, "Script $0 has finished" );
@@ -139,7 +173,7 @@ sub ReportElapsedTime {
   my ($current_time_stamp, $ref_time_stamp, $label) = @_;
 
   say "";
-    PrintTitle3( *STDOUT, sprintf("Elapsed time for $label %.2f seconds",
+    PrintTitle2( *STDOUT, sprintf("Elapsed time for $label %.2f seconds",
                           tv_interval($ref_time_stamp, $current_time_stamp)) );
   say "";
 }
