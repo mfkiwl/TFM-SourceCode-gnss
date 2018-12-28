@@ -35,6 +35,7 @@ BEGIN {
                        &PrintTitle1
                        &PrintTitle2
                        &PrintTitle3
+                       &PrintTitle4
                        &RaiseError
                        &RaiseWarning
                        &PrintComment
@@ -104,12 +105,21 @@ sub PrintTitle2 {
 sub PrintTitle3 {
   my ($fh, @contents) = @_;
 
-  say $fh LEVEL_3_DELIMITER;
   for (@contents) {
     my $msg = "# > ".$_;
     say $fh $msg." " x (MAX_NUM_CHAR_IN_LINE - length($msg) - 1)."#";
   }
   say $fh LEVEL_3_DELIMITER;
+
+}
+
+sub PrintTitle4 {
+  my ($fh, @contents) = @_;
+
+  for (@contents) {
+    my $msg = "# > ".$_;
+    say $fh $msg." " x (MAX_NUM_CHAR_IN_LINE - length($msg) - 1)."#";
+  }
 
 }
 
