@@ -4,26 +4,30 @@
 package DataDumper;
 
 
-# SCRIPT DESCRIPTION GOES HERE:
+# TODO: SCRIPT DESCRIPTION GOES HERE:
 
 # Import modules:
 # ---------------------------------------------------------------------------- #
-use strict;      # enables strict syntax...
+use Carp;         # enables advanced warning and failure raise...
+use strict;       # enables strict syntax and common mistakes advisory...
+use Data::Dumper; # enables nested struct pretty print...
 
 use feature      qq(say);               # same as print.$text.'\n'...
 use feature      qq(switch);            # switch functionality...
 use Scalar::Util qq(looks_like_number); # scalar utility...
-use Data::Dumper;                       # enables pretty print...
 
-# Import configuration and common interface module:
-use lib qq(/home/ppinto/TFM/src/);
+# Import configuration and common interfaces module:
+use lib qq(/home/ppinto/TFM/src/); # TODO: set enviroment variable!
 use GeneralConfiguration qq(:ALL);
 
 # Import dedicated libraries:
-use lib qq(/home/ppinto/TFM/src/lib/); # NOTE: this should be an enviroment!
+use lib qq(/home/ppinto/TFM/src/lib/); # TODO: this should be an enviroment!
+# Common tools:
 use MyUtil   qq(:ALL); # useful subs and constants...
-use MyPrint  qq(:ALL); # error and warning utilities...
-use TimeGNSS qq(:ALL); # GNSS time transforming utilities...
+use MyPrint  qq(:ALL); # print and warning/failure utilities...
+# GNSS dedicated tools:
+use TimeGNSS   qq(:ALL); # GNSS time transforming utilities...
+use MyGeodetic qq(:ALL);
 
 # Import dependent modules:
 use RinexReader qq(:ALL);
@@ -49,9 +53,11 @@ BEGIN {
   our @EXPORT_CONST = qw(  );
 
   # Define subroutines to export:
-  our @EXPORT_SUB   = qw( &DumpObservationData
-                          &DumpReceiverPositions
-                          &DumpSatellitePositions );
+  our @EXPORT_SUB   = qw( &DumpSatelliteObservationData
+                          &DumpReceiverSatelliteLoSData
+                          &DumpLeastSquaresReportInfo
+                          &DumpSatellitePosition
+                          &DumpReceiverPosition );
 
   # Merge constants and subroutines:
   our @EXPORT_OK = (@EXPORT_CONST, @EXPORT_SUB);
@@ -75,7 +81,7 @@ BEGIN {
 
 # Public Subroutines: #
 # ............................................................................ #
-sub DumpObservationData {
+sub DumpSatelliteObservationData {
   my ( $file_path, $ref_obs_rinex, $ref_sat_sys,
        $delimiter, $epoch_format, $fh_log ) = @_;
 
@@ -221,13 +227,13 @@ sub DumpObservationData {
   return TRUE;
 }
 
-sub DumpReceiverPositions {}
+sub DumpReceiverSatelliteLoSData {}
 
-sub DumpSatellitePositions {
-  my () = @_;
+sub DumpLeastSquaresReportInfo {}
 
-}
+sub DumpSatellitePosition {}
 
+sub DumpReceiverPosition {}
 
 
 TRUE;
