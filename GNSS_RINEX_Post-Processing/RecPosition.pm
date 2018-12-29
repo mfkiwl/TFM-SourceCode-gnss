@@ -137,6 +137,11 @@ sub ComputeRecPosition {
       }
     }
 
+    # TODO: Selection of alpha and beta IONO coefficients.
+    #       This depends on:
+    #         - Navigation RINEX version
+    #         - GNSS constellation --> Build hash
+
   # **************************** #
   # Position estimation routine: #
   # **************************** #
@@ -306,9 +311,10 @@ sub ComputeRecPosition {
 # Private Subroutines:                                                         #
 # ............................................................................ #
 
-# ************************ #
-# First Level Subroutines: #
-# ************************ #
+# ************************************************************** #
+# First Level Subroutines:                                       #
+#   Subroutines called from main public sub: ComputeRecPosition. #
+# ************************************************************** #
 
 sub InitEpochInfoHash {
   my ($ref_epoch_info) = @_;
@@ -382,8 +388,8 @@ sub SelectSatForLSQ {
                                                      \@rec_apx_xyzdt,
                                                      \@sat_xyz_recep );
 
-      # 3. Determine if sat accomplishes selection criteria:
-      #    Mask criteria is only assumed
+      # 3. Determine if sat accomplishes selection criteria.
+      #    Mask criteria is only assumed:
       if ($rec_sat_elevation >= $ref_gen_conf->{SAT_MASK}) {
         push(@sat_to_lsq, $sat);
       } else {
@@ -399,7 +405,7 @@ sub SelectSatForLSQ {
 sub InitLSQ {
   my ($num_obs, $num_prm, $init_value) = @_;
 
-  # Default init value:
+  # Default fill value:
   $init_value = 0 unless $init_value;
 
   # Deisgn Matrix [ nobs x nprm ]:
@@ -431,11 +437,12 @@ sub InitLSQ {
 }
 
 sub BuildLSQMatrixSystem {
-  my ($ref_gen_conf,
+  my (# General configuration:
+      $ref_gen_conf,
       $ref_sat_sys_nav,
       # Epoch info:
       $epoch, $ref_epoch_info,
-      # Approximate position & sat list fo LSQ:
+      # Approximate position & SV list fo LSQ:
       $ref_rec_apx_xyzdt, $ref_sat_to_lsq,
       # Tropo & iono delays:
       $ref_sub_iono, $ref_sub_troposphere,
@@ -499,9 +506,6 @@ sub BuildLSQMatrixSystem {
         &{$ref_sub_troposphere}( $rec_sat_zenital, $rec_helip );
 
       # 4. Ionospheric delay correction:
-      # TODO: NAV RINEX V3 does not include IONO_ALPHA and IONO_BETA
-      #       parametes. Furthermore, it depends if they sat is
-      #       GAL or GPS
       my ($ionosphere_corr, $ionosphere_corr_l2) =
         &{$ref_sub_iono->{$sat_sys}}
           ( $epoch,
@@ -601,9 +605,10 @@ sub FillSolutionDataHash {
   return TRUE;
 }
 
-# ************************* #
-# Second Level Subroutines: #
-# ************************* #
+# ************************************************** #
+# Second Level Subroutines:                          #
+#   Subrotuines that are called from 1st level subs. #
+# ************************************************** #
 
 sub SelectApproximateParameters {
   my ( $first_solution_flag,
@@ -714,31 +719,30 @@ sub ReceiverSatelliteLoS {
 
 sub SetPseudorangeEquation {
   my ( # Inputs:
-        $iobs,
-        $raw_obs,
-        $ix, $iy, $iz,
-        $sat_clk_bias, $rec_clk_bias,
-        $ionosphere_corr, $troposhpere_corr,
-        $rec_sat_distance, $rec_sat_elevation,
-       # Outputs:
+        $iobs, # observation index
+        $raw_obs, # raw REC-SV observation
+        $ix, $iy, $iz, # REC-SV ECEF vector components
+        $sat_clk_bias, $rec_clk_bias, # SV & REC clock biases
+        $ionosphere_corr, $troposhpere_corr, # tropo & iono LoS delays
+        $rec_sat_distance, $rec_sat_elevation, # REC-SV distance & elevation
+       # Outputs -> LSQ matrix references:
         $ref_design_matrix, $ref_weight_matrix, $ref_ind_term_matrix ) = @_;
 
-  # 1. Design matrix row elements:
+  # 1. Design matrix row terms:
   $ref_design_matrix->[$iobs][0] = -1*($ix/$rec_sat_distance);
   $ref_design_matrix->[$iobs][1] = -1*($iy/$rec_sat_distance);
   $ref_design_matrix->[$iobs][2] = -1*($iz/$rec_sat_distance);
   $ref_design_matrix->[$iobs][3] =  1;
 
-  # 2. Weight term row element:
+  # 2. Observation weight term:
   my $ep2 = 1.5*0.3; # TODO: Review Hofmann et al. 2008
                      # Seems like a coeficient for P2 observable
   $ref_weight_matrix->[$iobs][$iobs] = sin($rec_sat_elevation)**2/$ep2**2;
 
-  # 3. Independent term row elements:
-  my $ind_term = ( $raw_obs - $rec_sat_distance -
-                   $rec_clk_bias + SPEED_OF_LIGHT*$sat_clk_bias -
-                   $troposhpere_corr - $ionosphere_corr );
-  $ref_ind_term_matrix->[$iobs][0] = $ind_term;
+  # 3. Observation Independent term -> GNSS pseudorange equation:
+  $ref_ind_term_matrix->[$iobs][0] =
+    ( $raw_obs - $rec_sat_distance - $rec_clk_bias +
+      SPEED_OF_LIGHT*$sat_clk_bias - $troposhpere_corr - $ionosphere_corr );
 }
 
 sub FillLoSDataHash {
