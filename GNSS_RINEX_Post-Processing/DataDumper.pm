@@ -26,13 +26,14 @@ use lib qq(/home/ppinto/TFM/src/lib/); # TODO: this should be an enviroment!
 use MyUtil   qq(:ALL); # useful subs and constants...
 use MyPrint  qq(:ALL); # print and warning/failure utilities...
 # GNSS dedicated tools:
-use TimeGNSS   qq(:ALL); # GNSS time transforming utilities...
-use MyGeodetic qq(:ALL);
+use Geodetic qq(:ALL); # geodetic toolbox...
+use TimeGNSS qq(:ALL); # GNSS time transforming utilities...
 
 # Import dependent modules:
 use RinexReader qq(:ALL);
 use ErrorSource qq(:ALL);
-use PositionLSQ qq(:ALL);
+use SatPosition qq(:ALL);
+use RecPosition qq(:ALL);
 
 # Set package exportation properties:
 # ---------------------------------------------------------------------------- #
@@ -82,148 +83,121 @@ BEGIN {
 # Public Subroutines: #
 # ............................................................................ #
 sub DumpSatelliteObservationData {
-  my ( $file_path, $ref_obs_rinex, $ref_sat_sys,
-       $delimiter, $epoch_format, $fh_log ) = @_;
+  my ( $ref_dump_conf, $ref_gen_conf, $ref_obs_data,
+       $ref_sats_to_ignore, $ref_selected_obs, $output_path, $fh_log ) = @_;
 
   # Default input values if not defined:
-  $fh_log       = *STDOUT unless $fh_log;
-  $delimiter    = "\t"    unless $delimiter;
-  $epoch_format = 'gps'   unless $epoch_format;
+  $fh_log = *STDOUT unless $fh_log;
 
   # ************************* #
   # Input consistency cehcks: #
   # ************************* #
 
-  # Path provided must exist and have write permissions:
-  unless (-w $file_path) {
+  # Output path must exist and have write permissions:
+  unless (-w $output_path) {
     RaiseError($fh_log, ERR_WRITE_PERMISSION_DENIED,
-      "User does not have write permissions at $file_path");
+      "User '".$ENV{USER}."' does not have write permissions at $output_path");
     return KILLED;
   }
 
-  # $ref_obs_rinex must be hash reference:
-  unless (ref($ref_obs_rinex) eq 'HASH') {
+  # Dumper configuration must be hash type:
+  unless (ref($ref_dump_conf) eq 'HASH') {
     RaiseError($fh_log, ERR_WRONG_HASH_REF,
-      "Input argument \'$ref_obs_rinex\' is not HASH type");
+      "Input argument \'$ref_dump_conf\' is not HASH type");
     return KILLED;
   }
 
-  # $ref_sat_sys, must an array reference and its contellations must be a
-  # supported one:
-  my @sat_systems;
-  unless (ref($ref_sat_sys) eq 'ARRAY') {
+  # General configuration must be hash type:
+  unless (ref($ref_gen_conf) eq 'HASH') {
+    RaiseError($fh_log, ERR_WRONG_HASH_REF,
+      "Input argument \'$ref_gen_conf\' is not HASH type");
+    return KILLED;
+  }
+
+  # Observation data must be hash type:
+  unless (ref($ref_obs_data) eq 'HASH') {
+    RaiseError($fh_log, ERR_WRONG_HASH_REF,
+      "Input argument \'$ref_obs_data\' is not HASH type");
+    return KILLED;
+  }
+
+  # Satellites to discard must be array type:
+  unless (ref($ref_sats_to_ignore) eq 'ARRAY') {
     RaiseError($fh_log, ERR_WRONG_ARRAY_REF,
-      "Input argument \'$ref_sat_sys\' is not ARRAY type");
-    return KILLED;
-  } else {
-    for my $sat_sys (@{$ref_sat_sys}) {
-      unless (grep(/^$sat_sys$/, SUPPORTED_SAT_SYS)) {
-        RaiseWarning($fh_log, WARN_NOT_SUPPORTED_SAT_SYS,
-        "Satellite system \'$sat_sys\' is not supported. ".
-        "This constellation will be ignored!");
-      } else { push(@sat_systems, $sat_sys); }
-    } # end for @{$ref_sat_sys}
-  } # end unless ref()
-
-  # $epoch_format must be one of following: [ gps, tow, date ]
-  unless ( $epoch_format =~ /gps/i ||
-           $epoch_format =~ /tow/i ||
-           $epoch_format =~ /date/i )
-  {
-    RaiseError($fh_log, ERR_UNRECOGNIZED_INPUT,
-      "Argument \'$epoch_format\' was not recognized for epoch format!");
+      "Input argument \'$ref_sats_to_ignore\' is not ARRAY type");
     return KILLED;
   }
 
-  # ******************************* #
-  # Observation data dump sequence: #
-  # ******************************* #
-
-  # Open dumper file:
-  my $fh; open($fh, '>', $file_path) or die $!;
-
-  # Write title line:
-  say $fh sprintf('> RINEX observation data. Created : %s', GetPrettyLocalDate);
-
-  # Write header line indicating the parameters arranged by columns:
-  # Retrieve from obseration rinex the observations for each constellation...
-  my $sat_sys;
-  my $header_falg = TRUE;
-  for $sat_sys (@sat_systems)
-  {
-    # Observation identifiers:
-    my @obs =
-       @{$ref_obs_rinex->{HEAD}{SYS_OBS_TYPES}{$sat_sys}{OBS}};
-
-    # Observations for each constellation:
-    my $obs_string = "OBS-$sat_sys: ".join($delimiter, @obs);
-
-    # Write header lines:
-    if ($header_falg) {
-      say $fh join($delimiter, (qw(Epoch Status Sat_PRN), $obs_string));
-    } else {
-      say $fh join($delimiter, ('', '', '', $obs_string));
-    }
-
-    # For the rest of the constellation, header flag is no longer needed:
-    $header_falg = FALSE;
+  # Selected observations must be array type:
+  unless (ref($ref_selected_obs) eq 'ARRAY') {
+    RaiseError($fh_log, ERR_WRONG_ARRAY_REF,
+      "Input argument \'$ref_selected_obs\' is not ARRAY type");
+    return KILLED;
   }
 
-  # Write observations for each constellation:
-  for (my $i = 0; $i < scalar(@{$ref_obs_rinex->{BODY}}); $i++)
+  # TODO: Check that selected observations are available:
+
+
+  # ***************************************** #
+  # Satellite Observations data dump routine: #
+  # ***************************************** #
+
+  # Dump the data for each selected GNSS constellation:
+  for my $sat_sys (@{$ref_gen_conf->{SELECTED_SAT_SYS}})
   {
-    # Write epoch and measurements status only when a new epoch is selected:
-    my $new_epoch_falg = TRUE;
-    my ( $epoch, $satus ) =
-       ( $ref_obs_rinex->{BODY}[$i]{EPOCH},
-         $ref_obs_rinex->{BODY}[$i]{STATUS} );
+    # 1. Open dumper file at output path:
+      my $file_path = join('/', ($output_path, "$sat_sys-sat_obs_data.out"));
+      my $fh; open($fh, '>', $file_path) or croak "Could not create $!";
 
-    # Switch case for epoch format:
-    given ($epoch_format) {
-      when ( /gps/i  ) { $epoch = $epoch;                              }
-      when ( /tow/i  ) { $epoch = join('-',        GPS2ToW($epoch) ); }
-      when ( /date/i ) { $epoch = BuildDateString( GPS2Date($epoch) ); }
-      default          { $epoch = $epoch;                              }
-    }
+    # 2. Write title line:
+      say $fh sprintf("# > RINEX satellite observation data. Created : %s \n",
+                      "# > Observation epoch status info:\n".
+                      "#   0   --> OK\n".
+                      "#   1-6 --> NOK",
+                      GetPrettyLocalDate());
 
-    print $fh join($delimiter, ( $epoch, $satus ));
+    # 3. Write header:
+      # Save available observations:
+      my @sat_sys_obs = @{$ref_obs_data->{HEAD}{SYS_OBS_TYPES}{$sat_sys}{OBS}};
 
-    for my $sat (keys $ref_obs_rinex->{BODY}[$i]{SAT_OBS})
-    {
-      # Retrieve contellation:
-      my $sat_sys = substr($sat, 0, 1);
+      # Header line items:
+      my @header_items = qw(Epoch Status Sat_PRN);
+      push(@header_items, "$_") for (@sat_sys_obs);
 
-      # Write only those observations from the selected contellations,
-      # at the input check:
-      if ( grep(/^$sat_sys$/, @sat_systems) )
+      # Write header:
+      say $fh join($ref_dump_conf->{SEPARATOR}, @header_items);
+
+    # 4. Dump satellite observations:
+      for (my $i = 0; $i < scalar(@{$ref_obs_data->{BODY}}); $i += 1)
       {
-        # Observations identifiers:
-        my @obs =
-          @{$ref_obs_rinex->{HEAD}{SYS_OBS_TYPES}{$sat_sys}{OBS}};
+        # Save epoch data reference:
+        my $ref_epoch_data = $ref_obs_data->{BODY}[$i];
 
-        # Array containing the satellite measurements:
-        my @arranged_obs;
-        push(@arranged_obs,
-          $ref_obs_rinex->{BODY}[$i]{SAT_OBS}{$sat}{$_}) for (@obs);
+        # Save observation epoch status:
+        my $status = $ref_epoch_data->{STATUS};
 
-        # Write measurments:
-        if ( $new_epoch_falg ) {
-          say $fh $delimiter, join($delimiter, ($sat, @arranged_obs));
-        } else {
-          say $fh join($delimiter, ('', '', $sat, @arranged_obs));
-        }
+        # Epoch is transformed according to data dumper configuration:
+        my $epoch =
+          &{$ref_dump_conf->{EPOCH_FORMAT}}( $ref_epoch_data->{EPOCH} );
 
-        # For the rest of the satellites, new epoch flag is no longer needed:
-        $new_epoch_falg = FALSE;
+        # Write observations for each observed satellite:
+        for my $sat (keys %{$ref_epoch_data->{SAT_OBS}})
+        {
+          # TODO: Dump data ignoring the specified satellites:
+          # Save raw observations:
+          my @obs;
+          push(@obs, $ref_epoch_data->{SAT_OBS}{$sat}{$_}) for (@sat_sys_obs);
+          # Dump observation data:
+          say $fh
+            join($ref_dump_conf->{SEPARATOR}, ($epoch, $status, $sat, @obs));
+        } # end for my $sat
+      } # end for $i
 
-      } # end if grep($sat_sys)
-    } # end for my $sat
-  } # end for $i
+    # 5. Close dumper file:
+      close($fh);
 
-  # Close dumper file:
-  close($fh);
+  } # end for $sat_sys
 
-  # Subroutine returns TRUE if the dumping process was successful:
   return TRUE;
 }
 
