@@ -32,6 +32,7 @@ use lib qq(/home/ppinto/TFM/src/GNSS_RINEX_Post-Processing/);
 use RinexReader qq(:ALL);
 use SatPosition qq(:ALL);
 use RecPosition qq(:ALL);
+use DataDumper  qq(:ALL);
 
 # ============================================================================ #
 
@@ -106,7 +107,7 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
   # Print position solutions for validating GRPP functionality:
   PrintTitle3(*STDOUT, "Position solutions. ",
                        "first 4 and last 4 observation epochs:");
-  for (0..3) {
+  for (0..3, -4..-1) {
     PrintComment( *STDOUT, "Observation epoch : ".
       BuildDateString(GPS2Date($ref_obs_data->{BODY}[$_]{EPOCH})) );
     PrintBulletedInfo(*STDOUT, "  - ",
@@ -125,31 +126,32 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
                       {BODY}[$_]{POSITION_SOLUTION}{SIGMA_XYZDT}}[0..2])
         )
       );
+
+    say "[...]\n" if ($_ == 3);
   }
 
-  say "[...]\n";
 
-  for (-4..-1) {
-    PrintComment( *STDOUT, "Observation epoch : ".
-      BuildDateString(GPS2Date($ref_obs_data->{BODY}[$_]{EPOCH})) );
-    PrintBulletedInfo(*STDOUT, "  - ",
-      "Status = ".
-      ($ref_obs_data->{BODY}[$_]{POSITION_SOLUTION}{STATUS} ? "TRUE":"FALSE"),
-      "|  X |  Y |  Z =".
-        join(' | ',
-          sprintf( " %12.3f |" x 3,
-                   @{$ref_obs_data->
-                      {BODY}[$_]{POSITION_SOLUTION}{XYZDT}}[0..2] )
-        ),
-      "| sX | sY | sZ =".
-        join(' | ',
-          sprintf(" %12.3f |" x 3,
-                  @{$ref_obs_data->
-                      {BODY}[$_]{POSITION_SOLUTION}{SIGMA_XYZDT}}[0..2])
-        )
-      );
-  }
+# Data Dumper -> Set dumper configuration:
+# TODO: put this configuration in cfg file?
+  my %dump_conf = ( SEPARATOR        => "\t",
+                    EPOCH_FORMAT     => \&DummySub,
+                    ANGLE_FORMAT     => \&DummySub,
+                    SAT_POS_FORMAT   => \&DummySub,
+                    REC_POS_FORMAT   => \&ECEF2Geodetic,
+                    REC_SIGMA_FACTOR => 1 );
 
+# Dump processed data:
+  my $ini_time_dump_data = [gettimeofday];
+
+  DumpSatObsData( \%dump_conf,
+                  $ref_gen_conf,
+                  $ref_obs_data,
+                  [], $ref_gen_conf->{SELECTED_SIGNALS}{G},
+                  $ref_gen_conf->{OUTPUT_PATH}, $FH_LOG );
+
+  ReportElapsedTime([gettimeofday],
+                    $ini_time_dump_data, "DumpSatObsData()");
+  $MEM_USAGE->record('->DumpObsData');
 
 # Terminal:
   # Close output log file:
