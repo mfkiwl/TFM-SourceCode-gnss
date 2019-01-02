@@ -115,7 +115,7 @@ use constant SUPPORTED_GAL_SIGNALS => qw( C1C C1A C1B
                                           C8I C8Q C8X );
 
 # Supported time formats:
-use constant SUPPORTED_TIME_FORMATS => qw( GPS );
+use constant SUPPORTED_TIME_FORMATS => qw( GPS GPS_WEEK DATE );
 
 # Supported atmospheric correction models:
 use constant SUPPORTED_IONO_MODELS  => qw(Klobuchar NeQuick);
@@ -541,6 +541,8 @@ sub LoadConfiguration {
         return KILLED;
       }
     }
+
+  # TODO: Data Dumper configuration:
 
   return $ref_config_hash;
 }
