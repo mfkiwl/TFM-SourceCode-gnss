@@ -54,11 +54,11 @@ BEGIN {
   our @EXPORT_CONST = qw(  );
 
   # Define subroutines to export:
-  our @EXPORT_SUB   = qw( &DumpSatelliteObservationData
-                          &DumpReceiverSatelliteLoSData
-                          &DumpLeastSquaresReportInfo
-                          &DumpSatellitePosition
-                          &DumpReceiverPosition );
+  our @EXPORT_SUB   = qw( &DumpLSQInfo
+                          &DumpSatObsData
+                          &DumpSatPosition
+                          &DumpRecPosition
+                          &DumpRecSatLoSData );
 
   # Merge constants and subroutines:
   our @EXPORT_OK = (@EXPORT_CONST, @EXPORT_SUB);
@@ -74,7 +74,9 @@ BEGIN {
 # ---------------------------------------------------------------------------- #
 # Constants:
 # ---------------------------------------------------------------------------- #
-
+use constant {
+  WARN_NO_SELECTED_OBS => 90101,
+};
 
 # ---------------------------------------------------------------------------- #
 # Subroutines:
@@ -82,7 +84,7 @@ BEGIN {
 
 # Public Subroutines: #
 # ............................................................................ #
-sub DumpSatelliteObservationData {
+sub DumpSatObsData {
   my ( $ref_dump_conf, $ref_gen_conf, $ref_obs_data,
        $ref_sats_to_ignore, $ref_selected_obs, $output_path, $fh_log ) = @_;
 
@@ -135,12 +137,17 @@ sub DumpSatelliteObservationData {
     return KILLED;
   }
 
-  # TODO: Check that selected observations are available:
-
-
   # ***************************************** #
   # Satellite Observations data dump routine: #
   # ***************************************** #
+
+  # De-reference array inputs:
+  my @selected_obs   = @{ $ref_selected_obs   };
+  my @sats_to_ignore = @{ $ref_sats_to_ignore };
+
+  # Save dumper useful configuration:
+  my $separator     = $ref_dump_conf->{ SEPARATOR    };
+  my $ref_epoch_sub = $ref_dump_conf->{ EPOCH_FORMAT };
 
   # Dump the data for each selected GNSS constellation:
   for my $sat_sys (@{$ref_gen_conf->{SELECTED_SAT_SYS}})
@@ -150,22 +157,37 @@ sub DumpSatelliteObservationData {
       my $fh; open($fh, '>', $file_path) or croak "Could not create $!";
 
     # 2. Write title line:
-      say $fh sprintf("# > RINEX satellite observation data. Created : %s \n",
+      say $fh sprintf("# > RINEX satellite observation data. Created : %s \n".
                       "# > Observation epoch status info:\n".
                       "#   0   --> OK\n".
-                      "#   1-6 --> NOK",
+                      "#   1-6 --> NOK\n",
                       GetPrettyLocalDate());
 
     # 3. Write header:
-      # Save available observations:
-      my @sat_sys_obs = @{$ref_obs_data->{HEAD}{SYS_OBS_TYPES}{$sat_sys}{OBS}};
+      # Check for constellation available observations:
+      my @sat_sys_obs;
+      my @avail_obs = @{ $ref_obs_data->{HEAD}{SYS_OBS_TYPES}{$sat_sys}{OBS} };
+
+      # Filter available observations by the selected ones:
+      for my $obs (sort @avail_obs) {
+        if (grep(/^$obs$/, @selected_obs)) { push(@sat_sys_obs, $obs); }
+      }
+
+      # Raise Warning if no observations are left:
+      unless( @sat_sys_obs ) {
+        RaiseWarning($fh_log, WARN_NO_SELECTED_OBS,
+          "No observations for constellation '$sat_sys' have been selected.\n".
+          "Please, reconsider the following configuration: \n".
+          "  - Available observations : ".join(', ', @avail_obs)."\n".
+          "  - Selected  observations : ".join(', ', @selected_obs));
+      }
 
       # Header line items:
       my @header_items = qw(Epoch Status Sat_PRN);
       push(@header_items, "$_") for (@sat_sys_obs);
 
       # Write header:
-      say $fh join($ref_dump_conf->{SEPARATOR}, @header_items);
+      say $fh "# ".join($separator, @header_items);
 
     # 4. Dump satellite observations:
       for (my $i = 0; $i < scalar(@{$ref_obs_data->{BODY}}); $i += 1)
@@ -177,19 +199,19 @@ sub DumpSatelliteObservationData {
         my $status = $ref_epoch_data->{STATUS};
 
         # Epoch is transformed according to data dumper configuration:
-        my $epoch =
+        my @epoch =
           &{$ref_dump_conf->{EPOCH_FORMAT}}( $ref_epoch_data->{EPOCH} );
 
         # Write observations for each observed satellite:
-        for my $sat (keys %{$ref_epoch_data->{SAT_OBS}})
+        for my $sat (sort ( keys %{$ref_epoch_data->{SAT_OBS}} ))
         {
-          # TODO: Dump data ignoring the specified satellites:
-          # Save raw observations:
-          my @obs;
-          push(@obs, $ref_epoch_data->{SAT_OBS}{$sat}{$_}) for (@sat_sys_obs);
-          # Dump observation data:
-          say $fh
-            join($ref_dump_conf->{SEPARATOR}, ($epoch, $status, $sat, @obs));
+          unless (grep(/^$sat$/, @sats_to_ignore)) {
+            # Save raw observations:
+            my @obs;
+            push(@obs, $ref_epoch_data->{SAT_OBS}{$sat}{$_}) for (@sat_sys_obs);
+            # Dump observation data:
+            say $fh join($separator, (@epoch, $status, $sat, @obs));
+          }
         } # end for my $sat
       } # end for $i
 
@@ -198,16 +220,22 @@ sub DumpSatelliteObservationData {
 
   } # end for $sat_sys
 
+  # If successfull, the sub returns boolean TRUE answer:
   return TRUE;
 }
 
-sub DumpReceiverSatelliteLoSData {}
+sub DumpRecSatLoSData {
+  my ($ref_dump_conf, $ref_gen_conf, $ref_obs_data,
+      $ref_sats_to_ignore, ) = @_;
 
-sub DumpLeastSquaresReportInfo {}
 
-sub DumpSatellitePosition {}
+}
 
-sub DumpReceiverPosition {}
+sub DumpLSQInfo {}
+
+sub DumpSatPosition {}
+
+sub DumpRecPosition {}
 
 
 TRUE;
