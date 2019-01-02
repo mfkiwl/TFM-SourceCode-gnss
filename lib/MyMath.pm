@@ -10,6 +10,7 @@ use strict;   # enables perl strict syntax...
 use feature qq(say);
 
 use PDL; # loads Perl Data Language extension...
+use PDL::Constants qq(PI);
 
 # Set package exportation properties:
 BEGIN {
@@ -26,7 +27,9 @@ BEGIN {
   our @EXPORT = ();
 
   # All subroutines and constats to export:
-  our @EXPORT_OK = qw( &SolveWeightedLSQ
+  our @EXPORT_OK = qw( &Rad2Deg
+                       &Deg2Rad
+                       &SolveWeightedLSQ
                        &LinearInterpolationFromTable );
 
   # Define export tags:
@@ -40,6 +43,14 @@ BEGIN {
 
 # Subroutines:
 # ---------------------------------------------------------------------------- #
+sub Rad2Deg {
+  return map {$_ * 180/PI} @_;
+}
+
+sub Deg2Rad {
+  return map {$_ * PI/180} @_;
+}
+
 sub LinearInterpolationFromTable {
   my ( $x, $ref_domain, $ref_range ) = @_;
 
