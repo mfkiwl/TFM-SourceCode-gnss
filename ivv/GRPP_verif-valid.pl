@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-## SCRIPT DESCRIPTION GOES HERE ##
+## TODO: SCRIPT DESCRIPTION GOES HERE ##
 
 # ============================================================================ #
 
@@ -17,8 +17,10 @@ use Time::HiRes qw(gettimeofday tv_interval);
 # Common modules:
 # ---------------------------------------------------------------------------- #
 use lib qq(/home/ppinto/TFM/src/lib/);
-use MyUtil  qq(:ALL);
-use MyPrint qq(:ALL);
+use MyUtil   qq(:ALL);
+use MyMath   qq(:ALL);
+use MyPrint  qq(:ALL);
+use Geodetic qq(:ALL);
 use TimeGNSS qq(:ALL);
 
 # Configuration and common interfaces module:
@@ -135,23 +137,73 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
 # TODO: put this configuration in cfg file?
   my %dump_conf = ( SEPARATOR        => "\t",
                     EPOCH_FORMAT     => \&DummySub,
-                    ANGLE_FORMAT     => \&DummySub,
+                    ANGLE_FORMAT     => \&Rad2Deg,
                     SAT_POS_FORMAT   => \&DummySub,
                     REC_POS_FORMAT   => \&ECEF2Geodetic,
-                    REC_SIGMA_FACTOR => 1 );
+                    SIGMA_FACTOR     => 1 );
 
 # Dump processed data:
+  PrintTitle2($FH_LOG, "Dumping GRPP data:");
   my $ini_time_dump_data = [gettimeofday];
 
+  PrintTitle3($FH_LOG, "Dumping Satellite Observation Data:");
   DumpSatObsData( \%dump_conf,
                   $ref_gen_conf,
-                  $ref_obs_data,
-                  [], $ref_gen_conf->{SELECTED_SIGNALS}{G},
+                  $ref_obs_data, [], # no sats to ignore
+                  [ $ref_gen_conf->{SELECTED_SIGNALS}{G} ],
                   $ref_gen_conf->{OUTPUT_PATH}, $FH_LOG );
 
   ReportElapsedTime([gettimeofday],
                     $ini_time_dump_data, "DumpSatObsData()");
   $MEM_USAGE->record('-> DumpObsData');
+
+  $ini_time_dump_data = [gettimeofday];
+
+  PrintTitle3($FH_LOG, "Dumping Satellite-Receiver LoS Data:");
+  DumpRecSatLoSData( \%dump_conf,
+                     $ref_gen_conf,
+                     $ref_obs_data, [], # no sats to ignore
+                     $ref_gen_conf->{OUTPUT_PATH}, $FH_LOG );
+
+  ReportElapsedTime([gettimeofday],
+                    $ini_time_dump_data, "DumpRecSatLoSData()");
+  $MEM_USAGE->record('-> DumpRecSatLoSData');
+
+  $ini_time_dump_data = [gettimeofday];
+
+  PrintTitle3($FH_LOG, "Dumping Leas Squares report:");
+  DumpLSQReport( \%dump_conf,
+                 $ref_gen_conf,
+                 $ref_obs_data,
+                 $ref_gen_conf->{OUTPUT_PATH}, $FH_LOG );
+
+  ReportElapsedTime([gettimeofday],
+                    $ini_time_dump_data, "DumpLSQReport()");
+  $MEM_USAGE->record('-> DumpLSQReport');
+
+  $ini_time_dump_data = [gettimeofday];
+
+  PrintTitle3($FH_LOG, "Dumping Satellite XYZ & clock bias:");
+  DumpSatPosition( \%dump_conf,
+                   $ref_gen_conf,
+                   $ref_obs_data, [], # no sats to ignore...
+                   $ref_gen_conf->{OUTPUT_PATH}, $FH_LOG );
+
+  ReportElapsedTime([gettimeofday],
+                    $ini_time_dump_data, "DumpSatPosition()");
+  $MEM_USAGE->record('-> DumpSatPosition');
+
+  $ini_time_dump_data = [gettimeofday];
+
+  PrintTitle3($FH_LOG, "Dumping Receiver position & clock bias:");
+  DumpRecPosition( \%dump_conf,
+                   $ref_gen_conf,
+                   $ref_obs_data,
+                   $ref_gen_conf->{OUTPUT_PATH}, $FH_LOG );
+
+  ReportElapsedTime([gettimeofday],
+                    $ini_time_dump_data, "DumpRecPosition()");
+  $MEM_USAGE->record('-> DumpRecPosition');
 
 # Terminal:
   # Close output log file:
