@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/perl -w
 
 # Package declaration:
 package MyUtil;
@@ -6,7 +6,6 @@ package MyUtil;
 # Import useful modules:
 use Carp;
 use strict;
-use warnings;
 
 use feature qq(say);
 
@@ -34,6 +33,7 @@ BEGIN {
                        &ERR_UNRECOGNIZED_INPUT
                        &ERR_WRITE_PERMISSION_DENIED
                        &GENERIC_WARN_CODE
+                       &DummySub
                        &SkipLines
                        &ReadBoolean
                        &PurgeExtraSpaces
@@ -72,6 +72,10 @@ use constant {
 
 # Subroutines:
 # ---------------------------------------------------------------------------- #
+sub DummySub {
+  return @_;
+}
+
 sub PurgeExtraSpaces {
   my ($string) = @_;
 
