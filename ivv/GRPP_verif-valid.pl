@@ -44,7 +44,7 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
 
   # Init memory usage report:
   our $MEM_USAGE = Memory::Usage->new();
-      $MEM_USAGE->record('->Imports');
+      $MEM_USAGE->record('-> Imports');
 
 # ---------------------------------------------------------------------------- #
 
@@ -77,7 +77,7 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
 
   ReportElapsedTime([gettimeofday],
                     $ini_rinex_obs_time_stamp, "ReadObservationRinex()");
-  $MEM_USAGE->record('->ReadObsRinex');
+  $MEM_USAGE->record('-> ReadObsRinex');
 
 # Compute satellite positions:
   my $ini_rinex_nav_time_stamp = [gettimeofday];
@@ -89,7 +89,7 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
 
   ReportElapsedTime([gettimeofday],
                     $ini_rinex_nav_time_stamp, "ComputeSatPosition()");
-  $MEM_USAGE->record('->ComputeSatPosition');
+  $MEM_USAGE->record('-> ComputeSatPosition');
 
 # Compute Receiver positions:
   my $ini_rec_position_time_stamp = [gettimeofday];
@@ -102,7 +102,7 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
 
   ReportElapsedTime([gettimeofday],
                     $ini_rec_position_time_stamp, "ComputeRecPosition()");
-  $MEM_USAGE->record('->ComputeRecPosition');
+  $MEM_USAGE->record('-> ComputeRecPosition');
 
   # Print position solutions for validating GRPP functionality:
   PrintTitle3(*STDOUT, "Position solutions. ",
@@ -151,7 +151,7 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
 
   ReportElapsedTime([gettimeofday],
                     $ini_time_dump_data, "DumpSatObsData()");
-  $MEM_USAGE->record('->DumpObsData');
+  $MEM_USAGE->record('-> DumpObsData');
 
 # Terminal:
   # Close output log file:
