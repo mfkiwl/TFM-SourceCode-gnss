@@ -52,7 +52,7 @@ BEGIN {
   our @EXPORT = ();
 
   # Define constants to export:
-  our @EXPORT_CONST = qw();
+  our @EXPORT_CONST = qw( &NUM_PARAMETERS_TO_ESTIMATE );
 
   # Define subroutines to export:
   our @EXPORT_SUB   = qw( &ComputeRecPosition );
