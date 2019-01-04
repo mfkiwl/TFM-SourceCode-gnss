@@ -191,19 +191,22 @@ sub ComputeSatPosition {
            $ref_rinex_obs->{BODY}[$i]{SAT_OBS}{$sat}{$signal};
 
         # Init satelite coordinate array:
+        my $status;
         my @sat_coord;
 
         # Do not compute satellite coordinates if the observation is not valid:
         unless ( $obs_meas eq NULL_OBSERVATION ) {
           # Compute satellite coordinates for observation epoch:
-          @sat_coord =
+          ($status, @sat_coord) =
             ComputeSatelliteCoordinates( $obs_epoch, $obs_meas,
                                          $sat, $ref_sat_eph );
+        } else {
+          $status = FALSE;
         }
 
         # Save the satellite position in the observation hash:
-        # If the observation is null, satellite coordinates will be undefined...
-        $ref_rinex_obs->{BODY}[$i]{SAT_XYZTC}{$sat}{NAV} = \@sat_coord;
+        $ref_rinex_obs->{BODY}[$i]{SAT_XYZTC}{$sat}{NAV}{STATUS} = $status;
+        $ref_rinex_obs->{BODY}[$i]{SAT_XYZTC}{$sat}{NAV}{XYZTC}  = \@sat_coord
 
       } # end if grep($sat, SUPPORTED_SAT_SYS)
 
@@ -238,6 +241,9 @@ sub SelectNavigationBlock {
 
 sub ComputeSatelliteCoordinates {
   my ($epoch, $obs_meas, $sat, $ref_eph) = @_;
+
+  # Init algorithm status:
+  my $status = FALSE;
 
   # Transform target epoch into GPS time of week format:
   my ( $wn, $dn, $tow ) = GPS2ToW($epoch);
@@ -361,9 +367,11 @@ sub ComputeSatelliteCoordinates {
     # Compute final time correction:
     my $time_corr = $time_corr2 + $delta_trel - $delta_tgd;
 
+  # Update algorithm status:
+  $status = TRUE;
 
   # Return final satellite coordinates and time correction:
-  return  ($x_sat, $y_sat, $z_sat, $time_corr);
+  return  ($status, $x_sat, $y_sat, $z_sat, $time_corr);
 }
 
 TRUE;
