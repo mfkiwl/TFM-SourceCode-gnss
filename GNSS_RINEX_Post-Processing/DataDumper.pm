@@ -543,7 +543,7 @@ sub DumpSatPosition {
                       GetPrettyLocalDate(), $ref_gen_conf->{ELIPSOID});
 
     # 3. Write header line:
-      my @header_items = qw( Epoch Status SatID
+      my @header_items = qw( Epoch Obs-Status SatID Sat-Status
                              Sat-ECEF_X Sat-ECEF_Y Sat-ECEF_Z SatClockBias
                              Sat-GEO_Lat Sat-GEO_Lon Sat-GEO_ElipHeight );
 
@@ -570,28 +570,28 @@ sub DumpSatPosition {
             my $ref_sat_xyz_data = $ref_obs_data->{BODY}[$i]{SAT_XYZTC}{$sat};
 
             # ECEF satellite coordinates and clock bias:
-            my @sat_xyz_clkbias = @{ $ref_sat_xyz_data->{NAV} };
+            my $sat_status = $ref_sat_xyz_data->{NAV}{STATUS};
+            my @sat_xyz_clkbias = @{ $ref_sat_xyz_data->{NAV}{XYZTC} };
 
             # Geodetic satellite coordinates:
             my ( $sat_lat, $sat_lon, $sat_helip );
 
-            # NOTE: temporal for avoiding not available satellites
-            if ( @sat_xyz_clkbias ) {
+            if ( $sat_status ) {
               ($sat_lat, $sat_lon, $sat_helip) =
-              ECEF2Geodetic(@sat_xyz_clkbias[0..2], $ref_gen_conf->{ELIPSOID});
+               ECEF2Geodetic(@sat_xyz_clkbias[0..2], $ref_gen_conf->{ELIPSOID});
             } else {
-              ($sat_lat, $sat_lon, $sat_helip) = (0, 0, 0, 0);
+              @sat_xyz_clkbias = (0, 0, 0, 0);
+              ($sat_lat, $sat_lon, $sat_helip) = (0, 0, 0);
             }
 
             # Latitude and longitude are transformed according to configuration:
             my @geodetic_angles = &{ $ref_angle_sub }( $sat_lat, $sat_lon );
 
             # Save line items:
-            my @line_items = ( @epoch, $status, $sat,
+            my @line_items = ( @epoch, $status, $sat, $sat_status,
                                @sat_xyz_clkbias, @geodetic_angles, $sat_helip );
 
             # Write data line:
-            # TODO: some uninitialized satellite position in GRPP verif/valid
             say $fh join($separator, @line_items);
 
           } # end unless $sat
