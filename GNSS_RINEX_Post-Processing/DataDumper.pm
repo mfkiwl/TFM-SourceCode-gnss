@@ -157,10 +157,11 @@ sub DumpSatObsData {
       my $fh; open($fh, '>', $file_path) or croak "Could not create $!";
 
     # 2. Write title line:
-      say $fh sprintf("# > RINEX satellite observation data. Created : %s \n".
+      say $fh sprintf("# > Satellite system: $sat_sys, RINEX observations.\n".
+                      "# > Created : %s \n".
                       "# > Observation epoch status info:\n".
                       "#   0   --> OK\n".
-                      "#   1-6 --> NOK\n",
+                      "#   1-6 --> NOK",
                       GetPrettyLocalDate());
 
     # 3. Write header:
@@ -298,14 +299,18 @@ sub DumpRecSatLoSData {
       my $fh; open($fh, '>', $file_path) or croak "Could not create $!";
 
     # 2. Write title line:
-      say $fh sprintf("# > Receiver-Satellite LoS Data. Created  : %s \n".
-                      "#   Reference system for ECEF coordinates : %s \n",
-                      GetPrettyLocalDate(),
-                      $ref_gen_conf->{ELIPSOID});
+      say $fh sprintf("# > Receiver-Satellite ($sat_sys) Line of Sight data.\n".
+                      "# > Created : %s \n".
+                      "# > Observation epoch status info:\n".
+                      "#   0   --> OK\n".
+                      "#   1-6 --> NOK\n".
+                      "# > Reference system for ECEF coordinates : %s",
+                      GetPrettyLocalDate(), $ref_gen_conf->{ELIPSOID});
 
     # 3. Write header line:
       my @header_items = qw( Epoch Status SatID TropoCorr IonoCorr
-                             Azimut Zenital Elevation Distance IX IY IZ );
+                             Azimut Zenital Elevation Distance
+                             ECEF_IX ECEF_IY ECEF_IZ );
 
       say $fh "#".join($separator, @header_items);
 
@@ -336,7 +341,6 @@ sub DumpRecSatLoSData {
                                    $ref_sat_los_data->{ ELEVATION } );
 
             # Save line items:
-            # TODO: indicate reference system for ECEF_VECTOR?
             my @line_items = ( @epoch, $status, $sat,
                                $ref_sat_los_data->{ TROPO_CORR },
                                $ref_sat_los_data->{ IONO_CORR  },
@@ -414,12 +418,13 @@ sub DumpLSQReport {
     my $fh; open($fh, '>', $file_path) or croak "Could not create $!";
 
   # 2. Write title line:
-    say $fh sprintf("# > Least Squares Report. Created : %s \n",
+    say $fh sprintf("# > Least Squares Report.\n".
+                    "# > Created : %s",
                     GetPrettyLocalDate());
 
   # 3. Write header line:
-    my @header_items = qw( Epoch Iteration Status StdDevEstimator
-                           ConvergenceFlag );
+    my @header_items =
+      qw( Epoch Iteration Status StdDevEstimator ConvergenceFlag );
 
     # Insert number of apx parameters:
     push(@header_items,
@@ -438,17 +443,13 @@ sub DumpLSQReport {
          &{ $ref_epoch_sub }( $ref_obs_data->{BODY}[$i]{EPOCH} );
 
       # Go trhough available iterations:
-      for my $iter (keys %{ $ref_obs_data->{BODY}[$i]{LSQ_INFO} }) {
+      for my $iter (keys @{ $ref_obs_data->{BODY}[$i]{LSQ_INFO} }) {
 
         # Save iteration data reference:
-        my $ref_iter_data = $ref_obs_data->{BODY}[$i]{LSQ_INFO}{$iter};
-
-        # Get iteration index:
-        # TODO? : change ICD in order to save iterations as a list?
-        my $iter_index = $1 if ( $iter =~ m/^ITER_(\d+)$/ );
+        my $ref_iter_data = $ref_obs_data->{BODY}[$i]{LSQ_INFO}[$iter];
 
         # Save line items to print:
-        my @line_items = ( @epoch, $iter_index,
+        my @line_items = ( @epoch, $iter,
                            $ref_iter_data->{STATUS},
                            $ref_iter_data->{VARIANCE_ESTIMATOR}**(0.5),
                            $ref_iter_data->{CONVERGENCE},
@@ -522,9 +523,9 @@ sub DumpSatPosition {
   my @sats_to_ignore = @{ $ref_sats_to_ignore };
 
   # Save dumper useful configuration:
-  my $separator          = $ref_dump_conf->{ SEPARATOR      };
-  my $ref_epoch_sub      = $ref_dump_conf->{ EPOCH_FORMAT   };
-  my $ref_sat_xyz_format = $ref_dump_conf->{ SAT_POS_FORMAT };
+  my $separator     = $ref_dump_conf->{ SEPARATOR      };
+  my $ref_angle_sub = $ref_dump_conf->{ ANGLE_FORMAT   };
+  my $ref_epoch_sub = $ref_dump_conf->{ EPOCH_FORMAT   };
 
   for my $sat_sys (@{ $ref_gen_conf->{SELECTED_SAT_SYS} })
   {
@@ -533,15 +534,18 @@ sub DumpSatPosition {
       my $fh; open($fh, '>', $file_path) or croak "Could not create $!";
 
     # 2. Write title line:
-      # TODO: add observation epoch status info
-      say $fh sprintf("# > Satellite positions. Created  : %s \n".
-                      "#   Reference system for ECEF coordinates : %s \n",
-                      GetPrettyLocalDate(),
-                      $ref_gen_conf->{ELIPSOID});
+      say $fh sprintf("# > Satellite System: $sat_sys, navigation positions.\n".
+                      "# > Created  : %s \n".
+                      "# > Observation epoch status info:\n".
+                      "#   0   --> OK\n".
+                      "#   1-6 --> NOK\n".
+                      "# > Reference system for ECEF coordinates : %s",
+                      GetPrettyLocalDate(), $ref_gen_conf->{ELIPSOID});
 
     # 3. Write header line:
       my @header_items = qw( Epoch Status SatID
-                             SatPos[0] SatPos[1] SatPos[2] SatClockBias );
+                             Sat-ECEF_X Sat-ECEF_Y Sat-ECEF_Z SatClockBias
+                             Sat-GEO_Lat Sat-GEO_Lon Sat-GEO_ElipHeight );
 
       say $fh "#".join($separator, @header_items);
 
@@ -565,15 +569,26 @@ sub DumpSatPosition {
             # Save satellite position data reference:
             my $ref_sat_xyz_data = $ref_obs_data->{BODY}[$i]{SAT_XYZTC}{$sat};
 
-            # Satellite position is transformed according to configuration:
-            # TODO: Dump say XYZ and geodetic coordinates
-            my @sat_position =
-               &{ $ref_sat_xyz_format }( @{ $ref_sat_xyz_data->{NAV} } );
+            # ECEF satellite coordinates and clock bias:
+            my @sat_xyz_clkbias = @{ $ref_sat_xyz_data->{NAV} };
+
+            # Geodetic satellite coordinates:
+            my ( $sat_lat, $sat_lon, $sat_helip );
+
+            # NOTE: temporal for avoiding not available satellites
+            if ( @sat_xyz_clkbias ) {
+              ($sat_lat, $sat_lon, $sat_helip) =
+              ECEF2Geodetic(@sat_xyz_clkbias[0..2], $ref_gen_conf->{ELIPSOID});
+            } else {
+              ($sat_lat, $sat_lon, $sat_helip) = (0, 0, 0, 0);
+            }
+
+            # Latitude and longitude are transformed according to configuration:
+            my @geodetic_angles = &{ $ref_angle_sub }( $sat_lat, $sat_lon );
 
             # Save line items:
             my @line_items = ( @epoch, $status, $sat,
-                               @sat_position,
-                               $ref_sat_xyz_data->{NAV}[3] );
+                               @sat_xyz_clkbias, @geodetic_angles, $sat_helip );
 
             # Write data line:
             # TODO: some uninitialized satellite position in GRPP verif/valid
@@ -643,18 +658,24 @@ sub DumpRecPosition {
   my $ref_rec_xyz_format = $ref_dump_conf->{ REC_POS_FORMAT };
 
   # 1. Open dumper file at output path:
-    my $file_path = join('/', ($output_path, "rec-xyz.out"));
+    my $rec_name = $ref_obs_data->{HEAD}{MARKER_NAME};
+    my $file_path = join('/', ($output_path, "$rec_name-xyz.out"));
     my $fh; open($fh, '>', $file_path) or croak "Could not create $!";
 
   # 2. Write title line:
-    say $fh sprintf("# > Receiver Position. Created : %s \n",
-                    GetPrettyLocalDate());
+    say $fh sprintf("# > Receiver: $rec_name adjusted coordinates.\n".
+                    "# > Created  : %s \n".
+                    "# > Observation epoch status info:\n".
+                    "#   0   --> OK\n".
+                    "#   1-6 --> NOK\n".
+                    "# > Reference system for ECEF coordinates : %s",
+                    GetPrettyLocalDate(), $ref_gen_conf->{ELIPSOID});
 
   # 3. Write header line:
     my @header_items = qw( Epoch Status
-                           RecPosX RecPosY RecPosZ RecClkBias
-                           RecSigmaX RecSigmaY RecSigmaZ SigmaClkBias
-                           RecLat RecLon RecElipHeight );
+                           Rec-ECEF_X Rec-ECEF_Y Rec-ECEF_Z RecClkBias
+                           Rec-Sigma_X Rec-Sigma_Y Rec-Sigma_Z Rec-Sigma_ClkBias
+                           Rec-GEO_Lat Rec-GEO_Lon Rec-GEO_ElipHeight );
 
     say $fh "#".join($separator, @header_items);
 
