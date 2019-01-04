@@ -242,6 +242,8 @@ sub ComputeRecPosition {
             $iteration += 1;
 
             # Check for convergence criteria:
+            # TODO : convergence criteria should be based on delta parameters
+            #        obtained from LSQ algorithm
             $convergence_flag =
               CheckConvergenceCriteria($ref_rec_var_xyzdt->[0],
                                        $ref_rec_var_xyzdt->[1],
