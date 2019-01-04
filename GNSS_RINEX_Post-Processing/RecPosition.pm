@@ -319,8 +319,10 @@ sub ComputeRecPosition {
 sub InitEpochInfoHash {
   my ($ref_epoch_info) = @_;
 
+  my @array_dummy;
+
   $ref_epoch_info->{ SAT_LOS  } = undef;
-  $ref_epoch_info->{ LSQ_INFO } = undef;
+  $ref_epoch_info->{ LSQ_INFO } = \@array_dummy;
   $ref_epoch_info->{ POSITION_SOLUTION }{ STATUS      } = FALSE;
   $ref_epoch_info->{ POSITION_SOLUTION }{ XYZDT       } = undef;
   $ref_epoch_info->{ POSITION_SOLUTION }{ SIGMA_XYZDT } = undef;
@@ -557,14 +559,14 @@ sub FillLSQInfo {
   my $var_estimator = sclr( $pdl_var_estimator    );
 
   # Define iteration identifier:
-  $iter = "ITER_$iter";
+  # $iter = "ITER_$iter";
 
-  $ref_epoch_info->{LSQ_INFO}{$iter}{ STATUS             } = $lsq_status;
-  $ref_epoch_info->{LSQ_INFO}{$iter}{ CONVERGENCE        } = $conv_flag;
-  $ref_epoch_info->{LSQ_INFO}{$iter}{ APX_PARAMETER      } = $ref_apx_prm;
-  $ref_epoch_info->{LSQ_INFO}{$iter}{ PARAMETER_VECTOR   } = \@prm_vector;
-  $ref_epoch_info->{LSQ_INFO}{$iter}{ RESIDUAL_VECTOR    } = \@res_vector;
-  $ref_epoch_info->{LSQ_INFO}{$iter}{ VARIANCE_ESTIMATOR } = $var_estimator;
+  $ref_epoch_info->{LSQ_INFO}[$iter]{ STATUS             } = $lsq_status;
+  $ref_epoch_info->{LSQ_INFO}[$iter]{ CONVERGENCE        } = $conv_flag;
+  $ref_epoch_info->{LSQ_INFO}[$iter]{ APX_PARAMETER      } = $ref_apx_prm;
+  $ref_epoch_info->{LSQ_INFO}[$iter]{ PARAMETER_VECTOR   } = \@prm_vector;
+  $ref_epoch_info->{LSQ_INFO}[$iter]{ RESIDUAL_VECTOR    } = \@res_vector;
+  $ref_epoch_info->{LSQ_INFO}[$iter]{ VARIANCE_ESTIMATOR } = $var_estimator;
 }
 
 sub GetReceiverPositionSolution {
