@@ -355,7 +355,7 @@ sub SelectSatForLSQ {
     unless ( $raw_obs eq NULL_OBSERVATION )
     {
       # Save satellite navigation coordinates:
-      my @sat_xyztc = @{$ref_epoch_info->{SAT_XYZTC}{$sat}{NAV}};
+      my @sat_xyztc = @{$ref_epoch_info->{SAT_XYZTC}{$sat}{NAV}{XYZTC}};
 
       # Select aproximate recevier position:
       # NOTE: possible approximate parameters come from RINEX
@@ -472,7 +472,7 @@ sub BuildLSQMatrixSystem {
     unless ( $raw_obs eq NULL_OBSERVATION )
     {
       # Save navigation satellite coordinates:
-      my @sat_xyztc = @{ $ref_epoch_info->{SAT_XYZTC}{$sat}{NAV} };
+      my @sat_xyztc = @{ $ref_epoch_info->{SAT_XYZTC}{$sat}{NAV}{XYZTC} };
 
       # ************************************ #
       # Build pseudorange equation sequence: #
