@@ -44,6 +44,11 @@ BEGIN {
   our @EXPORT_CONST = qw( &OBSERVATION_RINEX
                           &NAVIGATION_RINEX
                           &NULL_OBSERVATION
+                          &ION_GAL_V3
+                          &ION_BETA_V2
+                          &ION_BETA_V3
+                          &ION_ALPHA_V2
+                          &ION_ALPHA_V3
                           &HEALTHY_OBSERVATION_BLOCK
                           &OBS_MANDATORY_HEADER_PARAMETERS
                           &NAV_MANDATORY_HEADER_PARAMETERS
@@ -116,6 +121,13 @@ use constant {
 use constant {
   IONOSPHERIC_CORR_V3 => 'IONOSPHERIC CORR',
   TIME_SYSTEM_CORR_V3 => 'TIME SYSTEM CORR',
+};
+
+# Navigation RINEX 3 ionosphere coefficients keys:
+use constant {
+  ION_GAL_V3   => 'GAL',
+  ION_BETA_V3  => 'GPSA',
+  ION_ALPHA_V3 => 'GPSB',
 };
 
 # RINEX hash parameters constants:
