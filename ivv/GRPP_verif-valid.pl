@@ -111,10 +111,10 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
                        "first 4 and last 4 observation epochs:");
   for (0..3, -4..-1) {
     PrintComment( *STDOUT, "Observation epoch : ".
-      BuildDateString(GPS2Date($ref_obs_data->{BODY}[$_]{EPOCH})) );
-    PrintBulletedInfo(*STDOUT, "  - ",
-      "Status = ".
-      ($ref_obs_data->{BODY}[$_]{POSITION_SOLUTION}{STATUS} ? "TRUE":"FALSE"),
+      BuildDateString(GPS2Date($ref_obs_data->{BODY}[$_]{EPOCH})).
+      " --> Status = ".
+      ($ref_obs_data->{BODY}[$_]{POSITION_SOLUTION}{STATUS} ? "TRUE":"FALSE") );
+    PrintBulletedInfo(*STDOUT, "  ",
       "|  X |  Y |  Z =".
         join(' | ',
           sprintf( " %12.3f |" x 3,
