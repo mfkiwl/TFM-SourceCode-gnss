@@ -11,7 +11,7 @@ package RecPosition;
 # ---------------------------------------------------------------------------- #
 use strict;   # enables strict syntax...
 
-use PDL;                                # loads Perl Data Language extension...
+use PDL;  # loads Perl Data Language extension...
 use PDL::Constants qw(PI);
 use Scalar::Util qq(looks_like_number); # scalar utility...
 
@@ -78,6 +78,7 @@ use constant NUM_PARAMETERS_TO_ESTIMATE => 4;
 # Module specific warning codes:
 use constant {
   WARN_OBS_NOT_VALID                 => 90301,
+  WARN_IONO_COEFF_NOT_SELECTED       => 90302,
   WARN_NOT_SUCCESSFUL_LSQ_ESTIMATION => 90305,
 };
 
@@ -137,10 +138,17 @@ sub ComputeRecPosition {
       }
     }
 
-    # TODO: Selection of alpha and beta IONO coefficients.
-    #       This depends on:
-    #         - Navigation RINEX version
-    #         - GNSS constellation --> Build hash
+    # Determine ionosphere coefficients for each selected constellation:
+    my ($iono_coeff_status, $warn_msg, $ref_iono_coeff) =
+       SelectIonosphereCoefficients( $ref_sat_sys_nav,
+                                     $ref_gen_conf->{SELECTED_SAT_SYS} );
+
+    # Raise warning if the coefficients are not found:
+    unless($iono_coeff_status) {
+      RaiseWarning($fh_log, WARN_IONO_COEFF_NOT_SELECTED,
+                   $warn_msg, "Ionosphere delay may not be properly computed!");
+    }
+
 
   # **************************** #
   # Position estimation routine: #
@@ -198,7 +206,7 @@ sub ComputeRecPosition {
           # Build up LSQ matrix system:
           BuildLSQMatrixSystem(
             $ref_gen_conf,
-            $ref_sat_sys_nav,
+            $ref_iono_coeff,
             $epoch, $ref_epoch_info,
             \@rec_apx_xyzdt, \@sat_to_lsq,
             $ref_sub_iono, $ref_sub_troposphere,
@@ -245,9 +253,7 @@ sub ComputeRecPosition {
             # TODO : convergence criteria should be based on delta parameters
             #        obtained from LSQ algorithm
             $convergence_flag =
-              CheckConvergenceCriteria($ref_rec_var_xyzdt->[0],
-                                       $ref_rec_var_xyzdt->[1],
-                                       $ref_rec_var_xyzdt->[2],
+              CheckConvergenceCriteria($pdl_parameter_vector,
                                        $ref_gen_conf->{CONVERGENCE_THRESHOLD});
 
             # Fill LSQ computation info.
@@ -317,6 +323,122 @@ sub ComputeRecPosition {
 # First Level Subroutines:                                       #
 #   Subroutines called from main public sub: ComputeRecPosition. #
 # ************************************************************** #
+
+sub SelectIonosphereCoefficients {
+  my ($ref_sat_sys_nav, $ref_selected_sat_sys) = @_;
+
+  # Init sub status and ionsphere coefficients hash:
+  my $status = TRUE;
+  my %iono_coeff; my $ref_iono_coeff = \%iono_coeff;
+
+  # Init sub's warning message:
+  my $warn_msg;
+
+  # Init dummy array for filling null hash info:
+  my @dummy_array;
+
+  for my $sat_sys (@{$ref_selected_sat_sys}) {
+
+    # Init variables to hold the reference to the coefficients:
+    my ($ref_coeff_1, $ref_coeff_2);
+
+    # Ionospheric coefficients for GPS constellation:
+    if ($sat_sys eq RINEX_GPS_ID) {
+
+      # Determine navigation RINEX version:
+      my $ref_nav_rinex_head = $ref_sat_sys_nav->{$sat_sys}{HEAD};
+      my $rinex_nav_version  = $ref_nav_rinex_head->{VERSION};
+
+      if ($rinex_nav_version == 2) {
+
+        # First, check that both coefficients exist since these are optional
+        # parameters in the navigation RINEX:
+        if ( defined $ref_nav_rinex_head->{ &ION_ALPHA_V2 } &&
+             defined $ref_nav_rinex_head->{ &ION_BETA_V2  } ) {
+          ( $ref_coeff_1,
+            $ref_coeff_2 ) = ( $ref_nav_rinex_head->{ &ION_ALPHA_V2 },
+                               $ref_nav_rinex_head->{ &ION_BETA_V2  } );
+        } else {
+          $warn_msg = FillIonoCoefficientWarning($sat_sys, $rinex_nav_version,
+                                                 ION_ALPHA_V2, ION_BETA_V2);
+          $status   = FALSE; last;
+        } # end if defined
+
+      } elsif ($rinex_nav_version == 3) {
+
+        # First, check that both coefficients exist since these are optional
+        # parameters in the navigation RINEX:
+        if ( defined $ref_nav_rinex_head->{ &ION_ALPHA_V3 } &&
+             defined $ref_nav_rinex_head->{ &ION_BETA_V3  } ) {
+          ( $ref_coeff_1,
+            $ref_coeff_2 ) = ( $ref_nav_rinex_head->{ &ION_ALPHA_V3 },
+                               $ref_nav_rinex_head->{ &ION_BETA_V3  } );
+        } else {
+          $warn_msg = FillIonoCoefficientWarning($sat_sys, $rinex_nav_version,
+                                                 ION_ALPHA_V3, ION_BETA_V3);
+          $status = FALSE; last;
+        } # end if defined
+
+      } else {
+
+        $warn_msg = "RINEX navigation file version: '$rinex_nav_version', ".
+                    "was not recognized for constellation: '$sat_sys'.";
+        $status = FALSE; last;
+
+      } # end if $rinex_nav_version
+
+    } # end if $sat_sys is GPS
+
+
+    # Ionospheric coefficients for GALILEO constellation:
+    if ($sat_sys eq RINEX_GAL_ID) {
+
+      # Determine navigation RINEX version:
+      my $ref_nav_rinex_head = $ref_sat_sys_nav->{$sat_sys}{HEAD};
+      my $rinex_nav_version  = $ref_nav_rinex_head->{VERSION};
+
+      if ($rinex_nav_version == 2) {
+
+        # Ionosphere coefficients for GALILEO are not defined in RINEX V2
+        # navigation file:
+        $warn_msg = "Sorry, but RINEX V2 navigation file, does not include ".
+                    "ionosphere coefficients for GALILEO constellation.".
+                    "Try to download RINEX V3 GALILEO navigation files.";
+        $status = FALSE; last;
+
+      } elsif ($rinex_nav_version == 3) {
+
+        # First, check that coefficients exist since this are optional
+        # parameters in the navigation RINEX:
+        if ( defined $ref_nav_rinex_head->{ &ION_GAL_V3 } ) {
+          ( $ref_coeff_1,
+            $ref_coeff_2 ) = ( $ref_nav_rinex_head->{ &ION_GAL_V3 },
+                               \@dummy_array );
+        } else {
+          $warn_msg = FillIonoCoefficientWarning($sat_sys, $rinex_nav_version,
+                                                 ION_GAL_V3);
+          $status = FALSE; last;
+        } # end if defined
+
+      } else {
+
+        $warn_msg = "RINEX navigation file version: '$rinex_nav_version', ".
+                    "was not recognized for constellation: '$sat_sys'.";
+        $status = FALSE; last;
+
+      } # end if $rinex_nav_version
+
+    } # end if $sat_sys is GALILEO
+
+    # Append ionosphere coefficients to target hash:
+    $ref_iono_coeff->{$sat_sys}{ IONO_COEFF_1 } = $ref_coeff_1;
+    $ref_iono_coeff->{$sat_sys}{ IONO_COEFF_2 } = $ref_coeff_2;
+
+  } # end for $sat_sys
+
+  # Return sub's status and hash reference to selected coefficients:
+  return ($status, $warn_msg, $ref_iono_coeff);
+}
 
 sub InitEpochInfoHash {
   my ($ref_epoch_info) = @_;
@@ -443,7 +565,7 @@ sub InitLSQ {
 sub BuildLSQMatrixSystem {
   my (# General configuration:
       $ref_gen_conf,
-      $ref_sat_sys_nav,
+      $ref_iono_coeff,
       # Epoch info:
       $epoch, $ref_epoch_info,
       # Approximate position & SV list fo LSQ:
@@ -515,8 +637,8 @@ sub BuildLSQMatrixSystem {
           ( $epoch,
             $rec_lat, $rec_lon,
             $rec_sat_azimut, $rec_sat_elevation,
-            $ref_sat_sys_nav->{$sat_sys}{HEAD}{ ION_ALPHA },
-            $ref_sat_sys_nav->{$sat_sys}{HEAD}{ ION_BETA  } );
+            $ref_iono_coeff->{$sat_sys}{ IONO_COEFF_1 },
+            $ref_iono_coeff->{$sat_sys}{ IONO_COEFF_2 } );
 
       # Fill LoS data in epoch info hash:
       FillLoSDataHash($ref_epoch_info, $sat,
@@ -575,7 +697,7 @@ sub GetReceiverPositionSolution {
   my ($pdl_apx_parameters, $pdl_parameter_vector, $pdl_covar_matrix ) = @_;
 
   my @rec_est_xyzdt =
-    list($pdl_apx_parameters + transpose($pdl_parameter_vector));
+    list($pdl_apx_parameters + transpose($pdl_parameter_vector)->flat);
 
   # Retrieve estimated parameter variances from covariance matrix:
   my @rec_var_xyzdt = ( sclr($pdl_covar_matrix->slice('0,0')),
@@ -587,13 +709,26 @@ sub GetReceiverPositionSolution {
 }
 
 sub CheckConvergenceCriteria {
-  my ($var_x, $var_y, $var_z, $threshold) = @_;
+  my ($pdl_parameter_vector, $threshold) = @_;
 
   # Declare boolean answer:
   my $status;
 
+  # Un-piddle parameter vector to array reference:
+  my $ref_delta_parameters = unpdl(transpose($pdl_parameter_vector)->flat);
+
+  # Retrieve delta parameters components:
+  my ( $delta_x,
+       $delta_y,
+       $delta_z,
+       $delta_clk ) = ( $ref_delta_parameters->[0],
+                        $ref_delta_parameters->[1],
+                        $ref_delta_parameters->[2],
+                        $ref_delta_parameters->[3] );
+
   # Determine convergence criteria by computing the square root sumatory:
-  $status = ( ($var_x + $var_y + $var_z)**0.5 <= $threshold ) ? TRUE : FALSE;
+  $status = ( ModulusNth($delta_x, $delta_y, $delta_z) <= $threshold ) ?
+            TRUE : FALSE;
 
   # Return boolean answer:
   return $status;
@@ -613,6 +748,16 @@ sub FillSolutionDataHash {
 # Second Level Subroutines:                          #
 #   Subrotuines that are called from 1st level subs. #
 # ************************************************** #
+
+sub FillIonoCoefficientWarning {
+  my ($sat_sys, $rinex_nav_version, @iono_coeffs) = @_;
+
+  my $coeff_list = join(', ', @iono_coeffs);
+
+  return "Could not find ionosphere coefficients: $coeff_list for ".
+         "constellation: '$sat_sys' and RINEX navigation file version: ".
+         "'$rinex_nav_version'";
+}
 
 sub SelectApproximateParameters {
   my ( $first_solution_flag,
