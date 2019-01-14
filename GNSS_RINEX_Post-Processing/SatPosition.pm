@@ -323,7 +323,7 @@ sub ComputeSatelliteCoordinates {
     my $phi0 = $v + $ref_eph->{OMEGA_2}; # NOTE: OMEGA_1 or OMEGA_2 ?!
 
     # Orbital correction terms:
-      # TODO: what do they mean these terms? --> physical meaning...
+      # NOTE: what do they mean these terms? --> physical meaning...
       my ( $delta_u, $delta_r, $delta_i ) =
          ( $ref_eph->{CUS}*sin(2*$phi0) + $ref_eph->{CUC}*cos(2*$phi0),
            $ref_eph->{CRS}*sin(2*$phi0) + $ref_eph->{CRC}*cos(2*$phi0),
