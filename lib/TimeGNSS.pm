@@ -68,7 +68,8 @@ use constant UNIX_GPS_OFFSET => 315964800;
 sub BuildDateString {
   my ($yyyy, $mo, $dd, $hh, $mi, $ss) = @_;
 
-  my $date = sprintf("%04d/%02d/%02d %02d:%02d:%f", $yyyy,$mo,$dd,$hh,$mi,$ss);
+  my $date = sprintf( "%04d/%02d/%02d %02d:%02d:%02f",
+                      $yyyy, $mo, $dd, $hh, $mi, $ss );
 
   return $date;
 }
