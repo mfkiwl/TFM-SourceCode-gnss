@@ -353,11 +353,11 @@ sub SelectIonosphereCoefficients {
 
         # First, check that both coefficients exist since these are optional
         # parameters in the navigation RINEX:
-        if ( defined $ref_nav_rinex_head->{ &ION_ALPHA_V2 } &&
-             defined $ref_nav_rinex_head->{ &ION_BETA_V2  } ) {
+        if ( defined $ref_nav_rinex_head->{ ION_ALPHA } &&
+             defined $ref_nav_rinex_head->{ ION_BETA  } ) {
           ( $ref_coeff_1,
-            $ref_coeff_2 ) = ( $ref_nav_rinex_head->{ &ION_ALPHA_V2 },
-                               $ref_nav_rinex_head->{ &ION_BETA_V2  } );
+            $ref_coeff_2 ) = ( $ref_nav_rinex_head->{ ION_ALPHA },
+                               $ref_nav_rinex_head->{ ION_BETA  } );
         } else {
           $warn_msg = FillIonoCoefficientWarning($sat_sys, $rinex_nav_version,
                                                  ION_ALPHA_V2, ION_BETA_V2);
