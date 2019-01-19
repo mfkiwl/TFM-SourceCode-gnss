@@ -73,8 +73,6 @@ use constant SAASTAMOINEN_B_DOMAIN =>
 use constant SAASTAMOINEN_B_RANGE  =>
   [1.156, 1.079, 1.006, 0.938, 0.874, 0.813, 0.757, 0.654, 0.563]; # [m]
 
-use constant GPS_SQUARED_L1_L2_DIVISION => ( GPS_L1_FREQ / GPS_L2_FREQ )**2;
-
 # ---------------------------------------------------------------------------- #
 # Subroutines:
 # ---------------------------------------------------------------------------- #
@@ -135,7 +133,8 @@ sub ComputeIonoKlobucharDelay {
   my ( $gps_epoch,
        $lat_rec, $lon_rec,
        $azimut, $elevation,
-       $ref_iono_alpha, $ref_iono_beta, ) = @_;
+       $ref_iono_alpha, $ref_iono_beta,
+       $carrier_freq_f1, $carrier_freq_f2 ) = @_;
 
   # De-reference input arguments:
   my @iono_alpha_prm = @{ $ref_iono_alpha };
@@ -193,23 +192,23 @@ sub ComputeIonoKlobucharDelay {
     # Compute slant factor delay [m¿?]:
     my $slant_fact = 1.0 + 16.0*(0.53 - $elevation)**3;
 
-    # Compute ionospheric time delay for L1 [m]:
-    my $iono_delay_l1;
+    # Compute ionospheric time delay for standard frequency [m]:
+    my $iono_delay_f1;
     # Depending of the absolue magnitude of the phase delay, delay for L1 signal
     # is computed as:
     if ( abs($iono_phase) <= 1.57 ) {
       my $aux1       = 1 - ($iono_phase**2/2) + ($iono_phase**4/24);
-      $iono_delay_l1 = ( 5.1e-9 + $iono_amplitude*$aux1 ) * $slant_fact;
+      $iono_delay_f1 = ( 5.1e-9 + $iono_amplitude*$aux1 ) * $slant_fact;
     } elsif ( abs($iono_phase) >= 1.57 ) {
-      $iono_delay_l1 = 5.1e-9 * $slant_fact;
+      $iono_delay_f1 = 5.1e-9 * $slant_fact;
     }
 
     # Transform ionospheric time delay into meters:
-    $iono_delay_l1 *= SPEED_OF_LIGHT;
+    $iono_delay_f1 *= SPEED_OF_LIGHT;
 
-    # TODO: Compute ionospheric time delay for L2 [m]:
-    #       How to handle this?
-    my $iono_delay_l2 = GPS_SQUARED_L1_L2_DIVISION*$iono_delay_l1;
+    # Compute ionospheric time delay for configured frequency [m]:
+    my $iono_delay_f2 =
+      ( ($carrier_freq_f1/$carrier_freq_f2)**2 )*$iono_delay_f1;
 
     # PrintTitle3(*STDOUT, "Ionosphere Klobuchar computed parameters:");
     # PrintBulletedInfo(*STDOUT, "\t\t - ",
@@ -220,12 +219,12 @@ sub ComputeIonoKlobucharDelay {
     #   "Iono delay amplitude = $iono_amplitude",
     #   "Iono delay period    = $iono_period",
     #   "Slant factor         = $slant_fact",
-    #   "Iono delay at L1     = $iono_delay_l1",
-    #   "Iono delay at L2     = $iono_delay_l2");
+    #   "Iono delay at L1     = $iono_delay_f1",
+    #   "Iono delay at L2     = $iono_delay_f2");
 
 
   # Return ionospheric delays for both frequencies:
-  return ($iono_delay_l1, $iono_delay_l2)
+  return ($iono_delay_f1, $iono_delay_f2)
 }
 
 sub ComputeIonoNeQuickDelay {
