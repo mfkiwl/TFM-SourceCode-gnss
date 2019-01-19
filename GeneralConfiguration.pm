@@ -324,7 +324,13 @@ sub LoadConfiguration {
       if ( $config_content =~ /^GPS Signal Observation +: +(.+)$/gim ) {
         my $gps_signal = $1;
         if ( grep(/^$gps_signal$/, SUPPORTED_GPS_SIGNALS) ) {
-          $ref_config_hash->{SELECTED_SIGNALS}{&RINEX_GPS_ID} = $gps_signal;
+          $ref_config_hash ->
+            {SELECTED_SIGNALS}{&RINEX_GPS_ID} = $gps_signal;
+          $ref_config_hash ->
+            {CARRIER_FREQUENCY}{&RINEX_GPS_ID}{F1} = GPS_L1_FREQ;
+          $ref_config_hash ->
+            {CARRIER_FREQUENCY}{&RINEX_GPS_ID}{F2} =
+              GetCarrierFrequency( &RINEX_GPS_ID, $gps_signal );
         } else {
           RaiseError(*STDOUT, ERR_SIGNAL_NOT_SUPPORTED,
           "GPS signal \'$gps_signal\' is not supported",
@@ -337,7 +343,13 @@ sub LoadConfiguration {
       if ( $config_content =~ /^GAL Signal Observation +: +(.+)$/gim ) {
         my $gal_signal = $1;
         if ( grep(/^$gal_signal$/, SUPPORTED_GAL_SIGNALS) ) {
-          $ref_config_hash->{SELECTED_SIGNALS}{&RINEX_GAL_ID} = $gal_signal;
+          $ref_config_hash ->
+            {SELECTED_SIGNALS}{&RINEX_GAL_ID} = $gal_signal;
+          $ref_config_hash ->
+            {CARRIER_FREQUENCY}{&RINEX_GAL_ID}{F1} = GAL_E1_FREQ;
+          $ref_config_hash ->
+            {CARRIER_FREQUENCY}{&RINEX_GAL_ID}{F2} =
+              GetCarrierFrequency( &RINEX_GPS_ID, $gal_signal );
         } else {
           RaiseError(*STDOUT, ERR_SIGNAL_NOT_SUPPORTED,
           "GALILEO signal \'$gal_signal\' is not supported",
@@ -545,6 +557,50 @@ sub LoadConfiguration {
   # TODO: Data Dumper configuration:
 
   return $ref_config_hash;
+}
+
+sub GetCarrierFrequency {
+  my ($sat_sys, $obs_code) = @_;
+
+  # Init var to store selected carrier frequency:
+  my $carrier_freq;
+
+  # Decompose observation info:
+  my ($obs_type, $obs_channel, $obs_track) = split(//, $obs_code);
+
+  # Switch case for GPS and GALILEO obs:
+  given ($sat_sys) {
+
+    # ******************************* #
+    # GPS carrier frequency selection #
+    # ******************************* #
+    when (&RINEX_GPS_ID) {
+      given ($obs_channel) {
+        when (1) { $carrier_freq = GPS_L1_FREQ; }
+        when (2) { $carrier_freq = GPS_L2_FREQ; }
+        when (5) { $carrier_freq = GPS_L5_FREQ; }
+        default  { $carrier_freq = GPS_L1_FREQ; }
+      } # end given $obs_channel
+    } # end when RINEX_GPS_ID
+
+    # *********************************** #
+    # GALILEO carrier frequency selection #
+    # *********************************** #
+    when (&RINEX_GAL_ID) {
+      given ($obs_channel) {
+        when (1) { $carrier_freq = GAL_E1_FREQ;  }
+        when (5) { $carrier_freq = GAL_E5a_FREQ; }
+        when (7) { $carrier_freq = GAL_E5b_FREQ; }
+        when (8) { $carrier_freq = GAL_E5_FREQ;  }
+        default  { $carrier_freq = GAL_E1_FREQ;  }
+      } # end given $obs_channel
+    } # end when RINEX_GAL_ID
+
+  } # end given $sat_sys
+
+  # If no frequency from those above is selected,
+  # the returned value will be undef:
+  return $carrier_freq;
 }
 
 
