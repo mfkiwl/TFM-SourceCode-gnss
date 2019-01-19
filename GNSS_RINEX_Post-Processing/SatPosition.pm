@@ -196,10 +196,16 @@ sub ComputeSatPosition {
 
         # Do not compute satellite coordinates if the observation is not valid:
         unless ( $obs_meas eq NULL_OBSERVATION ) {
+          # Retrieve carrier frequencies:
+          my ( $carrier_freq_f1, $carrier_freq_f2 ) =
+             ( $ref_gen_conf->{CARRIER_FREQUENCY}{$sat_sys}{F1},
+               $ref_gen_conf->{CARRIER_FREQUENCY}{$sat_sys}{F2} );
+
           # Compute satellite coordinates for observation epoch:
           ($status, @sat_coord) =
-            ComputeSatelliteCoordinates( $obs_epoch, $obs_meas,
-                                         $sat, $ref_sat_eph );
+            ComputeSatelliteCoordinates( $obs_epoch,
+                                         $obs_meas, $sat, $ref_sat_eph,
+                                         $carrier_freq_f1, $carrier_freq_f2 );
         } else {
           $status = FALSE;
         }
@@ -240,7 +246,8 @@ sub SelectNavigationBlock {
 }
 
 sub ComputeSatelliteCoordinates {
-  my ($epoch, $obs_meas, $sat, $ref_eph) = @_;
+  my ($epoch, $obs_meas, $sat, $ref_eph,
+      $carrier_freq_f1, $carrier_freq_f2) = @_;
 
   # Init algorithm status:
   my $status = FALSE;
@@ -361,8 +368,7 @@ sub ComputeSatelliteCoordinates {
     # Total group delay correction:
     # TODO: Frequencies are selected based on... # NOTE: how to handle this?
     #       This must be based on the constellation and the selected signal
-    my ( $freq1, $freq2 ) = ( GPS_L1_FREQ, GPS_L2_FREQ );
-    my $delta_tgd = (($freq1/$freq2)**2)*$ref_eph->{TGD};
+    my $delta_tgd = (($carrier_freq_f1/$carrier_freq_f2)**2)*$ref_eph->{TGD};
 
     # Compute final time correction:
     my $time_corr = $time_corr2 + $delta_trel - $delta_tgd;
