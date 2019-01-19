@@ -194,7 +194,7 @@ sub ComputeRecPosition {
                                                  NUM_PARAMETERS_TO_ESTIMATE );
 
           # Build up LSQ matrix system:
-          BuildLSQMatrixSystem(
+          BuildLSQMatrixSystem (
             $ref_gen_conf,
             $ref_iono_coeff,
             $epoch, $ref_epoch_info,
@@ -227,7 +227,7 @@ sub ComputeRecPosition {
 
             # Get estimated receiver position and solution variances:
             ( $ref_rec_est_xyzdt,
-              $ref_rec_var_xyzdt ) = GetReceiverPositionSolution(
+              $ref_rec_var_xyzdt ) = GetReceiverPositionSolution (
                                         $pdl_rec_apx_xyzdt,
                                         $pdl_parameter_vector,
                                         $pdl_covariance_matrix
@@ -240,8 +240,6 @@ sub ComputeRecPosition {
             $iteration += 1;
 
             # Check for convergence criteria:
-            # TODO : convergence criteria should be based on delta parameters
-            #        obtained from LSQ algorithm
             $convergence_flag =
               CheckConvergenceCriteria($pdl_parameter_vector,
                                        $ref_gen_conf->{CONVERGENCE_THRESHOLD});
@@ -605,8 +603,8 @@ sub BuildLSQMatrixSystem {
       $ref_design_matrix, $ref_weight_matrix, $ref_ind_term_matrix) = @_;
 
   # De-reference input arguments:
-  my @sat_to_lsq = @{$ref_sat_to_lsq};
-  my @rec_apx_xyzdt = @{$ref_rec_apx_xyzdt};
+  my @sat_to_lsq    = @{ $ref_sat_to_lsq    };
+  my @rec_apx_xyzdt = @{ $ref_rec_apx_xyzdt };
 
   # Iterate over the selected satellites for LSQ:
   for (my $j = 0; $j < scalar(@sat_to_lsq); $j += 1)
@@ -661,19 +659,21 @@ sub BuildLSQMatrixSystem {
         &{$ref_sub_troposphere}( $rec_sat_zenital, $rec_helip );
 
       # 4. Ionospheric delay correction:
-      my ($ionosphere_corr, $ionosphere_corr_l2) =
-        &{$ref_sub_iono->{$sat_sys}}
-          ( $epoch,
-            $rec_lat, $rec_lon,
-            $rec_sat_azimut, $rec_sat_elevation,
-            $ref_iono_coeff->{$sat_sys}{ IONO_COEFF_1 },
-            $ref_iono_coeff->{$sat_sys}{ IONO_COEFF_2 } );
+      my ($ionosphere_corr_f1, $ionosphere_corr_f2) =
+        &{$ref_sub_iono->{$sat_sys}} (
+          $epoch, $rec_lat, $rec_lon,
+          $rec_sat_azimut, $rec_sat_elevation,
+          $ref_iono_coeff->{$sat_sys}{ IONO_COEFF_1 },
+          $ref_iono_coeff->{$sat_sys}{ IONO_COEFF_2 },
+          $ref_gen_conf->{CARRIER_FREQUENCY}{$sat_sys}{F1},
+          $ref_gen_conf->{CARRIER_FREQUENCY}{$sat_sys}{F2}
+        );
 
       # Fill LoS data in epoch info hash:
       FillLoSDataHash($ref_epoch_info, $sat,
                       $rec_sat_azimut, $rec_sat_zenital,
                       $rec_sat_distance, $rec_sat_elevation,
-                      $ionosphere_corr_l2, $troposhpere_corr,
+                      $ionosphere_corr_f2, $troposhpere_corr,
                       [$rec_sat_ix, $rec_sat_iy, $rec_sat_iz]);
 
       # 5. Set pseudorange equation:
@@ -685,7 +685,7 @@ sub BuildLSQMatrixSystem {
                               $rec_sat_iz,
                               $sat_clk_bias,
                               $rec_clk_bias,
-                              $ionosphere_corr_l2,
+                              $ionosphere_corr_f2,
                               $troposhpere_corr,
                               $rec_sat_distance,
                               $rec_sat_elevation,
