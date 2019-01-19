@@ -57,6 +57,8 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
 # Load general configuration:
   my $ref_gen_conf = LoadConfiguration($path_conf_file);
 
+  # print Dumper $ref_gen_conf; exit 0;
+
   # print Dumper $ref_gen_conf;
 
   if ($ref_gen_conf == KILLED) {
