@@ -676,10 +676,14 @@ sub BuildLSQMatrixSystem {
                       $ionosphere_corr_f2, $troposhpere_corr,
                       [$rec_sat_ix, $rec_sat_iy, $rec_sat_iz]);
 
+      # Retrive configured observation mean error:
+      my $obs_err = $ref_gen_conf->{OBS_MEAN_ERR}{$sat_sys};
+
       # 5. Set pseudorange equation:
       SetPseudorangeEquation( # Inputs:
                               $j,
                               $raw_obs,
+                              $obs_err,
                               $rec_sat_ix,
                               $rec_sat_iy,
                               $rec_sat_iz,
@@ -910,6 +914,7 @@ sub SetPseudorangeEquation {
   my ( # Inputs:
         $iobs, # observation index
         $raw_obs, # raw REC-SV observation
+        $obs_mean_err, # configured observation mean error
         $ix, $iy, $iz, # REC-SV ECEF vector components
         $sat_clk_bias, $rec_clk_bias, # SV & REC clock biases
         $ionosphere_corr, $troposhpere_corr, # tropo & iono LoS delays
@@ -924,9 +929,12 @@ sub SetPseudorangeEquation {
   $ref_design_matrix->[$iobs][3] =  1;
 
   # 2. Observation weight term:
-  my $ep2 = 1.5*0.3; # TODO: Review Hofmann et al. 2008
-                     # Seems like a coeficient for P2 observable
-  $ref_weight_matrix->[$iobs][$iobs] = sin($rec_sat_elevation)**2/$ep2**2;
+    # Factor for accounting the observation mean precision:
+    # NOTE: the observation mean error is scaled 1.5 times in order to
+    #       account for the maximum tolerance
+    my $aux_fact = 1.5*$obs_mean_err;
+    # Compute weight term:
+    $ref_weight_matrix->[$iobs][$iobs] = (sin($rec_sat_elevation)/$aux_fact)**2;
 
   # 3. Observation Independent term -> GNSS pseudorange equation:
   $ref_ind_term_matrix->[$iobs][0] =
