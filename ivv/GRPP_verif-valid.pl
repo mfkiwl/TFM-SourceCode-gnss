@@ -112,8 +112,8 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
   for (0..3, -4..-1) {
     PrintComment( *STDOUT, "Observation epoch : ".
       BuildDateString(GPS2Date($ref_obs_data->{BODY}[$_]{EPOCH})).
-      " --> Status = ".
-      ($ref_obs_data->{BODY}[$_]{POSITION_SOLUTION}{STATUS} ? "TRUE":"FALSE") );
+      "| Status = ".
+      ($ref_obs_data->{BODY}[$_]{POSITION_SOLUTION}{STATUS} ? "OK":"NOK") );
     PrintBulletedInfo(*STDOUT, "  ",
       "|  X |  Y |  Z =".
         join(' | ',
