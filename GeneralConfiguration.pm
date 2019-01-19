@@ -319,7 +319,6 @@ sub LoadConfiguration {
     }
 
     # Observation configuration sub-section:
-    # TODO: set frequencies for signals!
     if ( grep(/^${\RINEX_GPS_ID}$/, @{$ref_config_hash->{SELECTED_SAT_SYS}}) ) {
       if ( $config_content =~ /^GPS Signal Observation +: +(.+)$/gim ) {
         my $gps_signal = $1;
@@ -354,6 +353,32 @@ sub LoadConfiguration {
           RaiseError(*STDOUT, ERR_SIGNAL_NOT_SUPPORTED,
           "GALILEO signal \'$gal_signal\' is not supported",
           "Supported GALILEO signals are: ".join(', ', SUPPORTED_GAL_SIGNALS));
+          return KILLED;
+        }
+      }
+    }
+    if ( grep(/^${\RINEX_GPS_ID}$/, @{$ref_config_hash->{SELECTED_SAT_SYS}}) ) {
+      if ($config_content =~ /^GPS Mean Observation Error \[m\] +: +(.+)$/gim) {
+        my $gps_mean_obs_err = $1;
+        if ( looks_like_number($gps_mean_obs_err) ) {
+          $ref_config_hash->{OBS_MEAN_ERR}{&RINEX_GPS_ID} = $gps_mean_obs_err;
+        } else {
+          RaiseError(*STDOUT, ERR_OPTION_IS_NOT_NUMERIC,
+            "GPS Mean Observation Error \'$gps_mean_obs_err\' is not a ".
+            "numeric value!");
+          return KILLED;
+        }
+      }
+    }
+    if ( grep(/^${\RINEX_GAL_ID}$/, @{$ref_config_hash->{SELECTED_SAT_SYS}}) ) {
+      if ($config_content =~ /^GAL Mean Observation Error \[m\] +: +(.+)$/gim) {
+        my $gal_mean_obs_err = $1;
+        if ( looks_like_number($gal_mean_obs_err) ) {
+          $ref_config_hash->{OBS_MEAN_ERR}{&RINEX_GAL_ID} = $gal_mean_obs_err;
+        } else {
+          RaiseError(*STDOUT, ERR_OPTION_IS_NOT_NUMERIC,
+            "GAL Mean Observation Error \'$gal_mean_obs_err\' is not a ".
+            "numeric value!");
           return KILLED;
         }
       }
