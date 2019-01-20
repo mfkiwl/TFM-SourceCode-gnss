@@ -200,6 +200,7 @@ sub ComputeRecPosition {
             $epoch, $ref_epoch_info,
             \@rec_apx_xyzdt, \@sat_to_lsq,
             $ref_sub_iono, $ref_sub_troposphere,
+            $ref_rinex_obs->{HEAD}{LEAP_SECONDS},
             $ref_design_matrix, $ref_weight_matrix, $ref_ind_term_matrix
           );
 
@@ -597,8 +598,8 @@ sub BuildLSQMatrixSystem {
       $epoch, $ref_epoch_info,
       # Approximate position & SV list fo LSQ:
       $ref_rec_apx_xyzdt, $ref_sat_to_lsq,
-      # Tropo & iono delays:
-      $ref_sub_iono, $ref_sub_troposphere,
+      # Tropo, Iono delays & leap seconds:
+      $ref_sub_iono, $ref_sub_troposphere, $leap_sec,
       # LSQ matrix system references:
       $ref_design_matrix, $ref_weight_matrix, $ref_ind_term_matrix) = @_;
 
@@ -655,18 +656,24 @@ sub BuildLSQMatrixSystem {
                                                       \@sat_xyz_recep );
 
       # 3. Tropospheric delay correction:
+      #    NOTE: only Saastamoinen model available
       my $troposhpere_corr =
         &{$ref_sub_troposphere}( $rec_sat_zenital, $rec_helip );
 
       # 4. Ionospheric delay correction:
+      #    NOTE: Klobuchar & NeQuick models available
       my ($ionosphere_corr_f1, $ionosphere_corr_f2) =
         &{$ref_sub_iono->{$sat_sys}} (
-          $epoch, $rec_lat, $rec_lon,
+          $epoch,
+          $leap_sec,
+          \@sat_xyz_recep,
+          [$rec_lat, $rec_lon, $rec_helip],
           $rec_sat_azimut, $rec_sat_elevation,
           $ref_iono_coeff->{$sat_sys}{ IONO_COEFF_1 },
           $ref_iono_coeff->{$sat_sys}{ IONO_COEFF_2 },
           $ref_gen_conf->{CARRIER_FREQUENCY}{$sat_sys}{F1},
-          $ref_gen_conf->{CARRIER_FREQUENCY}{$sat_sys}{F2}
+          $ref_gen_conf->{CARRIER_FREQUENCY}{$sat_sys}{F2},
+          $ref_gen_conf->{ELIPSOID},
         );
 
       # Fill LoS data in epoch info hash:
@@ -676,7 +683,7 @@ sub BuildLSQMatrixSystem {
                       $ionosphere_corr_f2, $troposhpere_corr,
                       [$rec_sat_ix, $rec_sat_iy, $rec_sat_iz]);
 
-      # Retrive configured observation mean error:
+      # Retrieve configured observation mean error:
       my $obs_err = $ref_gen_conf->{OBS_MEAN_ERR}{$sat_sys};
 
       # 5. Set pseudorange equation:
