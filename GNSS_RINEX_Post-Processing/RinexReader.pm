@@ -208,6 +208,7 @@ use constant {
   WARN_MISSING_OPTIONAL_HEADER    => 90102,
   WARN_NO_OBS_AFTER_END_OF_HEADER => 90103,
   WARN_NO_NAV_BLOCK_FOUND         => 90104,
+  WARN_TIME_CONF_EXCEPTION        => 90105,
 };
 
 
@@ -505,11 +506,50 @@ sub ReadObservationRinexV3 {
     }
   }
 
-  # TODO:
   # Check for time configuration against time intervals in rinex header:
-    # Time of first obs vs. Start time: (WARNING)
-    # Time of last obs vs. End time:    (WARNING)
-    # RINEX interval vs. configured interval: (WARNING & set RINEX interval)
+
+  # Retrieve time parameters from user configuration:
+  my ( $conf_ini_epoch,
+       $conf_end_epoch,
+       $conf_interval ) = ( $ref_gen_conf->{ INI_EPOCH },
+                            $ref_gen_conf->{ END_EPOCH },
+                            $ref_gen_conf->{ INTERVAL  } );
+
+    # Time of first obs vs. Start time:
+    my $rinex_time_first_obs = $ref_rinex_header->{TIME_FIRST_OBS};
+
+    if ( $rinex_time_first_obs > $conf_ini_epoch ) {
+      RaiseWarning($fh_log, WARN_TIME_CONF_EXCEPTION,
+        "Configured intial epoch ($conf_ini_epoch) is older than the ".
+        "first available observation.",
+        "TIME_FIRST_OBS from RINEX header ($rinex_time_first_obs) ".
+        "will be set.");
+      $conf_ini_epoch = $rinex_time_first_obs;
+    }
+
+    # Time of last obs vs. End time:
+    if (defined $ref_rinex_header->{TIME_LAST_OBS}) {
+      my $rinex_time_last_obs = $ref_rinex_header->{TIME_LAST_OBS};
+      if ( $rinex_time_last_obs < $conf_end_epoch ) {
+        RaiseWarning($fh_log, WARN_TIME_CONF_EXCEPTION,
+          "Configured end epoch ($conf_end_epoch) is greater than the ".
+          "last available observation.",
+          "TIME_LAST_OBS from RINEX header ($rinex_time_last_obs) will be set");
+        $conf_end_epoch = $rinex_time_last_obs;
+      }
+    }
+
+    # RINEX interval vs. configured interval:
+    if (defined $ref_rinex_header->{INTERVAL}) {
+      my $rinex_interval = $ref_rinex_header->{INTERVAL};
+      if ( $rinex_interval > $conf_interval ) {
+        RaiseWarning($fh_log, WARN_TIME_CONF_EXCEPTION,
+          "Configured interval ($conf_interval) is lower than the ".
+          "current observation interval.",
+          "INTERVAL from RINEX header ($rinex_interval) will be set");
+        $conf_interval = $rinex_interval;
+      }
+    }
 
 
   # Init array to store observations:
@@ -539,9 +579,9 @@ sub ReadObservationRinexV3 {
 
       # Read epochs according to the time parameters from the general
       # configuration:
-      if ( $gps_epoch >= $ref_gen_conf->{INI_EPOCH} &&
-           $gps_epoch <= $ref_gen_conf->{END_EPOCH} &&
-           $gps_epoch  % $ref_gen_conf->{INTERVAL} == 0)
+      if ( $gps_epoch >= $conf_ini_epoch &&
+           $gps_epoch <= $conf_end_epoch &&
+           $gps_epoch  % $conf_interval  == 0)
       {
         # Fill observation block hash:
         $obs_block_hash{ EPOCH   } = $gps_epoch;
@@ -614,10 +654,10 @@ sub ReadObservationRinexV3 {
     RaiseError($fh_log, ERR_NO_EPOCHS_WERE_STORED,
       "No epochs were stored since any of them has acomplished the time ".
       "parameter criteria", "Please, review time parameters in general ".
-      "cnfiguration", "Your time configuration for this executin was: ",
-      "\tInit epoch = ".BuildDateString(GPS2Date($ref_gen_conf->{INI_EPOCH})),
-      "\tEnd  epoch = ".BuildDateString(GPS2Date($ref_gen_conf->{END_EPOCH})),
-      "\tInterval   = ".$ref_gen_conf->{INTERVAL}." seconds");
+      "configuration", "Your time configuration for this execution was: ",
+      "\tInit epoch = ".BuildDateString(GPS2Date($conf_ini_epoch)),
+      "\tEnd  epoch = ".BuildDateString(GPS2Date($conf_end_epoch)),
+      "\tInterval   = ".$conf_interval." seconds");
     return KILLED;
   }
 
