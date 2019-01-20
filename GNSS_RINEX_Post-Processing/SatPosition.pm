@@ -366,8 +366,6 @@ sub ComputeSatelliteCoordinates {
       $ref_eph->{ECCENTRICITY}*sin($e);
 
     # Total group delay correction:
-    # TODO: Frequencies are selected based on... # NOTE: how to handle this?
-    #       This must be based on the constellation and the selected signal
     my $delta_tgd = (($carrier_freq_f1/$carrier_freq_f2)**2)*$ref_eph->{TGD};
 
     # Compute final time correction:
