@@ -53,7 +53,7 @@ BEGIN {
                           &ComputeIonoKlobucharDelay
                           &ComputeIonoNeQuickDelay );
 
-  # Merge constants and subroutines:
+  # Merge constants$rec_lon subroutines:
   our @EXPORT_OK = (@EXPORT_CONST, @EXPORT_SUB);
 
   # Define export tags:
@@ -131,21 +131,27 @@ sub ComputeTropoSaastamoinenDelay {
 
 sub ComputeIonoKlobucharDelay {
   my ( $gps_epoch,
-       $lat_rec, $lon_rec,
+       $leap_sec,
+       $ref_sat_xyz,
+       $ref_rec_lat_lon_h,
        $azimut, $elevation,
        $ref_iono_alpha, $ref_iono_beta,
-       $carrier_freq_f1, $carrier_freq_f2 ) = @_;
+       $carrier_freq_f1, $carrier_freq_f2, $elip ) = @_;
 
   # De-reference input arguments:
-  my @iono_alpha_prm = @{ $ref_iono_alpha };
-  my @iono_beta_prm  = @{ $ref_iono_beta  };
+    # GPS Alpha and Beta coefficients:
+    my @iono_alpha_prm = @{ $ref_iono_alpha };
+    my @iono_beta_prm  = @{ $ref_iono_beta  };
+
+    # Receiver's geodetic position:
+    my ($rec_lat, $rec_lon, $rec_helip) = @{ $ref_rec_lat_lon_h };
 
   # Preliminary steps:
     # Elevation from [rad] --> [semicircles]:
     $elevation /= PI;
 
     # Receiver latitude and longitude: [rad] --> [semicircles]
-    $lat_rec /= PI; $lon_rec /= PI;
+    $rec_lat /= PI; $rec_lon /= PI;
 
     # Time transfomation: GPS --> Num_week, Num_day, ToW [s]
     my ($week, $day, $tow) = GPS2ToW($gps_epoch);
@@ -156,25 +162,25 @@ sub ComputeIonoKlobucharDelay {
 
     # Compute IPP's geodetic coordinates:
       # IPP's latitude [semicircles]:
-      my $lat_ipp = $lat_rec + $earth_center_angle*cos($azimut);
+      my $ipp_lat = $rec_lat + $earth_center_angle*cos($azimut);
 
         # Latitude boundary protection:
-        $lat_ipp =    0.416 if ($lat_ipp >    0.416);
-        $lat_ipp = -1*0.416 if ($lat_ipp < -1*0.416);
+        $ipp_lat =    0.416 if ($ipp_lat >    0.416);
+        $ipp_lat = -1*0.416 if ($ipp_lat < -1*0.416);
 
       # IPP's longitude [semicircles]:
       # NOTE: Cosine's argument is transformaed [semicircles] --> [rad]
-      my $lon_ipp =
-         $lon_rec + ( $earth_center_angle*sin($azimut) )/( cos($lat_ipp*PI) );
+      my $ipp_lon =
+         $rec_lon + ( $earth_center_angle*sin($azimut) )/( cos($ipp_lat*PI) );
 
       # IPP's geomagnetic latitude [semicircles]:
       # NOTE: Sinus's argument is transformed [semicircles] --> [rad]
-      my $geomag_lat_ipp = $lat_ipp + 0.064*cos( ($lon_ipp - 1.617)*PI );
+      my $geomag_lat_ipp = $ipp_lat + 0.064*cos( ($ipp_lon - 1.617)*PI );
 
       # Local time at IPP [s]:
-      my $time_ipp  = SECONDS_IN_DAY/2 * $lon_ipp + $tow;
-         $time_ipp -= SECONDS_IN_DAY if ($time_ipp >= SECONDS_IN_DAY);
-         $time_ipp += SECONDS_IN_DAY if ($time_ipp < 0.0 );
+      my $ipp_time  = SECONDS_IN_DAY/2 * $ipp_lon + $tow;
+         $ipp_time -= SECONDS_IN_DAY if ($ipp_time >= SECONDS_IN_DAY);
+         $ipp_time += SECONDS_IN_DAY if ($ipp_time < 0.0 );
 
     # Compute ionospheric delay amplitude [s]:
     my $iono_amplitude  = 0;
@@ -187,7 +193,7 @@ sub ComputeIonoKlobucharDelay {
        $iono_period  = 72000 if ($iono_period < 72000);
 
     # Compute ionospheric delay phase [rad]:
-    my $iono_phase = ( 2*PI*($time_ipp - 50400) ) / $iono_period;
+    my $iono_phase = ( 2*PI*($ipp_time - 50400) ) / $iono_period;
 
     # Compute slant factor delay [m¿?]:
     my $slant_fact = 1.0 + 16.0*(0.53 - $elevation)**3;
@@ -198,9 +204,9 @@ sub ComputeIonoKlobucharDelay {
     # is computed as:
     if ( abs($iono_phase) <= 1.57 ) {
       my $aux1       = 1 - ($iono_phase**2/2) + ($iono_phase**4/24);
-      $iono_delay_f1 = ( 5.1e-9 + $iono_amplitude*$aux1 ) * $slant_fact;
+      $iono_delay_f1 = ( 5.1e-9 + $iono_amplitude*$aux1 )*$slant_fact;
     } elsif ( abs($iono_phase) >= 1.57 ) {
-      $iono_delay_f1 = 5.1e-9 * $slant_fact;
+      $iono_delay_f1 = 5.1e-9*$slant_fact;
     }
 
     # Transform ionospheric time delay into meters:
@@ -213,8 +219,8 @@ sub ComputeIonoKlobucharDelay {
     # PrintTitle3(*STDOUT, "Ionosphere Klobuchar computed parameters:");
     # PrintBulletedInfo(*STDOUT, "\t\t - ",
     #   "Earth center angle = $earth_center_angle",
-    #   "IPP's lat    = $lat_ipp",
-    #   "IPP's lon    = $lon_ipp",
+    #   "IPP's lat    = $ipp_lat",
+    #   "IPP's lon    = $ipp_lon",
     #   "IPP's GM lat = $geomag_lat_ipp",
     #   "Iono delay amplitude = $iono_amplitude",
     #   "Iono delay period    = $iono_period",
@@ -225,14 +231,58 @@ sub ComputeIonoKlobucharDelay {
 
   # Return ionospheric delays for both frequencies:
   return ($iono_delay_f1, $iono_delay_f2)
-}
+} # end sub ComputeIonoKlobucharDelay
 
 sub ComputeIonoNeQuickDelay {
   my ( $gps_epoch,
-       $lat_rec, $lon_rec,
+       $leap_sec,
+       $ref_sat_xyz,
+       $ref_rec_lat_lon_h,
        $azimut, $elevation,
-       $ref_iono_alpha, $ref_iono_beta, ) = @_;
-}
+       $ref_iono_coeff, $ref_null_coeff,
+       $carrier_freq_f1, $carrier_freq_f2, $elip ) = @_;
+
+  # ***************** #
+  # Preliminary steps #
+  # ***************** #
+
+    # De-reference input arguments:
+    my ( $sat_x,   $sat_y,   $sat_z     ) = @{ $ref_sat_xyz       };
+    my ( $rec_lat, $rec_lon, $rec_helip ) = @{ $ref_rec_lat_lon_h };
+
+    # Retrieve Hour and Month from UTC time:
+    my ( $year, $month, $day,
+         $hour, $min,   $sec ) = GPS2Date( $gps_epoch - $leap_sec );
+
+    # Compute geodetic coordinates for satellite:
+    my ( $sat_lat,
+         $sat_lon,
+         $sat_helip ) = ECEF2Geodetic( $sat_x, $sat_y, $sat_z, $elip );
+
+
+  # ********************************* #
+  # NeQuick delay computation routine #
+  # ********************************* #
+
+    # ******************** #
+    # 1. MODIP computation #
+    # ******************** #
+
+    # ***************************************** #
+    # 2. Effective Ionisation Level computation #
+    # ***************************************** #
+
+    # ********************************** #
+    # 3. NeQuick G Slant TEC integration #
+    # ********************************** #
+
+    # *********************************************** #
+    # 4. Delay computation for configured observation #
+    # *********************************************** #
+
+
+} # end sub ComputeIonoNeQuickDelay
+
 
 # Private Subroutines: #
 # ............................................................................ #
