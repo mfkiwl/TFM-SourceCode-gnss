@@ -352,8 +352,11 @@ sub ConfigureIonosphereInfo {
           $status = FALSE; last SAT_SYS_FOR;
         }
 
+        # Check for RINEX navigation version:
+        my $rinex_nav_version = int( $ref_nav_head->{VERSION} );
+
         # Switch among navgation RINEX version:
-        given( $ref_nav_head->{VERSION} ) {
+        given( $rinex_nav_version ) {
 
           # ******************** #
           # GALILEO RINEX NAV V2 #
@@ -379,7 +382,7 @@ sub ConfigureIonosphereInfo {
             } else {
               $warn_msg =
               FillIonoCoefficientWarning($sat_sys,
-                                         $ref_nav_head->{VERSION}, ION_GAL_V3);
+                                         $rinex_nav_version, ION_GAL_V3);
               $status = FALSE; last SAT_SYS_FOR;
             } # end if defined
           } # end when 3
@@ -412,8 +415,11 @@ sub ConfigureIonosphereInfo {
           $status = FALSE; last SAT_SYS_FOR;
         }
 
+        # Check for RINEX navigation version:
+        my $rinex_nav_version = int( $ref_nav_head->{VERSION} );
+
         # Switch among navgation RINEX version:
-        given( $ref_nav_head->{VERSION} ) {
+        given( $rinex_nav_version ) {
 
           # **************** #
           # GPS RINEX NAV V2 #
@@ -428,7 +434,7 @@ sub ConfigureIonosphereInfo {
                                    $ref_nav_head->{ ION_BETA  } );
             } else {
               $warn_msg =
-                FillIonoCoefficientWarning( $sat_sys, $ref_nav_head->{VERSION},
+                FillIonoCoefficientWarning( $sat_sys, $rinex_nav_version,
                                             ION_ALPHA_V2, ION_BETA_V2 );
               $status = FALSE; last SAT_SYS_FOR;
             } # end if defined
@@ -447,7 +453,7 @@ sub ConfigureIonosphereInfo {
                                    $ref_nav_head->{ &ION_BETA_V3  } );
             } else {
               $warn_msg =
-                FillIonoCoefficientWarning( $sat_sys, $ref_nav_head->{VERSION},
+                FillIonoCoefficientWarning( $sat_sys, $rinex_nav_version,
                                             ION_ALPHA_V3, ION_BETA_V3 );
               $status = FALSE; last SAT_SYS_FOR;
             } # end if defined
@@ -494,62 +500,65 @@ sub SelectSatForLSQ {
   # Iterate over observed satellites:
   for my $sat (keys %{$ref_epoch_info->{SAT_OBS}})
   {
-    # Get constellation:
-    my $sat_sys = substr($sat, 0, 1);
+    # Select only satellites with available navigation data:
+    if ($ref_epoch_info->{SAT_XYZTC}{$sat}{NAV}{STATUS}) {
+      # Get constellation:
+      my $sat_sys = substr($sat, 0, 1);
 
-    # Get receiver-satellite observation measurement:
-    my $signal  = $ref_gen_conf   -> {SELECTED_SIGNALS}{$sat_sys};
-    my $raw_obs = $ref_epoch_info -> {SAT_OBS}{$sat}{$signal};
+      # Get receiver-satellite observation measurement:
+      my $signal  = $ref_gen_conf   -> {SELECTED_SIGNALS}{$sat_sys};
+      my $raw_obs = $ref_epoch_info -> {SAT_OBS}{$sat}{$signal};
 
-    # Discard NULL observations:
-    unless ( $raw_obs eq NULL_OBSERVATION )
-    {
-      # Save satellite navigation coordinates:
-      my @sat_xyztc = @{$ref_epoch_info->{SAT_XYZTC}{$sat}{NAV}{XYZTC}};
+      # Discard NULL observations:
+      unless ( $raw_obs eq NULL_OBSERVATION )
+      {
+        # Save satellite navigation coordinates:
+        my @sat_xyztc = @{$ref_epoch_info->{SAT_XYZTC}{$sat}{NAV}{XYZTC}};
 
-      # Select aproximate recevier position:
-      # NOTE: possible approximate parameters come from RINEX
-      #       header or from previous iteration:
-      my @rec_apx_xyzdt =
-        SelectApproximateParameters( $first_solution_flag,
-                                     $ref_rinex_obs, $i,
-                                     undef, FALSE );
+        # Select aproximate recevier position:
+        # NOTE: possible approximate parameters come from RINEX
+        #       header or from previous iteration:
+        my @rec_apx_xyzdt =
+          SelectApproximateParameters( $first_solution_flag,
+                                       $ref_rinex_obs, $i,
+                                       undef, FALSE );
 
-      # Propagate satellite coordinates due to the signal flight time:
-      my @sat_xyz_recep =
-        SatPositionFromEmission2Reception( $sat_xyztc     [0],
-                                           $sat_xyztc     [1],
-                                           $sat_xyztc     [2],
-                                           $rec_apx_xyzdt [0],
-                                           $rec_apx_xyzdt [1],
-                                           $rec_apx_xyzdt [2] );
+        # Propagate satellite coordinates due to the signal flight time:
+        my @sat_xyz_recep =
+          SatPositionFromEmission2Reception( $sat_xyztc     [0],
+                                             $sat_xyztc     [1],
+                                             $sat_xyztc     [2],
+                                             $rec_apx_xyzdt [0],
+                                             $rec_apx_xyzdt [1],
+                                             $rec_apx_xyzdt [2] );
 
-      # Save propagated coordinates in epoch info hash:
-      $ref_epoch_info->{SAT_XYZTC}{$sat}{RECEP} = [ @sat_xyz_recep,
-                                                    $sat_xyztc[3] ];
+        # Save propagated coordinates in epoch info hash:
+        $ref_epoch_info->{SAT_XYZTC}{$sat}{RECEP} = [ @sat_xyz_recep,
+                                                      $sat_xyztc[3] ];
 
-      # Compute Rec-Sat LoS info:
-      my ($rec_lat, # REC geodetic coordinates
-          $rec_lon,
-          $rec_helip,
-          $rec_sat_ix, # REC-SAT ECEF vector
-          $rec_sat_iy,
-          $rec_sat_iz,
-          $rec_sat_azimut, # REC-SAT polar coordiantes
-          $rec_sat_zenital,
-          $rec_sat_distance,
-          $rec_sat_elevation) = ReceiverSatelliteLoS( $ref_gen_conf,
-                                                     \@rec_apx_xyzdt,
-                                                     \@sat_xyz_recep );
+        # Compute Rec-Sat LoS info:
+        my ($rec_lat, # REC geodetic coordinates
+            $rec_lon,
+            $rec_helip,
+            $rec_sat_ix, # REC-SAT ECEF vector
+            $rec_sat_iy,
+            $rec_sat_iz,
+            $rec_sat_azimut, # REC-SAT polar coordiantes
+            $rec_sat_zenital,
+            $rec_sat_distance,
+            $rec_sat_elevation) = ReceiverSatelliteLoS( $ref_gen_conf,
+                                                       \@rec_apx_xyzdt,
+                                                       \@sat_xyz_recep );
 
-      # 3. Determine if sat accomplishes selection criteria.
-      #    Mask criteria is only assumed:
-      if ($rec_sat_elevation >= $ref_gen_conf->{SAT_MASK}) {
-        push(@sat_to_lsq, $sat);
-      } else {
-        push(@sat_not_to_lsq, $sat);
-      }
-    } # end unless $raw_obs eq NULL_OBSERVATION
+        # 3. Determine if sat accomplishes selection criteria.
+        #    Mask criteria is only assumed:
+        if ($rec_sat_elevation >= $ref_gen_conf->{SAT_MASK}) {
+          push(@sat_to_lsq, $sat);
+        } else {
+          push(@sat_not_to_lsq, $sat);
+        }
+      } # end unless $raw_obs eq NULL_OBSERVATION
+    } # end if status
   } # end for $sat
 
   # Return list of selected satellites:
