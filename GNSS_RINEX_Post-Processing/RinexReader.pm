@@ -595,7 +595,7 @@ sub ReadObservationRinexV3 {
           $line = <$fh>; chomp $line;
 
           # Identify satellite and constellation:
-          my $sat     = unpack( 'A3', $line );
+          my $sat     = ConsistentSatID( unpack('A3', $line) );
           my $sat_sys = substr( $sat, 0,  1 );
 
           # Read only those sat_sys selected in general configuration...
@@ -800,6 +800,17 @@ sub CheckRinexHeaderOptional {
 
 # Private Subrutines: #
 # ............................................................................ #
+sub ConsistentSatID {
+  my ($sat) = @_;
+
+  # Consistency check (YEBE SAT ID RINEX issue):
+  if (index(' ', $sat) == -1) {
+    $sat =~ s/ /0/g;
+  }
+
+  return $sat;
+}
+
 sub ReadIonParameters {
   my ($line, $version) = @_;
 
