@@ -173,6 +173,9 @@ sub ComputeSatPosition {
 
         # Check that the ephemerids have been selected:
         unless ($sat_eph_epoch != FALSE) {
+          # Fill navigation coordinates with null info:
+          $ref_rinex_obs->{BODY}[$i]{SAT_XYZTC}{$sat}{NAV}{STATUS} = FALSE;
+          $ref_rinex_obs->{BODY}[$i]{SAT_XYZTC}{$sat}{NAV}{XYZTC}  = [];
           # If not, raise a warning and go to the next satellite:
           RaiseWarning($fh_log, WARN_NO_SAT_EPH_FOUND,
             "No navigation ephemerids were selected for satellite \'$sat\', ".
