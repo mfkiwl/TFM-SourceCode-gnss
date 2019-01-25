@@ -83,6 +83,9 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
                     $ini_rinex_obs_time_stamp, "ReadObservationRinex()");
   $MEM_USAGE->record('-> ReadObsRinex');
 
+  # print Dumper $ref_obs_data->{HEAD};
+  # print Dumper $ref_obs_data->{BODY}[0]; exit 0;
+
 # Compute satellite positions:
   my $ini_rinex_nav_time_stamp = [gettimeofday];
 
