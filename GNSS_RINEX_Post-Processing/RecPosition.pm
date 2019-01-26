@@ -129,7 +129,7 @@ sub ComputeRecPosition {
     # Ionosphere model configuration. Assessed with dedicated sub:
     my ( $conf_iono_status, $warn_msg,
          $ref_sub_iono, $ref_iono_coeff ) =
-      ConfigureIonosphereInfo( $ref_sat_sys_nav,
+      ConfigureIonosphereInfo( $ref_gen_conf->{RINEX_NAV_PATH},
                                $ref_gen_conf->{SELECTED_SAT_SYS},
                                $ref_gen_conf->{IONOSPHERE_MODEL} );
 
@@ -314,7 +314,7 @@ sub ComputeRecPosition {
 # ************************************************************** #
 
 sub ConfigureIonosphereInfo {
-  my ( $ref_sat_sys_nav,
+  my ( $ref_nav_path,
        $ref_selected_sat_sys,
        $ref_sat_sys_iono_model ) = @_;
 
@@ -344,7 +344,8 @@ sub ConfigureIonosphereInfo {
 
         # Set ionosphere coefficients. NeQuick model uses GAL ones:
         my ($ref_coeff_1, $ref_coeff_2);
-        my $ref_nav_head = $ref_sat_sys_nav->{&RINEX_GAL_ID}{HEAD};
+        my $ref_nav_head =
+           ReadNavigationRinexHeader( $ref_nav_path->{&RINEX_GAL_ID}, *STDOUT );
 
         # Check if GALILEO nav file has been configured:
         unless($ref_nav_head) {
@@ -407,7 +408,8 @@ sub ConfigureIonosphereInfo {
         # Set ionosphere coefficients. Klobuchar model uses GPS_A and GPS_B
         # ones:
         my ($ref_coeff_1, $ref_coeff_2);
-        my $ref_nav_head = $ref_sat_sys_nav->{&RINEX_GPS_ID}{HEAD};
+        my $ref_nav_head =
+           ReadNavigationRinexHeader( $ref_nav_path->{&RINEX_GPS_ID}, *STDOUT );
 
         # Check if GPS nav file has been configured:
         unless($ref_nav_head) {
