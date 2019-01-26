@@ -222,7 +222,7 @@ sub LoadConfiguration {
         return KILLED;
       }
     }
-    if ( grep(/^${\RINEX_GPS_ID}$/, @{$ref_config_hash->{SELECTED_SAT_SYS}}) ) {
+    # if ( grep(/^${\RINEX_GPS_ID}$/, @{$ref_config_hash->{SELECTED_SAT_SYS}}) ) {
       if ( $config_content =~ /^RINEX Navigation GPS path +: +(.+)$/gim ) {
         my $rinex_g_nav_path = $1;
         if (-r $rinex_g_nav_path) {
@@ -233,8 +233,8 @@ sub LoadConfiguration {
           return KILLED;
         }
       }
-    }
-    if ( grep(/^${\RINEX_GAL_ID}$/, @{$ref_config_hash->{SELECTED_SAT_SYS}}) ) {
+    # }
+    # if ( grep(/^${\RINEX_GAL_ID}$/, @{$ref_config_hash->{SELECTED_SAT_SYS}}) ) {
       if ( $config_content =~ /^RINEX Navigation GAL path +: +(.+)$/gim ) {
         my $rinex_e_nav_path = $1;
         if (-r $rinex_e_nav_path) {
@@ -245,7 +245,7 @@ sub LoadConfiguration {
           return KILLED;
         }
       }
-    }
+    # }
 
 
     # Output sub-section:
