@@ -5,6 +5,9 @@ package DataDumper;
 
 
 # TODO: SCRIPT DESCRIPTION GOES HERE:
+# TODO: Review headers!
+# TODO: implement dumper configuration as part of general configuration
+# TODO: New dumper for LSQ specific obs info! (or merge with LSQ_info dumper)
 
 # Import modules:
 # ---------------------------------------------------------------------------- #
@@ -87,6 +90,8 @@ use constant {
 sub DumpSatObsData {
   my ( $ref_dump_conf, $ref_gen_conf, $ref_obs_data,
        $ref_sats_to_ignore, $ref_selected_obs, $output_path, $fh_log ) = @_;
+
+  # TODO: singular behaviour for each sat_sys or flexible enough for all?
 
   # Default input values if not defined:
   $fh_log = *STDOUT unless $fh_log;
@@ -571,7 +576,14 @@ sub DumpSatPosition {
 
             # ECEF satellite coordinates and clock bias:
             my $sat_status = $ref_sat_xyz_data->{NAV}{STATUS};
-            my @sat_xyz_clkbias = @{ $ref_sat_xyz_data->{NAV}{XYZTC} };
+
+            # TODO: Temporary patch:
+            my @sat_xyz_clkbias;
+            eval {
+               @sat_xyz_clkbias = @{ $ref_sat_xyz_data->{NAV}{XYZTC} };
+            } or do {
+              next;
+            };
 
             # Geodetic satellite coordinates:
             my ( $sat_lat, $sat_lon, $sat_helip );
