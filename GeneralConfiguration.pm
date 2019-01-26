@@ -222,30 +222,26 @@ sub LoadConfiguration {
         return KILLED;
       }
     }
-    # if ( grep(/^${\RINEX_GPS_ID}$/, @{$ref_config_hash->{SELECTED_SAT_SYS}}) ) {
-      if ( $config_content =~ /^RINEX Navigation GPS path +: +(.+)$/gim ) {
-        my $rinex_g_nav_path = $1;
-        if (-r $rinex_g_nav_path) {
-          $ref_config_hash->{RINEX_NAV_PATH}{&RINEX_GPS_ID} = $rinex_g_nav_path;
-        } else {
-          RaiseError(*STDOUT, ERR_CANNOT_READ_FILE,
-          "File \'$rinex_g_nav_path\' either cannot be read or does not exist");
-          return KILLED;
-        }
+    if ( $config_content =~ /^RINEX Navigation GPS path +: +(.+)$/gim ) {
+      my $rinex_g_nav_path = $1;
+      if (-r $rinex_g_nav_path) {
+        $ref_config_hash->{RINEX_NAV_PATH}{&RINEX_GPS_ID} = $rinex_g_nav_path;
+      } else {
+        RaiseError(*STDOUT, ERR_CANNOT_READ_FILE,
+        "File \'$rinex_g_nav_path\' either cannot be read or does not exist");
+        return KILLED;
       }
-    # }
-    # if ( grep(/^${\RINEX_GAL_ID}$/, @{$ref_config_hash->{SELECTED_SAT_SYS}}) ) {
-      if ( $config_content =~ /^RINEX Navigation GAL path +: +(.+)$/gim ) {
-        my $rinex_e_nav_path = $1;
-        if (-r $rinex_e_nav_path) {
-          $ref_config_hash->{RINEX_NAV_PATH}{&RINEX_GAL_ID} = $rinex_e_nav_path;
-        } else {
-          RaiseError(*STDOUT, ERR_CANNOT_READ_FILE,
-          "File \'$rinex_e_nav_path\' either cannot be read or does not exist");
-          return KILLED;
-        }
+    }
+    if ( $config_content =~ /^RINEX Navigation GAL path +: +(.+)$/gim ) {
+      my $rinex_e_nav_path = $1;
+      if (-r $rinex_e_nav_path) {
+        $ref_config_hash->{RINEX_NAV_PATH}{&RINEX_GAL_ID} = $rinex_e_nav_path;
+      } else {
+        RaiseError(*STDOUT, ERR_CANNOT_READ_FILE,
+        "File \'$rinex_e_nav_path\' either cannot be read or does not exist");
+        return KILLED;
       }
-    # }
+    }
 
 
     # Output sub-section:
