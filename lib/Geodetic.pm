@@ -134,6 +134,19 @@ sub ModulusNth {
   return $square_sum**0.5;
 }
 
+sub ComputeSphericalDistance {
+  my ($p1_lat, $p1_lon, $p2_lat, $p2_lon, $radius) = @_;
+
+  # Default argument for radius if not defined:
+  $radius = 1 unless $radius;
+
+  my $spherical_distance;
+
+  # TODO: finish this sub!
+
+  return $spherical_distance;
+}
+
 sub ECEF2Geodetic {
   my ($x, $y, $z, $elip, $iter) = @_;
 
@@ -230,8 +243,6 @@ sub Venu2AzZeDs {
 
 sub PrimeVerticalRadius {
   my ($lat, $elip) = @_;
-
-  # TODO: Check elipsoid argument
 
   # Load elipsoid parameters:
   my $ref_elip_prm = &ELIPSOID_DATABASE->{$elip};
