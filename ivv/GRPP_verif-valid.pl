@@ -155,7 +155,9 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
   DumpSatObsData( \%dump_conf,
                   $ref_gen_conf,
                   $ref_obs_data, [], # no sats to ignore
-                  [ $ref_gen_conf->{SELECTED_SIGNALS}{E} ], # TODO: fix singular behaviour
+                  [ $ref_gen_conf->{SELECTED_SIGNALS}{E},
+                    $ref_gen_conf->{SELECTED_SIGNALS}{G} ],
+                    # TODO: fix singular behaviour
                   $ref_gen_conf->{OUTPUT_PATH}, $FH_LOG );
 
   ReportElapsedTime([gettimeofday],
