@@ -149,6 +149,12 @@ use constant {
 
 # Public Subroutines: #
 # ............................................................................ #
+
+# TODO: Read for the following configuration items
+#       - Integrity configuration
+#       - Data dumper configuration
+#       - Satellites to discard
+
 sub LoadConfiguration {
   my ($file_path, $fh_log) = @_;
 
