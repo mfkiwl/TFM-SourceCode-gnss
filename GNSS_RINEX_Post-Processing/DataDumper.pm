@@ -8,6 +8,12 @@ package DataDumper;
 # TODO: Review headers!
 # TODO: implement dumper configuration as part of general configuration
 # TODO: New dumper for LSQ specific obs info! (or merge with LSQ_info dumper)
+# TODO: would be great to have the following information
+#       - Num sats with valid obs per epoch
+#       - Num sats to LSQ algorithm
+#       - Reference coordinates from station --> extract from IGS file?
+#       - ENU position and sigma for receiver position
+#       - ...
 
 # Import modules:
 # ---------------------------------------------------------------------------- #
