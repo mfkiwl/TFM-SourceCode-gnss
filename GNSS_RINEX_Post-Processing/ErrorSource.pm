@@ -68,10 +68,16 @@ BEGIN {
 # ---------------------------------------------------------------------------- #
 # Constants:
 # ---------------------------------------------------------------------------- #
+
+# Saastamoinen's B values:
 use constant SAASTAMOINEN_B_DOMAIN =>
   [0.0e3, 0.5e3, 1.0e3, 1.5e3, 2.0e3, 2.5e3, 3.0e3, 4.0e3, 5.0e3]; # [m]
 use constant SAASTAMOINEN_B_RANGE  =>
   [1.156, 1.079, 1.006, 0.938, 0.874, 0.813, 0.757, 0.654, 0.563]; # [m]
+
+# Threshold for computing NeQuick ionophere correction as a vertical or slant
+# ray approach:
+use constant NEQUICK_SLANT_VERTICAL_THRESHOLD => 0.1e3; # [m]
 
 # ---------------------------------------------------------------------------- #
 # Subroutines:
@@ -259,28 +265,57 @@ sub ComputeIonoNeQuickDelay {
          $sat_lon,
          $sat_helip ) = ECEF2Geodetic( $sat_x, $sat_y, $sat_z, $elip );
 
+    # Compute receiver-satellite spherical distance:
+    my $rec_sat_sphere_dist = ComputeSphericalDistance( $rec_lat, $rec_lon,
+                                                        $sat_lat, $sat_lon,
+                                                        EARTH_MEAN_RADIUS );
 
   # ********************************* #
   # NeQuick delay computation routine #
   # ********************************* #
 
-    # ******************** #
-    # 1. MODIP computation #
-    # ******************** #
+    # ***************************************** #
+    # 1. MODIP computation at receiver location #
+    # ***************************************** #
+      my $modip = # [rad]
+         ComputeMODIP( $rec_lat, $rec_lon );
 
     # ***************************************** #
     # 2. Effective Ionisation Level computation #
     # ***************************************** #
+      my $eff_iono_level = # [SFU]
+         ComputeEffectiveIonisationLevel( $ref_iono_coeff, $modip );
+
+    # ************************************ #
+    # 3. Obtain necessary Model Parameters #
+    # ************************************ #
+      my $ref_model_parameters =
+         ComputeNeQuickModelParameters(  );
 
     # ********************************** #
-    # 3. NeQuick G Slant TEC integration #
+    # 4. NeQuick G Slant TEC integration #
     # ********************************** #
+      my $total_electron_content;
+
+      if ( $rec_sat_sphere_dist > NEQUICK_SLANT_VERTICAL_THRESHOLD ) {
+        $total_electron_content = # [TECU]
+          IntegrateNeQuickSlantTEC(  );
+      } else {
+        $total_electron_content = # [TECU]
+          IntegrateNeQuickVerticalTEC(  );
+      }
 
     # *********************************************** #
-    # 4. Delay computation for configured observation #
+    # 5. Delay computation for configured observation #
     # *********************************************** #
+      my $nequick_iono_delay_f1 =
+        ( 40.3/($carrier_freq_f1)**2 )*$total_electron_content;
+
+      my $nequick_iono_delay_f2 =
+        ( 40.3/($carrier_freq_f2)**2 )*$total_electron_content;
 
 
+  return ($nequick_iono_delay_f1, $nequick_iono_delay_f2);
 } # end sub ComputeIonoNeQuickDelay
 
 
