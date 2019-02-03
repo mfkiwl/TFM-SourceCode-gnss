@@ -11,6 +11,8 @@ use warnings;
 use Time::Local;
 use feature qq(say);
 
+use PDL::Constants qq(PI);
+
 # Set package exportation properties:
 BEGIN {
   # Load export module:
@@ -30,10 +32,15 @@ BEGIN {
                        &Date2GPS
                        &GPS2Date
                        &GPS2ToW
+                       &Date2UniversalTime
+                       &UniversalTime2LocalTime
                        &SECONDS_IN_DAY
                        &SECONDS_IN_HOUR
                        &SECONDS_IN_WEEK
                        &SECONDS_IN_MINUTE
+                       &MINUTES_IN_HOUR
+                       &MINUTES_IN_DAY
+                       &MINUTES_IN_WEEK
                        &MONTH_NAMES
                        &WEEK_DAY_NAMES );
 
@@ -48,9 +55,16 @@ BEGIN {
 # Number of seconds in...
 use constant {
   SECONDS_IN_MINUTE => 60,
-  SECONDS_IN_HOUR   => 3600,
-  SECONDS_IN_DAY    => 86400,
-  SECONDS_IN_WEEK   => 604800
+  SECONDS_IN_HOUR   => 3600,   # = SECONDS_IN_MINUTE*60
+  SECONDS_IN_DAY    => 86400,  # = SECONDS_IN_HOUR*24
+  SECONDS_IN_WEEK   => 604800, # = SECONDS_IN_DAY*7
+};
+
+# Number of minutes in...
+use constant {
+  MINUTES_IN_HOUR => 60,
+  MINUTES_IN_DAY  => 1440,  # = MINUTES_IN_HOUR*24
+  MINUTES_IN_WEEK => 10080, # = MINUTES_IN_DAY*7
 };
 
 # Months and week names:
@@ -92,8 +106,9 @@ sub GPS2Date {
   # 'gmtime' method returns GM time using UNIX reference. This is the
   # 1970/01/01. In order to provide the GPS time, the UNIX to GPS offset must
   # be added:
-  my ($sec, $min,$hour, $day, $mon, $year, $wday, $yday, $isdst) =
-    gmtime($gps_time + UNIX_GPS_OFFSET);
+  my ( $sec, $min, $hour,
+       $day, $mon, $year,
+       $wday, $yday, $isdst ) = gmtime($gps_time + UNIX_GPS_OFFSET);
 
   # 'gmtime' method returns the year offset since 1900 and the months numerated
   # from 0 to 11:
@@ -117,6 +132,29 @@ sub GPS2ToW {
 
   # Returned values are the week number and the time of week (ToW):
   return ($week_number, $day_number, $time_of_week);
+}
+
+sub Date2UniversalTime {
+  my ($yyyy, $mo, $dd, $hh, $mi, $ss) = @_;
+
+  # NOTE: year, month and day are not relevant in subroutine. However, they
+  #       are kept for interface consistency
+
+  return $hh + $mi/MINUTES_IN_HOUR + $ss/SECONDS_IN_HOUR;
+}
+
+sub UniversalTime2LocalTime {
+  my ( $longitude, $universal_time ) = @_;
+
+  # NOTE: $longitude must be in radians!
+  #       $universal_time must be hour decimal format! --> hh.dddd
+
+  # Longitude is transformed to degrees:
+  $longitude *= 180/PI;
+
+  # Magic number '15' is the degree arc resulting from dividing 360º (whole
+  # earth's circumference) between 24 hours:
+  return $universal_time + $longitude/15; # [hour decimal]
 }
 
 1;
