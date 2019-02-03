@@ -27,7 +27,9 @@ BEGIN {
   our @EXPORT = ();
 
   # All subroutines and constats to export:
-  our @EXPORT_OK = qw( &Rad2Deg
+  our @EXPORT_OK = qw( &DEGREE_TO_RADIANS
+                       &RADIANS_TO_DEGREE
+                       &Rad2Deg
                        &Deg2Rad
                        &SolveWeightedLSQ
                        &LinearInterpolationFromTable );
@@ -40,15 +42,18 @@ BEGIN {
 
 # Constants:
 # ---------------------------------------------------------------------------- #
+use constant DEGREE_TO_RADIANS => PI/180;
+use constant RADIANS_TO_DEGREE => 180/PI;
+
 
 # Subroutines:
 # ---------------------------------------------------------------------------- #
 sub Rad2Deg {
-  return map {$_ * 180/PI} @_;
+  return map {$_ * RADIANS_TO_DEGREE} @_;
 }
 
 sub Deg2Rad {
-  return map {$_ * PI/180} @_;
+  return map {$_ * DEGREE_TO_RADIANS} @_;
 }
 
 sub LinearInterpolationFromTable {
