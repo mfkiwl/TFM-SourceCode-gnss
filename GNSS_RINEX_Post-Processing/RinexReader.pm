@@ -6,6 +6,11 @@ package RinexReader;
 
 # SCRIPT DESCRIPTION GOES HERE:
 
+# Load bash enviroments:
+# ---------------------------------------------------------------------------- #
+use lib $ENV{ ENV_ROOT };
+use Enviroments qq(:CONSTANTS);
+
 # Import Modules:
 # ---------------------------------------------------------------------------- #
 use strict;      # enables strict syntax...
@@ -15,11 +20,11 @@ use Scalar::Util qq(looks_like_number); # scalar utility...
 use Data::Dumper;                       # enables pretty print...
 
 # Import configuration and common interface module:
-use lib qq(/home/ppinto/TFM/src/);
+use lib SRC_ROOT_PATH;
 use GeneralConfiguration qq(:ALL);
 
 # Import dedicated libraries:
-use lib qq(/home/ppinto/TFM/src/lib/); # TODO: this should be an enviroment!
+use lib LIB_ROOT_PATH;
 use MyUtil   qq(:ALL); # useful subs and constants...
 use MyPrint  qq(:ALL); # error and warning utilities...
 use TimeGNSS qq(:ALL); # GNSS time transforming utilities...

@@ -6,6 +6,10 @@ package RecPosition;
 
 # NOTE: SCRIPT DESCRIPTION GOES HERE:
 
+# Load bash enviroments:
+# ---------------------------------------------------------------------------- #
+use lib $ENV{ ENV_ROOT };
+use Enviroments qq(:CONSTANTS);
 
 # Import Modules:
 # ---------------------------------------------------------------------------- #
@@ -20,11 +24,11 @@ use feature qq(switch); # switch functionality...
 use Data::Dumper;       # enables pretty...
 
 # Import configuration and common interface module:
-use lib qq(/home/ppinto/TFM/src/); # TODO: this should be an enviroment!
+use lib SRC_ROOT_PATH;
 use GeneralConfiguration qq(:ALL);
 
 # Import dedicated libraries:
-use lib qq(/home/ppinto/TFM/src/lib/); # TODO: this should be an enviroment!
+use lib LIB_ROOT_PATH;
 use MyUtil   qq(:ALL); # useful subs and constants...
 use MyMath   qq(:ALL); # useful mathematical methods...
 use MyPrint  qq(:ALL); # print error and warning methods...
@@ -32,6 +36,7 @@ use TimeGNSS qq(:ALL); # GNSS time transforming utilities...
 use Geodetic qq(:ALL); # geodetic toolbox for coordinate transformation...
 
 # Import dependent modules:
+use lib GRPP_ROOT_PATH;
 use RinexReader qq(:ALL); # observation & navigation rinex parser...
 use ErrorSource qq(:ALL); # ionosphere & troposphere correction models...
 

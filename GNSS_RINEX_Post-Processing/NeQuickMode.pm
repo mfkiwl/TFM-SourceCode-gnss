@@ -6,6 +6,11 @@ package NeQuickMode;
 
 # SCRIPT DESCRIPTION GOES HERE:
 
+# Load bash enviroments:
+# ---------------------------------------------------------------------------- #
+use lib $ENV{ ENV_ROOT };
+use Enviroments qq(:CONSTANTS);
+
 # Import Modules:
 # ---------------------------------------------------------------------------- #
 use Carp;
@@ -18,17 +23,12 @@ use Scalar::Util qq(looks_like_number); # scalar utility...
 use feature qq(say); # print adding carriage return...
 use Data::Dumper;    # enables pretty print...
 
-# TODO: this should be an enviroment!
-use constant SOURCE_ROOT_PATH  => qq(/home/ppinto/TFM/src/);
-use constant DATA_ROOT_PATH    => SOURCE_ROOT_PATH.qq(dat/);
-use constant LIBRARY_ROOT_PATH => SOURCE_ROOT_PATH.qq(lib/);
-
 # Import configuration and common interface module:
-use lib SOURCE_ROOT_PATH;
+use lib SRC_ROOT_PATH;
 use GeneralConfiguration qq(:ALL);
 
 # Import dedicated libraries:
-use lib LIBRARY_ROOT_PATH;
+use lib LIB_ROOT_PATH;
 use MyUtil   qq(:ALL); # useful subs and constants...
 use MyMath   qq(:ALL); # useful mathematical methods...
 use MyPrint  qq(:ALL); # error and warning utilities...
@@ -72,7 +72,7 @@ BEGIN {
 # ---------------------------------------------------------------------------- #
 
 # File configuration:
-use constant MODIP_FILE_PATH     => DATA_ROOT_PATH.qq(modipNeQG_wrapped.txt);
+use constant MODIP_FILE_PATH     => DAT_ROOT_PATH.qq(modipNeQG_wrapped.txt);
 use constant CCIR_BASE_FILE_NAME => qq(ccir);
 use constant CCIR_FILE_EXTENSION => qq(.txt);
 
@@ -110,7 +110,7 @@ sub LoadCCIRFiles {
 
     # Build file path:
     my $ccir_file_path =
-       DATA_ROOT_PATH.CCIR_BASE_FILE_NAME.(10 + $month).CCIR_FILE_EXTENSION;
+       DAT_ROOT_PATH.CCIR_BASE_FILE_NAME.(10 + $month).CCIR_FILE_EXTENSION;
 
     # Open CCIR month file:
     my $fh; open($fh, '<', $ccir_file_path) or croak $!;
@@ -135,8 +135,8 @@ sub LoadCCIRFiles {
 use constant
     ZENIT_ANGLE_DAY_NIGHT_TRANSITION => 86.23292796211615 * DEGREE_TO_RADIANS;
 
+use constant REF_CCIR_HASH => LoadCCIRFiles( DAT_ROOT_PATH   );
 use constant REF_MODIP_MAP => LoadMODIPFile( MODIP_FILE_PATH );
-use constant REF_CCIR_HASH => LoadCCIRFiles( DATA_ROOT_PATH  );
 
 # ---------------------------------------------------------------------------- #
 # Subroutines:

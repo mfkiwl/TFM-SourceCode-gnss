@@ -15,6 +15,11 @@ package DataDumper;
 #       - ENU position and sigma for receiver position
 #       - ...
 
+# Load bash enviroments:
+# ---------------------------------------------------------------------------- #
+use lib $ENV{ ENV_ROOT };
+use Enviroments qq(:CONSTANTS);
+
 # Import modules:
 # ---------------------------------------------------------------------------- #
 use Carp;         # enables advanced warning and failure raise...
@@ -26,11 +31,11 @@ use feature      qq(switch);            # switch functionality...
 use Scalar::Util qq(looks_like_number); # scalar utility...
 
 # Import configuration and common interfaces module:
-use lib qq(/home/ppinto/TFM/src/); # TODO: set enviroment variable!
+use lib SRC_ROOT_PATH;
 use GeneralConfiguration qq(:ALL);
 
 # Import dedicated libraries:
-use lib qq(/home/ppinto/TFM/src/lib/); # TODO: this should be an enviroment!
+use lib LIB_ROOT_PATH;
 # Common tools:
 use MyUtil   qq(:ALL); # useful subs and constants...
 use MyPrint  qq(:ALL); # print and warning/failure utilities...
@@ -39,6 +44,7 @@ use Geodetic qq(:ALL); # geodetic toolbox...
 use TimeGNSS qq(:ALL); # GNSS time transforming utilities...
 
 # Import dependent modules:
+use lib GRPP_ROOT_PATH;
 use RinexReader qq(:ALL);
 use ErrorSource qq(:ALL);
 use SatPosition qq(:ALL);
