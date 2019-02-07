@@ -4,6 +4,11 @@
 
 # ============================================================================ #
 
+# Load bash enviroments:
+# ---------------------------------------------------------------------------- #
+use lib $ENV{ ENV_ROOT };
+use Enviroments qq(:CONSTANTS);
+
 # Perl modules:
 # ---------------------------------------------------------------------------- #
 use Carp;            # enhanced user warning and error messages...
@@ -16,7 +21,7 @@ use Time::HiRes qw(gettimeofday tv_interval);
 
 # Common modules:
 # ---------------------------------------------------------------------------- #
-use lib qq(/home/ppinto/TFM/src/lib/);
+use lib LIB_ROOT_PATH;
 use MyUtil   qq(:ALL);
 use MyMath   qq(:ALL);
 use MyPrint  qq(:ALL);
@@ -25,12 +30,12 @@ use TimeGNSS qq(:ALL);
 
 # Configuration and common interfaces module:
 # ---------------------------------------------------------------------------- #
-use lib qq(/home/ppinto/TFM/src/);
+use lib SRC_ROOT_PATH;
 use GeneralConfiguration qq(:ALL);
 
 # GRPP tool packages:
 # ---------------------------------------------------------------------------- #
-use lib qq(/home/ppinto/TFM/src/GNSS_RINEX_Post-Processing/);
+use lib GRPP_ROOT_PATH;
 use RinexReader qq(:ALL);
 use SatPosition qq(:ALL);
 use RecPosition qq(:ALL);
