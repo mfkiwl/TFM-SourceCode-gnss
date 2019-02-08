@@ -29,7 +29,8 @@ BEGIN {
                           &LIB_ROOT_PATH
                           &DAT_ROOT_PATH
                           &UTIL_ROOT_PATH
-                          &GRPP_ROOT_PATH );
+                          &GRPP_ROOT_PATH
+                          &NEQUICK_DAT_PATH );
 
   # Define subroutines to export:
   our @EXPORT_SUB   = qw(  );
@@ -53,6 +54,10 @@ use constant {
   DAT_ROOT_PATH  => $ENV{ DAT_ROOT  },
   UTIL_ROOT_PATH => $ENV{ UTIL_ROOT },
   GRPP_ROOT_PATH => $ENV{ GRPP_ROOT },
+};
+
+use constant {
+  NEQUICK_DAT_PATH => DAT_ROOT_PATH.qq(/nequick/),
 };
 
 1;
