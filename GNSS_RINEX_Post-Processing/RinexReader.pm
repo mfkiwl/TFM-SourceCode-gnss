@@ -573,7 +573,7 @@ sub ReadObservationRinexV3 {
     if (index($line, OBSERVATION_BLOCK_ID) == LINE_START)
     {
       # Init observation block hash:
-      my %obs_block_hash;
+      my $ref_obs_block;
 
       # Unpack the epoch and observation block elements:
       my ($obs_id, $yyyy, $mo, $dd, $hh, $mi, $ss, $epoch_status, $num_sat) =
@@ -589,9 +589,14 @@ sub ReadObservationRinexV3 {
            $gps_epoch  % $conf_interval  == 0)
       {
         # Fill observation block hash:
-        $obs_block_hash{ EPOCH   } = $gps_epoch;
-        $obs_block_hash{ STATUS  } = $epoch_status;
-        $obs_block_hash{ NUM_SAT } = $num_sat;
+        $ref_obs_block->{ EPOCH   } = $gps_epoch;
+        $ref_obs_block->{ STATUS  } = $epoch_status;
+        $ref_obs_block->{ NUM_SAT } = $num_sat;
+
+        # Init hash counter for number of satellites with no-NULL observations:
+        $ref_obs_block->{ NUM_OBS_SAT } =
+          InitSatSysNoNullObsCounter( $ref_gen_conf->{SELECTED_SAT_SYS},
+                                      $ref_rinex_header->{SYS_OBS_TYPES} );
 
         # Read the observations for each satellite:
         for (my $j = 0; $j < $num_sat; $j++)
@@ -601,7 +606,7 @@ sub ReadObservationRinexV3 {
 
           # Identify satellite and constellation:
           my $sat     = ConsistentSatID( unpack('A3', $line) );
-          my $sat_sys = substr( $sat, 0,  1 );
+          my $sat_sys = substr( $sat, 0, 1 );
 
           # Read only those sat_sys selected in general configuration...
           if ( grep(/^$sat_sys$/, @{$ref_gen_conf->{SELECTED_SAT_SYS}}) )
@@ -627,19 +632,21 @@ sub ReadObservationRinexV3 {
               eval {
                 no warnings; # supress warnings when evaluating the statement...
                 $raw_obs = substr($line, $index, RAW_OBSERVATION_LENGTH)*1;
+                # $ref_obs_block->{NUM_OBS_SAT}{$sat_sys}{$obs_id} =
+                  # $ref_obs_block->{NUM_OBS_SAT}{$sat_sys}{$obs_id} + 1;
               } or do {
                 $raw_obs = NULL_OBSERVATION;
               };
 
               # Fill observation block hash:
-              $obs_block_hash{SAT_OBS}{$sat}{$obs_id} = $raw_obs;
+              $ref_obs_block->{SAT_OBS}{$sat}{$obs_id} = $raw_obs;
             } # enf id $sat_sys in SUPPORTED_SAT_SYS
 
           } # end for $num_obs
         } # end for $num_sat
 
         # Fill observation array:
-        push(@rinex_obs_arr, \%obs_block_hash);
+        push(@rinex_obs_arr, $ref_obs_block);
 
       } else {
         # If the epoch is not stored, skip as many lines as observed
@@ -805,6 +812,23 @@ sub CheckRinexHeaderOptional {
 
 # Private Subrutines: #
 # ............................................................................ #
+sub InitSatSysNoNullObsCounter {
+  my ($ref_selected_sat_sys, $ref_sat_sys_obs) = @_;
+
+  # Init hash:
+  my $ref_sat_sys_counter = {};
+
+  # Init to 0 all counters:
+  for my $sat_sys (@{ $ref_selected_sat_sys }) {
+    for my $sat_sys_obs (@{ $ref_sat_sys_obs->{$sat_sys}{OBS} }){
+      $ref_sat_sys_counter->{$sat_sys}{$sat_sys_obs} = 0;
+    }
+  }
+
+  # Return intiallized hash reference:
+  return $ref_sat_sys_counter;
+}
+
 sub ConsistentSatID {
   my ($sat) = @_;
 
