@@ -72,7 +72,7 @@ BEGIN {
 # ---------------------------------------------------------------------------- #
 
 # File configuration:
-use constant MODIP_FILE_PATH     => DAT_ROOT_PATH.qq(modipNeQG_wrapped.txt);
+use constant MODIP_FILE_PATH     => NEQUICK_DAT_PATH.qq(modipNeQG_wrapped.txt);
 use constant CCIR_BASE_FILE_NAME => qq(ccir);
 use constant CCIR_FILE_EXTENSION => qq(.txt);
 
@@ -110,7 +110,7 @@ sub LoadCCIRFiles {
 
     # Build file path:
     my $ccir_file_path =
-       DAT_ROOT_PATH.CCIR_BASE_FILE_NAME.(10 + $month).CCIR_FILE_EXTENSION;
+       NEQUICK_DAT_PATH.CCIR_BASE_FILE_NAME.(10 + $month).CCIR_FILE_EXTENSION;
 
     # Open CCIR month file:
     my $fh; open($fh, '<', $ccir_file_path) or croak $!;
