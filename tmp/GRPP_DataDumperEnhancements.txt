@@ -1,16 +1,23 @@
 Changes for GRPP dumpers:
 
+
+IMPORTANT --> set DatDumper configuration in GeneralConfiguration.pm
 (for all): change base names accordignly to this file
 
 <MARKER_NAME>_rec-xyz.out:
   · Include number of satellites used for position estimation
   · ENU increments --> review documentation for commiting this
+    - ENU incrments respect MARKER reference position (lat, lon)
+    - If no marker reference position is provided, do it with the mean receiver position or other statistical measurement
   · Differences against reference station from data file
-  · Remove Observation epoch status information
+  · Remove Observation epoch status information from header
 
 <MARKER_NAME>_rec-lsq_report.out.:
   · Include residuals (maybe in another dumper file)**
   · More explanatory names for columns
+  · Include number of obsrvation equations
+  · Include number of parameters to estimate
+  · Compute degrees of freedom
 
 <SAT_SYS>_sat-obs_data.out:
   · Include observed num of sats
@@ -28,6 +35,31 @@ Changes for GRPP dumpers:
   · Include num of satellites with no-NULL measurment
   · Include num of satellites to LSQ algorithm
 
+
+*New file:
+<MARKER_NAME>-DOP.out:
+  · Include here:
+
+    Being Qxx (Co-variance matrix) = [ [qxx qxy qxz qxt], 
+                                       [qyx qyy qyz qyt], 
+                                       [qzx qzy qzz qzt],
+                                       [qtx qty qtz qtt] ];
+
+    - GDOP -> Geometric DOP  = sqrt( qxx + qyy + qzz + qtt );
+    - PDOP -> Position DOP   = sqrt( qxx + qyy + qzz );
+    - TDOP -> Time DOP       = sqrt( qtt );
+
+    And, Qenu = R' x Qxyz x R = [ [qee, qen, qeu], 
+                                  [qne, qnn, qnu], 
+                                  [que, qun, quu] ];
+
+    Being R = [ [-sin(lat), -sin(lat)cos(lon), cos(lat)cos(lon)], 
+                [ cos(lon), -sin(lat)sin(lon), cos(lat)sin(lon)], 
+                [        0,          cos(lat),         sin(lat)] ];
+
+    - HDOP -> Horizontal DOP = sqrt( qee + qnn );
+    - VDOP -> Vertical DOP   = sqrt( quu );
+
 *** Why dont we make a dumper file with number of satellites???!!!
   · Per epoch:
     - Observed satellites
@@ -36,7 +68,6 @@ Changes for GRPP dumpers:
     - Satellites to LSQ algorithm
 
 ** The idea of the residual vector file would be:
-
 Epoch   SAT_ID_1    SAT_ID_2   SAT_ID_3   SAT_ID_4    SAT_ID_5 --> all possible LSQ sats 
 21654    45.23       45874.2     NULL       745.2       NULL
 ...
