@@ -81,6 +81,21 @@ use constant MODIP_FILE_PATH     => NEQUICK_DAT_PATH.qq(modipNeQG_wrapped.txt);
 use constant CCIR_BASE_FILE_NAME => qq(ccir);
 use constant CCIR_FILE_EXTENSION => qq(.txt);
 
+# CCIR array arrangement:
+use constant {
+  CCIR_F2_ROW_DIM  => 2,
+  CCIR_F2_COL_DIM  => 76,
+  CCIR_F2_DEP_DIM  => 13,
+  CCIR_FM3_ROW_DIM => 2,
+  CCIR_FM3_COL_DIM => 49,
+  CCIR_FM3_DEP_DIM => 9,
+};
+
+# MODIP array arrangement:
+use constant {
+
+};
+
 sub LoadMODIPFile {
   my ($modip_file_path) = @_;
 
@@ -111,7 +126,8 @@ sub LoadCCIRFiles {
   for my $month (1..12) {
 
     # Set CCIR hash entry for month:
-    $ref_ccir_hash->{$month} = [];
+    $ref_ccir_hash->{$month}{ F2  } = [];
+    $ref_ccir_hash->{$month}{ FM3 } = [];
 
     # Build file path:
     my $ccir_file_path =
@@ -120,15 +136,34 @@ sub LoadCCIRFiles {
     # Open CCIR month file:
     my $fh; open($fh, '<', $ccir_file_path) or croak $!;
 
-    # Read file and store data:
-    while ( my $line = <$fh> ) {
-
-      # NOTE: CCIR files store F2 (??) and Fm3 (??)
-
+    # Load file in memory as single line string:
+    # TODO: consider constants for CCIR file format
+    my @ccir_array;
+    while (my $line = <$fh>) {
+      chomp $line;
+      push( @ccir_array, map { PurgeExtraSpaces($_) } unpack('A16'x4, $line) );
     }
 
     # Close CCIR month file:
     close($fh);
+
+    # Build up F2 matrix from CCIR array:
+    for (my $i = 0; $i < CCIR_F2_ROW_DIM; $i += 1) {
+      for (my $j = 0; $j < CCIR_F2_COL_DIM; $j += 1) {
+        for (my $k = 0; $k < CCIR_F2_DEP_DIM; $k += 1) {
+          $ref_ccir_hash->{$month}{F2}[$i][$j][$k] = shift @ccir_array;
+        }
+      }
+    }
+
+    # Build up FM3 matrix from CCIR array:
+    for (my $i = 0; $i < CCIR_FM3_ROW_DIM; $i += 1) {
+      for (my $j = 0; $j < CCIR_FM3_COL_DIM; $j += 1) {
+        for (my $k = 0; $k < CCIR_FM3_DEP_DIM; $k += 1) {
+          $ref_ccir_hash->{$month}{FM3}[$i][$j][$k] = shift @ccir_array;
+        }
+      }
+    }
 
   } # end for $month
 
