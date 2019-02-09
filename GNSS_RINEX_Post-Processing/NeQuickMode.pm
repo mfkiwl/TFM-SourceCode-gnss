@@ -187,8 +187,13 @@ sub LoadCCIRFiles {
 # ---------------------------------------------------------------------------- #
 # Constants:
 # ---------------------------------------------------------------------------- #
-use constant
-    ZENIT_ANGLE_DAY_NIGHT_TRANSITION => 86.23292796211615*DEGREE_TO_RADIANS;
+use constant {
+  MIN_EFF_IONO_LEVEL => 0,
+  MAX_EFF_IONO_LEVEL => 400,
+  DEFAULT_EFF_IONO_LEVEL => 63.7,
+};
+
+use constant ZENIT_ANGLE_DAY_NIGHT_TRANSITION => 86.23292796211615; # [deg]
 
 use constant REF_CCIR_HASH => LoadCCIRFiles( DAT_ROOT_PATH   );
 use constant REF_MODIP_MAP => LoadMODIPFile( MODIP_FILE_PATH );
@@ -203,7 +208,7 @@ use constant REF_MODIP_MAP => LoadMODIPFile( MODIP_FILE_PATH );
 sub ComputeMODIP {
   my ($lat, $lon) = @_;
 
-  # Preliminary --> Transform latitude and longitude to degree format:
+  # Preliminary --> Transform latitude and longitude to degree angle format:
   $lat *= RADIANS_TO_DEGREE;
   $lon *= RADIANS_TO_DEGREE;
 
@@ -222,14 +227,15 @@ sub ComputeMODIP {
        $lon_index += 36 if $lon_index < 0;
        $lon_index -= 36 if $lon_index > 33;
 
-    # Tipificate latitude point to interpolate:
+    # Tipificate (arange among 0 to 1) latitude point to interpolate:
     my $aux1 = ($lat + 90)/5 + 1;
     my $x    = $aux1 - int($aux1);
 
     # Latitude grid index:
     my $lat_index = int($aux1) - 2;
 
-    # Build buffer grid
+    # Build buffer grid:
+    # NOTE: buffer grid is 4x4 MODIP imported points
     my $ref_modip_buffer_grid = [];
 
     for my $k (0..3) {
@@ -249,11 +255,12 @@ sub ComputeMODIP {
                                      $ref_modip_buffer_grid->[3][$k], $x) );
     }
 
-    # Tipificate longitude point to interpolate:
+    # Tipificate (arange among 0 to 1) longitude point to interpolate:
     my $aux2 = ($lon + 180)/10;
     my $y    = $aux2 - int($aux2);
 
-    # Interpolate on longitude grid buffer in order to retrive MODIP:
+    # Interpolate on longitude grid buffer using interpolation performed on
+    # latitude buffer in order to retrive MODIP:
     $modip = ThirdOrderInterpolation( @z_interpolated_lat, $y );
 
   }
@@ -262,9 +269,89 @@ sub ComputeMODIP {
   return $modip*DEGREE_TO_RADIANS;
 }
 
-sub ComputeEffectiveIonisationLevel {}
+sub ComputeEffectiveIonisationLevel {
+  my ( $ref_iono_coeff, $modip ) = @_;
 
-sub ComputeNeQuickModelParameters {}
+  # De-reference iono coefficient array:
+  my ( $a0, $a1, $a2 ) = @{ $ref_iono_coeff };
+
+  # MODIP is transformed to degree angle format:
+  $modip *= RADIANS_TO_DEGREE;
+
+  # Init effective ionisation level value to return:
+  my $eff_iono_level;
+
+  if ( $a0 == 0 && $a1 == 0 && $a2 == 0 ) {
+    $eff_iono_level = DEFAULT_EFF_IONO_LEVEL;
+  } else {
+    $eff_iono_level = $a0 + $a1*$modip + $a2*$modip**2;
+  }
+
+  # Bound effective ionisation level according to estipulated range:
+  if ( $eff_iono_level < MIN_EFF_IONO_LEVEL  )
+     { $eff_iono_level = MIN_EFF_IONO_LEVEL; }
+  if ( $eff_iono_level > MAX_EFF_IONO_LEVEL  )
+     { $eff_iono_level = MAX_EFF_IONO_LEVEL; }
+
+  # In addition, compute Effective sunspot number:
+  my $eff_sunspot_number =
+    (167273 + ($eff_iono_level - DEFAULT_EFF_IONO_LEVEL)*1123.6)**0.5 - 408.99;
+
+  return ($eff_iono_level, $eff_sunspot_number);
+}
+
+sub ComputeNeQuickModelParameters {
+  my ( $lat, $lon, $modip,
+       $month, $ut_time, $local_time,
+       $eff_iono_level, $eff_sunspot_number ) = @_;
+
+  # Preliminary:
+    # Angle formats are converted to degrees:
+    ($lat, $lon, $modip) = map{ $_*RADIANS_TO_DEGREE } ($lat, $lon, $modip);
+
+  # Init hash to store model parameters:
+  my $ref_model_parameters = {};
+
+  # ******************** #
+  # 1. Solar Parameters: #
+  # ******************** #
+
+    # 1.a. Compute Solar Declination:
+    my ( $sin_delta_sun, $cos_delta_sun ) =
+      ComputeSolarDeclination( $month, $ut_time );
+
+    # 1.b. Compute Solar Zenit Angle:
+    my ( $solar_zenit_angle ) =
+      ComputeSolarZenitAngle( $lat, $local_time,
+                              $sin_delta_sun, $cos_delta_sun );
+
+    # 1.c. Compute Effective Solar Zenit Angle:
+    my ($eff_solar_zenit_angle) =
+      ComputeEffSolarZenitAngle( $solar_zenit_angle,
+                                 ZENIT_ANGLE_DAY_NIGHT_TRANSITION  );
+
+  # ******************** #
+  # 2. Model Parameters: #
+  # ******************** #
+
+    # 2.a. f0E (??) & NmE (??):
+
+    # 2.b. f0F1 (??) & NmF1 (??):
+
+    # 2.c. f0F2 (??), NmF2 (??) & M(3000)F2 (??):
+
+    # 2.d. hME, hMF1 & hMF2 (??):
+
+    # 2.e. B2BOT, (B1TOP, B1BOT) & (BETOP, BEBOT) (??):
+
+    # 2.f. A1, A2 & A3 (??):
+
+    # 2.g. Shape Parameter (??):
+
+    # 2.h. H0 (??):
+
+  return $ref_model_parameters;
+}
 
 sub IntegrateNeQuickSlantTEC {}
 
@@ -278,6 +365,60 @@ sub IntegrateNeQuickVerticalTEC {}
 # First Level Subroutines:                           #
 #   Subroutines called from main public subroutines. #
 # ************************************************** #
+sub ComputeSolarDeclination {
+  my ( $month, $ut_time ) = @_;
+
+  # Day of the year (at th middle of the month??):
+  my $doy = 30.5*$month - 15;
+
+  # Compute time [days]:
+  my $time = $doy + (18 - $ut_time)/24;
+
+  # Solar's declination argument:
+  my $aux1 = (0.9856*$time - 3.289)*DEGREE_TO_RADIANS;
+  my $aux2 = (1.916*sin($aux1) + 0.02*sin(2*$aux1) + 282.634)*DEGREE_TO_RADIANS;
+  my $argument = $aux1 + $aux2;
+
+  # Solar declination sinus and cosine components:
+  my $sin_delta_sun = 0.39782*sin($argument);
+  my $cos_delta_sun = (1 - $sin_delta_sun**2)**0.5;
+
+  return ( $sin_delta_sun, $cos_delta_sun );
+}
+
+sub ComputeSolarZenitAngle {
+  my ($lat, $local_time, $sin_delta_sun, $cos_delta_sun) = @_;
+
+  # Preliminary:
+    # Latitude is transformed o radians:
+    $lat *= DEGREE_TO_RADIANS;
+
+  # Solar zenit angle cosine component:
+  my $cos_solar_zenit_angle = sin($lat)*$sin_delta_sun +
+                              cos($lat)*$cos_delta_sun +
+                              cos( PI/12*(12 - $local_time) );
+
+  my $solar_zenit_angle = RADIANS_TO_DEGREE*
+                          atan2( (1 - $cos_solar_zenit_angle**2)**0.5,
+                                 $cos_solar_zenit_angle );
+
+  return $solar_zenit_angle;
+}
+
+sub ComputeEffSolarZenitAngle {
+  my ($solar_zenit_angle, $zenit_angle_day_night_transition) = @_;
+
+  my $aux = exp( 12*($solar_zenit_angle -
+                     $zenit_angle_day_night_transition) );
+
+  my $denominator = 1 + $aux;
+  my $nominator   = $solar_zenit_angle +
+                    ( 90 - 0.24*exp(20 - 0.2*$solar_zenit_angle) )*$aux;
+
+  # Effective solar zenit angle is computed as the following fraction:
+  return $nominator/$denominator;
+}
+
 
 # ******************************************************** #
 # Second Level Subroutines:                                #
