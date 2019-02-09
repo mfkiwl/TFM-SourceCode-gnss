@@ -51,10 +51,15 @@ BEGIN {
   our @EXPORT = ();
 
   # Define constants to export:
-  our @EXPORT_CONST = qw(  );
+  our @EXPORT_CONST = qw( &REF_CCIR_HASH
+                          &REF_MODIP_MAP );
 
   # Define subroutines to export:
-  our @EXPORT_SUB   = qw(  );
+  our @EXPORT_SUB   = qw( &ComputeMODIP
+                          &ComputeEffectiveIonisationLevel
+                          &ComputeNeQuickModelParameters
+                          &IntegrateNeQuickSlantTEC
+                          &IntegrateNeQuickVerticalTEC );
 
   # Merge constants$rec_lon subroutines:
   our @EXPORT_OK = (@EXPORT_CONST, @EXPORT_SUB);
@@ -118,6 +123,8 @@ sub LoadCCIRFiles {
     # Read file and store data:
     while ( my $line = <$fh> ) {
 
+      # NOTE: CCIR files store F2 (??) and Fm3 (??)
+
     }
 
     # Close CCIR month file:
@@ -178,3 +185,5 @@ sub IntegrateNeQuickVerticalTEC {}
 # Forth Level Subroutines:                                 #
 #   Subroutines called from 3rd level private subroutines. #
 # ******************************************************** #
+
+TRUE;
