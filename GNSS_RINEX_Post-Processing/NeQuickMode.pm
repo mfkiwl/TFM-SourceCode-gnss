@@ -93,8 +93,8 @@ use constant {
 
 # MODIP array arrangement:
 use constant {
-  MODIP_ROW_DIM => 38,
-  MODIP_COL_DIM => 38,
+  MODIP_ROW_DIM => 39,
+  MODIP_COL_DIM => 39,
 };
 
 sub LoadMODIPFile {
