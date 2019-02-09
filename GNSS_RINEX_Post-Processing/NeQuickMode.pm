@@ -81,6 +81,9 @@ use constant MODIP_FILE_PATH     => NEQUICK_DAT_PATH.qq(modipNeQG_wrapped.txt);
 use constant CCIR_BASE_FILE_NAME => qq(ccir);
 use constant CCIR_FILE_EXTENSION => qq(.txt);
 
+# CCIR line template:
+use constant CCIR_LINE_TEMPLEATE => 'A16'x4;
+
 # CCIR array arrangement:
 use constant {
   CCIR_F2_ROW_DIM  => 2,
@@ -150,7 +153,8 @@ sub LoadCCIRFiles {
     my @ccir_array;
     while (my $line = <$fh>) {
       chomp $line;
-      push( @ccir_array, map { PurgeExtraSpaces($_) } unpack('A16'x4, $line) );
+      push( @ccir_array,
+            map { PurgeExtraSpaces($_) } unpack(CCIR_LINE_TEMPLEATE, $line) );
     }
 
     # Close CCIR month file:
@@ -184,7 +188,7 @@ sub LoadCCIRFiles {
 # Constants:
 # ---------------------------------------------------------------------------- #
 use constant
-    ZENIT_ANGLE_DAY_NIGHT_TRANSITION => 86.23292796211615 * DEGREE_TO_RADIANS;
+    ZENIT_ANGLE_DAY_NIGHT_TRANSITION => 86.23292796211615*DEGREE_TO_RADIANS;
 
 use constant REF_CCIR_HASH => LoadCCIRFiles( DAT_ROOT_PATH   );
 use constant REF_MODIP_MAP => LoadMODIPFile( MODIP_FILE_PATH );
@@ -196,7 +200,67 @@ use constant REF_MODIP_MAP => LoadMODIPFile( MODIP_FILE_PATH );
 # Public Subroutines: #
 # ............................................................................ #
 
-sub ComputeMODIP {}
+sub ComputeMODIP {
+  my ($lat, $lon) = @_;
+
+  # Preliminary --> Transform latitude and longitude to degree format:
+  $lat *= RADIANS_TO_DEGREE;
+  $lon *= RADIANS_TO_DEGREE;
+
+  # Init MODIP value to be returned:
+  my $modip;
+
+  # Latitude extreme cases:
+  if      ( $lat ==  90 ) {
+    $modip =  90;
+  } elsif ( $lat == -90 ) {
+    $modip = -90;
+  } else { # For the rest of the cases, MODIP interpolation is performed:
+
+    # Longitude grid index:
+    my $lon_index  = int( ($lon + 180)/10 ) - 2;
+       $lon_index += 36 if $lon_index < 0;
+       $lon_index -= 36 if $lon_index > 33;
+
+    # Tipificate latitude point to interpolate:
+    my $aux1 = ($lat + 90)/5 + 1;
+    my $x    = $aux1 - int($aux1);
+
+    # Latitude grid index:
+    my $lat_index = int($aux1) - 2;
+
+    # Build buffer grid
+    my $ref_modip_buffer_grid = [];
+
+    for my $k (0..3) {
+      for my $j (0..3) {
+        $ref_modip_buffer_grid->[$j][$k] =
+          REF_MODIP_MAP->[$lat_index + $j][$lon_index + $k];
+      }
+    }
+
+    # Interpolate on latitude grid buffer:
+    my @z_interpolated_lat;
+    for my $k (0..3) {
+      push ( @z_interpolated_lat,
+             ThirdOrderInterpolation($ref_modip_buffer_grid->[0][$k],
+                                     $ref_modip_buffer_grid->[1][$k],
+                                     $ref_modip_buffer_grid->[2][$k],
+                                     $ref_modip_buffer_grid->[3][$k], $x) );
+    }
+
+    # Tipificate longitude point to interpolate:
+    my $aux2 = ($lon + 180)/10;
+    my $y    = $aux2 - int($aux2);
+
+    # Interpolate on longitude grid buffer in order to retrive MODIP:
+    $modip = ThirdOrderInterpolation( @z_interpolated_lat, $y );
+
+  }
+
+  # MODIP is returned in radians:
+  return $modip*DEGREE_TO_RADIANS;
+}
 
 sub ComputeEffectiveIonisationLevel {}
 
