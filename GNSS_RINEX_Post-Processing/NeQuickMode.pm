@@ -93,7 +93,8 @@ use constant {
 
 # MODIP array arrangement:
 use constant {
-
+  MODIP_ROW_DIM => 38,
+  MODIP_COL_DIM => 38,
 };
 
 sub LoadMODIPFile {
@@ -105,13 +106,21 @@ sub LoadMODIPFile {
   # Open file:
   my $fh; open($fh, '<', $modip_file_path) or croak $!;
 
-  # Read file and store data in map:
+  my @modip_array;
   while (my $line = <$fh>) {
-
+    chomp $line;
+    push( @modip_array, split(/ +/, PurgeExtraSpaces($line)) );
   }
 
   # Close file:
   close($fh);
+
+  # Build up MODIP map:
+  for (my $i = 0; $i < MODIP_ROW_DIM; $i += 1) {
+    for (my $j = 0; $j < MODIP_COL_DIM; $j += 1) {
+      $ref_modip_map->[$i][$j] = shift @modip_array;
+    }
+  }
 
   return $ref_modip_map;
 }
