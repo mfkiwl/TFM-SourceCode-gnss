@@ -265,6 +265,13 @@ sub ComputeIonoNeQuickDelay {
     my ( $year, $month, $day,
          $hour, $min,   $sec ) = GPS2Date( $gps_epoch - $leap_sec );
 
+    # Retrieve universal time:
+    my $ut_time = Date2UniversalTime( $year, $month, $day,
+                                      $hour, $min,   $sec );
+
+    # Compute local time:
+    my $local_time = UniversalTime2LocalTime( $lon, $ut_time );
+
     # Compute geodetic coordinates for satellite:
     my ( $sat_lat,
          $sat_lon,
@@ -285,17 +292,20 @@ sub ComputeIonoNeQuickDelay {
       my $modip = # [rad]
          ComputeMODIP( $rec_lat, $rec_lon );
 
-    # ***************************************** #
-    # 2. Effective Ionisation Level computation #
-    # ***************************************** #
-      my $eff_iono_level = # [SFU]
+    # **************************************** #
+    # 2. Effective Ionisation Level &          #
+    #    Effective Sunspot Number computation: #
+    # **************************************** #
+      my ($eff_iono_level, $eff_sunspot_number) = # [SFU]
          ComputeEffectiveIonisationLevel( $ref_iono_coeff, $modip );
 
     # ************************************ #
     # 3. Obtain necessary Model Parameters #
     # ************************************ #
       my $ref_model_parameters =
-         ComputeNeQuickModelParameters(  );
+         ComputeNeQuickModelParameters( $lat, $lon, $modip,
+                                        $month, $ut_time, $local_time,
+                                        $eff_iono_level, $eff_sunspot_number );
 
     # ********************************** #
     # 4. NeQuick G Slant TEC integration #
