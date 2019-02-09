@@ -32,7 +32,8 @@ BEGIN {
                        &Rad2Deg
                        &Deg2Rad
                        &SolveWeightedLSQ
-                       &LinearInterpolationFromTable );
+                       &LinearInterpolationFromTable
+                       &ThirdOrderInterpolation );
 
   # Define export tags:
   our %EXPORT_TAGS = ( DEFAULT => [],
@@ -149,5 +150,32 @@ sub SolveWeightedLSQ {
   return (1, $x, $r, $sigma_xx, $sigma2_0);
 }
 
+sub ThirdOrderInterpolation {
+  my ($z1, $z2, $z3, $x) = @_;
+  # NOTE: $x is assumed to be [0,1]
+
+  # Init interpolated value:
+  my $zx;
+
+  # If value to be interpolated is non-significant, the interpolation is
+  # assumed to be the second point.
+  # Otherwise, the third order interpolation must be computed:
+  if ( abs(2*$x) < 10e-10 ) {
+    $zx = $z2;
+  } else {
+    my $delta = 2*$x - 1;
+
+    my ( $g1, $g2,
+         $g3, $g4 ) = ( $z3 + $z2,  $z3 - $z2,
+                        $z4 + $z1, ($z4 - $z1)/3 );
+    my ( $a0, $a1,
+         $a2, $a3 ) = ( 9*$g1 - $g3, 9*$g2 - $g4,
+                          $g3 - $g1,   $g4 - $g2 );
+
+    $zx = (1/16)*($a0 + $a1*$delta + $a2*$delta**2 + $a3*$delta**3);
+  }
+
+  return $zx;
+}
 
 1;
