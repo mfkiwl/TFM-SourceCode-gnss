@@ -143,8 +143,11 @@ sub ComputeSphericalDistance {
   my $spherical_distance;
 
   # TODO: finish this sub!
+  # spherical geometry in a great circle:
 
-  return $spherical_distance;
+  
+
+  return $spherical_distance*$radius;
 }
 
 sub ECEF2Geodetic {
