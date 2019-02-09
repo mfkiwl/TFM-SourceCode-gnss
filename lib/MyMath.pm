@@ -151,7 +151,7 @@ sub SolveWeightedLSQ {
 }
 
 sub ThirdOrderInterpolation {
-  my ($z1, $z2, $z3, $x) = @_;
+  my ($z1, $z2, $z3, $z4, $x) = @_;
   # NOTE: $x is assumed to be [0,1]
 
   # Init interpolated value:
