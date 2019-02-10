@@ -317,11 +317,11 @@ sub ComputeNeQuickModelParameters {
   # ******************** #
 
     # 1.a. Compute Solar Declination:
-    my ( $sin_delta_sun, $cos_delta_sun ) =
+    my ($sin_delta_sun, $cos_delta_sun) =
       ComputeSolarDeclination( $month, $ut_time );
 
     # 1.b. Compute Solar Zenit Angle:
-    my ( $solar_zenit_angle ) =
+    my ($solar_zenit_angle) =
       ComputeSolarZenitAngle( $lat, $local_time,
                               $sin_delta_sun, $cos_delta_sun );
 
@@ -334,21 +334,87 @@ sub ComputeNeQuickModelParameters {
   # 2. Model Parameters: #
   # ******************** #
 
-    # 2.a. f0E (??) & NmE (??):
+  # TODO: think about the posibility to control interfaces trough
+  #       $ref_model_parameters hash
+  # TODO: set units for parameters
 
-    # 2.b. f0F1 (??) & NmF1 (??):
+    # 2.a. E ionosphere layer parameters:
+    #      f0E --> E layer critical frequency
+    #      NmE --> E layer maximum density
+    my ($e_critical_freq, $e_max_density) =
+      ComputeELayerParameters( $lat, $month,
+                               $eff_iono_level, $eff_solar_zenit_angle );
 
-    # 2.c. f0F2 (??), NmF2 (??) & M(3000)F2 (??):
+    # 2.b. F2 ionosphere layer parameters:
+    #      f0F2 --> F2 layer critical frequency
+    #      NmF2 --> F2 layer maximum density
+    #      M(3000)F2 --> F2 layer transmission factor
+    my ($f2_critical_freq,
+        $f2_max_density, $f2_trans_fact) =
+      ComputeF2LayerParameters( $lat, $lon,
+                                $month, $ut_time,
+                                $modip, $eff_sunspot_number );
 
-    # 2.d. hME, hMF1 & hMF2 (??):
+    # 2.c. F1 ionosphere layer parameters:
+    #      f0F1 --> F1 layer critical frequency
+    #      NmF1 --> F1 layer maximum density
+    my ($f1_critical_freq, $f1_max_density) =
+      ComputeF1LayerParameters( $e_critical_freq, $f2_critical_freq );
 
-    # 2.e. B2BOT, (B1TOP, B1BOT) & (BETOP, BEBOT) (??):
+    # 2.d. Layer maximum density heights:
+    #      hME  --> E  layer maximum density height
+    #      hMF2 --> F2 layer maximum density height
+    #      hMF1 --> F1 layer maximum density height
+    my ($e_max_density_height,
+        $f2_max_density_height, $f1_max_density_height) =
+      ComputeLayerMaxDensityHeight( $e_critical_freq,
+                                    $f2_critical_freq, $f2_trans_fact );
 
-    # 2.f. A1, A2 & A3 (??):
+    # 2.e. Ionosphere layer thickness parameters:
+    #      B2BOT --> F2 bottom layer thickness
+    #      BETOP, BEBOT --> E  top and bottom layer thickness
+    #      B1TOP, B1BOT --> F1 top and bottom layer thickness
+    my ($f2_bot_thick,
+        $f1_top_thick, $f1_bot_thick,
+        $e_top_thick,  $e_bot_thick) =
+      ComputeLayerThickness(
+                             $f2_trans_fact,
+                             $f2_max_density,
+                             $f2_critical_freq,
+                             $f2_max_density_height,
+                             $f1_max_density_height,
+                             $e_max_density_height );
 
-    # 2.g. Shape Parameter (??):
+    # 2.f. Ionosphere layers amplitude:
+    #      A1 --> F2 layer amplitude
+    #      A2 --> F1 layer amplitude
+    #      A3 --> E  layer amplitude
+    my ( $f2_amplitude,
+         $f1_amplitude,
+         $e_amplitude ) =
+      ComputeLayerAmplitude( $f2_max_density,
+                             $f1_max_density,
+                             $e_max_density,
+                             $f2_max_density_height,
+                             $f1_max_density_height,
+                             $e_max_density_height,
+                             $f2_bot_thick, $f1_top_thick, $f1_bot_thick,
+                             $e_top_thick, $e_bot_thick, $f1_critical_freq );
 
-    # 2.h. H0 (??):
+    # 2.g. k --> Shape Parameter:
+    my ($shape_parameter) =
+      ComputeShapeParameter( $month,
+                             $f2_bot_thick,
+                             $f2_max_density,
+                             $f2_max_density_height,
+                             $eff_sunspot_number );
+
+    # 2.h. H0 --> Topside thickness parameter:
+    my ($topside_thick) =
+      ComputeTopsideThickness( $f2_bot_thick, $shape_parameter );
+
+  # Fill hash with computed model parameters:
+
 
   return $ref_model_parameters;
 }
@@ -419,6 +485,63 @@ sub ComputeEffSolarZenitAngle {
   return $nominator/$denominator;
 }
 
+sub ComputeELayerParameters {
+  my ($lat, $month,
+      $eff_iono_level, $eff_solar_zenit_angle) = @_;
+
+  my ($e_critical_freq, $e_max_density);
+
+  return $e_critical_freq, $e_max_density;
+}
+
+sub ComputeF2LayerParameters {
+  my ($lat, $lon,
+      $month, $ut_time,
+      $modip, $eff_sunspot_number) = @_;
+
+  my ($f2_critical_freq, $f2_max_density, $f2_trans_fact);
+
+  return $f2_critical_freq, $f2_max_density, $f2_trans_fact;
+}
+
+sub ComputeF1LayerParameters {
+  my ($e_critical_freq, $f2_critical_freq) = @_;
+
+  my ($f1_critical_freq, $f1_max_density);
+
+  return $f1_critical_freq, $f1_max_density;
+}
+
+sub ComputeLayerMaxDensityHeight {
+  my ($e_critical_freq, $f2_critical_freq, $f2_trans_fact) = @_;
+
+  my ($e_max_density_height,
+      $f2_max_density_height,
+      $f1_max_density_height);
+
+  return $e_max_density_height, $f2_max_density_height, $f1_max_density_height;
+}
+
+sub ComputeLayerThickness {
+  my ($f2_trans_fact,
+      $f2_max_density,
+      $f2_critical_freq,
+      $f1_max_density_height,
+      $f2_max_density_height,
+      $e_max_density_height) = @_;
+
+  my ($f2_bot_thick, $f1_top_thick, $f1_bot_thick, $e_top_thick, $e_bot_thick);
+
+  return $f2_bot_thick,
+         $f1_top_thick, $f1_bot_thick,
+         $e_top_thick, $e_bot_thick;
+}
+
+sub ComputeLayerAmplitude {}
+
+sub ComputeShapeParameter {}
+
+sub ComputeTopsideThickness {}
 
 # ******************************************************** #
 # Second Level Subroutines:                                #
