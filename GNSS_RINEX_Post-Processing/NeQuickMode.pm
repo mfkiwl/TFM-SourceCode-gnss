@@ -334,86 +334,63 @@ sub ComputeNeQuickModelParameters {
   # 2. Model Parameters: #
   # ******************** #
 
-  # TODO: think about the posibility to control interfaces trough
-  #       $ref_model_parameters hash
   # TODO: set units for parameters
 
     # 2.a. E ionosphere layer parameters:
     #      f0E --> E layer critical frequency
     #      NmE --> E layer maximum density
-    my ($e_critical_freq, $e_max_density) =
+    $ref_model_parameters =
       ComputeELayerParameters( $lat, $month,
-                               $eff_iono_level, $eff_solar_zenit_angle );
+                               $eff_iono_level,
+                               $eff_solar_zenit_angle,
+                               $ref_model_parameters );
 
     # 2.b. F2 ionosphere layer parameters:
     #      f0F2 --> F2 layer critical frequency
     #      NmF2 --> F2 layer maximum density
     #      M(3000)F2 --> F2 layer transmission factor
-    my ($f2_critical_freq,
-        $f2_max_density, $f2_trans_fact) =
-      ComputeF2LayerParameters( $lat, $lon,
+    $ref_model_parameters =
+      ComputeF2LayerParameters( $lat, $lon, $modip,
                                 $month, $ut_time,
-                                $modip, $eff_sunspot_number );
+                                $eff_sunspot_number,
+                                $ref_model_parameters );
 
     # 2.c. F1 ionosphere layer parameters:
     #      f0F1 --> F1 layer critical frequency
     #      NmF1 --> F1 layer maximum density
-    my ($f1_critical_freq, $f1_max_density) =
-      ComputeF1LayerParameters( $e_critical_freq, $f2_critical_freq );
+    $ref_model_parameters =
+      ComputeF1LayerParameters( $ref_model_parameters );
 
     # 2.d. Layer maximum density heights:
     #      hME  --> E  layer maximum density height
     #      hMF2 --> F2 layer maximum density height
     #      hMF1 --> F1 layer maximum density height
-    my ($e_max_density_height,
-        $f2_max_density_height, $f1_max_density_height) =
-      ComputeLayerMaxDensityHeight( $e_critical_freq,
-                                    $f2_critical_freq, $f2_trans_fact );
+    $ref_model_parameters =
+      ComputeLayerMaxDensityHeight( $ref_model_parameters );
 
     # 2.e. Ionosphere layer thickness parameters:
     #      B2BOT --> F2 bottom layer thickness
     #      BETOP, BEBOT --> E  top and bottom layer thickness
     #      B1TOP, B1BOT --> F1 top and bottom layer thickness
-    my ($f2_bot_thick,
-        $f1_top_thick, $f1_bot_thick,
-        $e_top_thick,  $e_bot_thick) =
-      ComputeLayerThickness(
-                             $f2_trans_fact,
-                             $f2_max_density,
-                             $f2_critical_freq,
-                             $f2_max_density_height,
-                             $f1_max_density_height,
-                             $e_max_density_height );
+    $ref_model_parameters =
+      ComputeLayerThickness( $ref_model_parameters );
 
     # 2.f. Ionosphere layers amplitude:
     #      A1 --> F2 layer amplitude
     #      A2 --> F1 layer amplitude
     #      A3 --> E  layer amplitude
-    my ( $f2_amplitude,
-         $f1_amplitude,
-         $e_amplitude ) =
-      ComputeLayerAmplitude( $f2_max_density,
-                             $f1_max_density,
-                             $e_max_density,
-                             $f2_max_density_height,
-                             $f1_max_density_height,
-                             $e_max_density_height,
-                             $f2_bot_thick, $f1_top_thick, $f1_bot_thick,
-                             $e_top_thick, $e_bot_thick, $f1_critical_freq );
+    $ref_model_parameters =
+      ComputeLayerAmplitude( $ref_model_parameters );
 
     # 2.g. k --> Shape Parameter:
-    my ($shape_parameter) =
+    $ref_model_parameters =
       ComputeShapeParameter( $month,
-                             $f2_bot_thick,
-                             $f2_max_density,
-                             $f2_max_density_height,
-                             $eff_sunspot_number );
+                             $eff_sunspot_number,
+                             $ref_model_parameters );
 
     # 2.h. H0 --> Topside thickness parameter:
-    my ($topside_thick) =
-      ComputeTopsideThickness( $f2_bot_thick, $shape_parameter );
-
-  # Fill hash with computed model parameters:
+    $ref_model_parameters =
+      ComputeTopsideThickness( $ref_model_parameters );
 
 
   return $ref_model_parameters;
@@ -487,61 +464,112 @@ sub ComputeEffSolarZenitAngle {
 
 sub ComputeELayerParameters {
   my ($lat, $month,
-      $eff_iono_level, $eff_solar_zenit_angle) = @_;
+      $eff_iono_level,
+      $eff_solar_zenit_angle,
+      $ref_model_parameters) = @_;
 
   my ($e_critical_freq, $e_max_density);
 
-  return $e_critical_freq, $e_max_density;
+  # Append computed parameters to model hash:
+  $ref_model_parameters->{E_LAYER}{ MAX_DENSITY   } = $e_max_density;
+  $ref_model_parameters->{E_LAYER}{ CRITICAL_FREQ } = $e_critical_freq;
+
+  return $ref_model_parameters;
 }
 
 sub ComputeF2LayerParameters {
-  my ($lat, $lon,
-      $month, $ut_time,
-      $modip, $eff_sunspot_number) = @_;
+  my ($lat, $lon, $modip, $month, $ut_time,
+      $eff_sunspot_number, $ref_model_parameters) = @_;
 
   my ($f2_critical_freq, $f2_max_density, $f2_trans_fact);
 
-  return $f2_critical_freq, $f2_max_density, $f2_trans_fact;
+  # Append computed parameters to model hash:
+  $ref_model_parameters->{F2_LAYER}{ MAX_DENSITY         } = $f2_critical_freq;
+  $ref_model_parameters->{F2_LAYER}{ CRITICAL_FREQ       } = $f2_critical_freq;
+  $ref_model_parameters->{F2_LAYER}{ TRANSMISSION_FACTOR } = $f2_trans_fact;
+
+  return $ref_model_parameters;
 }
 
 sub ComputeF1LayerParameters {
-  my ($e_critical_freq, $f2_critical_freq) = @_;
+  my ($ref_model_parameters) = @_;
 
   my ($f1_critical_freq, $f1_max_density);
 
-  return $f1_critical_freq, $f1_max_density;
+  # Append computed parameters to model hash:
+  $ref_model_parameters->{F1_LAYER}{ MAX_DENSITY   } = $f1_max_density;
+  $ref_model_parameters->{F1_LAYER}{ CRITICAL_FREQ } = $f1_critical_freq;
+
+  return $ref_model_parameters;
 }
 
 sub ComputeLayerMaxDensityHeight {
-  my ($e_critical_freq, $f2_critical_freq, $f2_trans_fact) = @_;
+  my ($ref_model_parameters) = @_;
 
   my ($e_max_density_height,
       $f2_max_density_height,
       $f1_max_density_height);
 
-  return $e_max_density_height, $f2_max_density_height, $f1_max_density_height;
+  # Append computed parameters to model hash:
+  $ref_model_parameters->
+    { E_LAYER  }{MAX_DENSITY_HEIGHT} = $e_max_density_height;
+  $ref_model_parameters->
+    { F1_LAYER }{MAX_DENSITY_HEIGHT} = $f1_max_density_height;
+  $ref_model_parameters->
+    { F2_LAYER }{MAX_DENSITY_HEIGHT} = $f2_max_density_height;
+
+  return $ref_model_parameters;
 }
 
 sub ComputeLayerThickness {
-  my ($f2_trans_fact,
-      $f2_max_density,
-      $f2_critical_freq,
-      $f1_max_density_height,
-      $f2_max_density_height,
-      $e_max_density_height) = @_;
+  my ($ref_model_parameters) = @_;
 
   my ($f2_bot_thick, $f1_top_thick, $f1_bot_thick, $e_top_thick, $e_bot_thick);
 
-  return $f2_bot_thick,
-         $f1_top_thick, $f1_bot_thick,
-         $e_top_thick, $e_bot_thick;
+  # Append computed parameters to model hash:
+  $ref_model_parameters->{ E_LAYER  }{TOP_THICKNESS} = $e_top_thick;
+  $ref_model_parameters->{ E_LAYER  }{BOT_THICKNESS} = $e_bot_thick;
+  $ref_model_parameters->{ F1_LAYER }{TOP_THICKNESS} = $f1_top_thick;
+  $ref_model_parameters->{ F1_LAYER }{BOT_THICKNESS} = $f1_bot_thick;
+  $ref_model_parameters->{ F2_LAYER }{BOT_THICKNESS} = $f2_bot_thick;
+
+  return $ref_model_parameters;
 }
 
-sub ComputeLayerAmplitude {}
+sub ComputeLayerAmplitude {
+  my ($ref_model_parameters) = @_;
 
-sub ComputeShapeParameter {}
+  my ($e_amplitude, $f1_amplitude, $f2_amplitude);
 
-sub ComputeTopsideThickness {}
+  # Append computed parameters to model hash:
+  $ref_model_parameters->{ E_LAYER  }{AMPLITUDE} = $e_amplitude;
+  $ref_model_parameters->{ F1_LAYER }{AMPLITUDE} = $f1_amplitude;
+  $ref_model_parameters->{ F2_LAYER }{AMPLITUDE} = $f2_amplitude;
+
+  return $ref_model_parameters;
+}
+
+sub ComputeShapeParameter {
+  my ($ref_model_parameters) = @_;
+
+  my $shape_parameter;
+
+  # Append computed parameters to model hash:
+  $ref_model_parameters->{SHAPE_PARAMETER} = $shape_parameter;
+
+  return $ref_model_parameters;
+}
+
+sub ComputeTopsideThickness {
+  my ($ref_model_parameters) = @_;
+
+  my $topside_thick;
+
+  # Append computed parameters to model hash:
+  $ref_model_parameters->{TOPSIDE_THICKNESS} = $topside_thick;
+
+  return $ref_model_parameters;
+}
 
 # ******************************************************** #
 # Second Level Subroutines:                                #
