@@ -116,7 +116,7 @@ sub ComputeSatPosition {
   # ******************* #
 
   # Init hash to store navigation contents:
-  my %sat_sys_nav; my $ref_sat_sys_nav = \%sat_sys_nav;
+  my $ref_sat_sys_nav = {};
 
   # Read satellite navigation file and store its contents:
   for my $sat_sys (keys %{$ref_gen_conf->{RINEX_NAV_PATH}})
@@ -155,6 +155,9 @@ sub ComputeSatPosition {
       # Save constellation:
       my $sat_sys = substr($sat, 0, 1);
 
+      # Init satelite navigation data status and coordinate array:
+      my $sat_status; my @sat_coord;
+
       # Look for this constellation in the navigation hash:
       if (grep(/^$sat_sys$/, keys %{$ref_sat_sys_nav}))
       {
@@ -164,63 +167,69 @@ sub ComputeSatPosition {
         # Check that the navigation data is available for the selected
         # satellite:
         unless (exists $ref_nav_body->{$sat}) {
-          # Raise warning and go to the next satellite:
+
+          # Set invalid data for satellite:
+          $sat_status = FALSE; @sat_coord  = ();
+
+          # Raise warning and skip code to next satellite:
           RaiseWarning($fh_log, WARN_NO_SAT_NAVIGATION,
             "Navigation ephemerids for satellite \'$sat\' could not be found");
-          next;
-        }
 
-        # Determine best ephemerids to compute satellite coordinates:
-        my $sat_eph_epoch = SelectNavigationBlock(
-                              $ref_gen_conf->{EPH_TIME_THRESHOLD},
-                              $obs_epoch, sort(keys %{$ref_nav_body->{$sat}})
-                            );
+        } else { # If satellite navigation data is available:
 
-        # Check that the ephemerids have been selected:
-        unless ($sat_eph_epoch != FALSE) {
-          # Fill navigation coordinates with null info:
-          $ref_rinex_obs->{BODY}[$i]{SAT_XYZTC}{$sat}{NAV}{STATUS} = FALSE;
-          $ref_rinex_obs->{BODY}[$i]{SAT_XYZTC}{$sat}{NAV}{XYZTC}  = [];
-          # If not, raise a warning and go to the next satellite:
-          RaiseWarning($fh_log, WARN_NO_SAT_EPH_FOUND,
-            "No navigation ephemerids were selected for satellite \'$sat\', ".
-            "at observation epoch: ".BuildDateString(GPS2Date($obs_epoch)));
-          next;
-        }
+          # Determine best ephemerids to compute satellite coordinates:
+          my $sat_eph_epoch = SelectNavigationBlock(
+                                $ref_gen_conf->{EPH_TIME_THRESHOLD},
+                                $obs_epoch, sort(keys %{$ref_nav_body->{$sat}})
+                              );
 
-        # Save the ephemerid parameters for computing the satellite
-        # coordinates:
-        my $ref_sat_eph = $ref_nav_body->{$sat}{$sat_eph_epoch};
+          # Check that the ephemerids have been selected:
+          unless ($sat_eph_epoch != FALSE) {
 
-        # Retrieve observation measurement:
-        my $signal =
-           $ref_gen_conf->{SELECTED_SIGNALS}{$sat_sys};
-        my $obs_meas =
-           $ref_rinex_obs->{BODY}[$i]{SAT_OBS}{$sat}{$signal};
+            # Set invalid data for satellite:
+            $sat_status = FALSE; @sat_coord  = ();
 
-        # Init satelite coordinate array:
-        my $status;
-        my @sat_coord;
+            # Raise a warning and go to the next satellite:
+            RaiseWarning($fh_log, WARN_NO_SAT_EPH_FOUND,
+              "No navigation ephemerids were selected for satellite \'$sat\', ".
+              "at observation epoch: ".BuildDateString(GPS2Date($obs_epoch)));
 
-        # Do not compute satellite coordinates if the observation is not valid:
-        unless ( $obs_meas eq NULL_OBSERVATION ) {
-          # Retrieve carrier frequencies:
-          my ( $carrier_freq_f1, $carrier_freq_f2 ) =
-             ( $ref_gen_conf->{CARRIER_FREQUENCY}{$sat_sys}{F1},
-               $ref_gen_conf->{CARRIER_FREQUENCY}{$sat_sys}{F2} );
+          } else { # If satellite ephemerids have been selected:
 
-          # Compute satellite coordinates for observation epoch:
-          ($status, @sat_coord) =
-            ComputeSatelliteCoordinates( $obs_epoch,
-                                         $obs_meas, $sat, $ref_sat_eph,
-                                         $carrier_freq_f1, $carrier_freq_f2 );
-        } else {
-          $status = FALSE;
-        }
+            # Save the ephemerid parameters for computing the satellite
+            # coordinates:
+            my $ref_sat_eph = $ref_nav_body->{$sat}{$sat_eph_epoch};
+
+            # Retrieve observation measurement:
+            my $signal =
+               $ref_gen_conf->{SELECTED_SIGNALS}{$sat_sys};
+            my $obs_meas =
+               $ref_rinex_obs->{BODY}[$i]{SAT_OBS}{$sat}{$signal};
+
+            # Do not compute satellite coordinates if the observation is not
+            # valid:
+            unless ($obs_meas eq NULL_OBSERVATION) {
+              # Retrieve carrier frequencies:
+              my ( $carrier_freq_f1, $carrier_freq_f2 ) =
+                 ( $ref_gen_conf->{CARRIER_FREQUENCY}{$sat_sys}{F1},
+                   $ref_gen_conf->{CARRIER_FREQUENCY}{$sat_sys}{F2} );
+
+              # Compute satellite coordinates for observation epoch:
+              ($sat_status, @sat_coord) =
+                ComputeSatelliteCoordinates($obs_epoch,
+                                            $obs_meas, $sat, $ref_sat_eph,
+                                            $carrier_freq_f1, $carrier_freq_f2);
+            } else {
+              # Satellite coordintes cannot be computed:
+              $sat_status = FALSE; @sat_coord = ();
+            } # end unless $obs_meas eq NULL_OBSERVATION
+
+          } # end unless ($sat_eph_epoch != FALSE)
+        } # end unless (exists $ref_nav_body->{$sat})
 
         # Save the satellite position in the observation hash:
-        $ref_rinex_obs->{BODY}[$i]{SAT_XYZTC}{$sat}{NAV}{STATUS} = $status;
-        $ref_rinex_obs->{BODY}[$i]{SAT_XYZTC}{$sat}{NAV}{XYZTC}  = \@sat_coord
+        $ref_rinex_obs->{BODY}[$i]{SAT_XYZTC}{$sat}{NAV}{STATUS} = $sat_status;
+        $ref_rinex_obs->{BODY}[$i]{SAT_XYZTC}{$sat}{NAV}{XYZTC}  = \@sat_coord;
 
       } # end if grep($sat, SUPPORTED_SAT_SYS)
 
