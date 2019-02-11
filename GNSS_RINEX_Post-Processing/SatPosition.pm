@@ -138,6 +138,10 @@ sub ComputeSatPosition {
     # Save observation epoch:
     my $obs_epoch = $ref_rinex_obs->{BODY}[$i]{EPOCH};
 
+    # Init valid navigation satellite counter:
+    InitValidNavSatCounter( $ref_rinex_obs->{BODY}[$i],
+                            $ref_gen_conf->{SELECTED_SAT_SYS} );
+
     # Check observation health status:
     unless ( $ref_rinex_obs->{BODY}[$i]{STATUS} == HEALTHY_OBSERVATION_BLOCK )
     {
@@ -227,6 +231,11 @@ sub ComputeSatPosition {
           } # end unless ($sat_eph_epoch != FALSE)
         } # end unless (exists $ref_nav_body->{$sat})
 
+        # If the navigation status is valid, increment counter information:
+        if ( $sat_status ) {
+          $ref_rinex_obs->{BODY}[$i]{NUM_NAV_SAT}{$sat_sys} += 1;
+        }
+
         # Save the satellite position in the observation hash:
         $ref_rinex_obs->{BODY}[$i]{SAT_XYZTC}{$sat}{NAV}{STATUS} = $sat_status;
         $ref_rinex_obs->{BODY}[$i]{SAT_XYZTC}{$sat}{NAV}{XYZTC}  = \@sat_coord;
@@ -242,6 +251,16 @@ sub ComputeSatPosition {
 
 # Private Subroutines:                                                         #
 # ............................................................................ #
+sub InitValidNavSatCounter {
+  my ($ref_obs_epoch_info, $ref_selected_sat_sys) = @_;
+
+  for my $sat_sys (@{ $ref_selected_sat_sys }) {
+    $ref_obs_epoch_info->{NUM_NAV_SAT}{$sat_sys} = 0;
+  }
+
+  return TRUE;
+}
+
 sub SelectNavigationBlock {
   my ($time_threshold, $obs_epoch, @sat_nav_epochs) = @_;
 
