@@ -270,7 +270,7 @@ sub ComputeIonoNeQuickDelay {
                                       $hour, $min,   $sec );
 
     # Compute local time:
-    my $local_time = UniversalTime2LocalTime( $lon, $ut_time );
+    my $local_time = UniversalTime2LocalTime( $rec_lon, $ut_time );
 
     # Compute geodetic coordinates for satellite:
     my ( $sat_lat,
@@ -303,7 +303,7 @@ sub ComputeIonoNeQuickDelay {
     # 3. Obtain necessary Model Parameters #
     # ************************************ #
       my $ref_model_parameters = # [HASH]
-         ComputeNeQuickModelParameters( $lat, $lon, $modip,
+         ComputeNeQuickModelParameters( $rec_lat, $rec_lon, $modip,
                                         $month, $ut_time, $local_time,
                                         $eff_iono_level, $eff_sunspot_number );
 
