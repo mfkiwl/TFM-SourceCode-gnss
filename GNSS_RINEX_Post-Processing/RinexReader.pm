@@ -632,11 +632,14 @@ sub ReadObservationRinexV3 {
               eval {
                 no warnings; # supress warnings when evaluating the statement...
                 $raw_obs = substr($line, $index, RAW_OBSERVATION_LENGTH)*1;
-                # $ref_obs_block->{NUM_OBS_SAT}{$sat_sys}{$obs_id} =
-                  # $ref_obs_block->{NUM_OBS_SAT}{$sat_sys}{$obs_id} + 1;
               } or do {
                 $raw_obs = NULL_OBSERVATION;
               };
+
+              # Count no-null observation:
+              unless( $raw_obs eq NULL_OBSERVATION ) {
+                $ref_obs_block->{NUM_OBS_SAT}{$sat_sys}{$obs_id} += 1;
+              }
 
               # Fill observation block hash:
               $ref_obs_block->{SAT_OBS}{$sat}{$obs_id} = $raw_obs;
