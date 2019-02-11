@@ -129,7 +129,7 @@ PrintTitle0(*STDOUT, "Launching validation script $0");
   $month = $mo; # September
 
   my $univr_time = Date2UniversalTime($yyyy, $month, $dd, $hh, $mi, $ss);
-  my $local_time = UniversalTime2LocalTime($test_lon, $ut_time);
+  my $local_time = UniversalTime2LocalTime($test_lon, $univr_time);
 
 # ****************** #
 # MODIP computation: #
