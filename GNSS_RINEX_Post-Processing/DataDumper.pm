@@ -9,8 +9,6 @@ package DataDumper;
 # TODO: implement dumper configuration as part of general configuration
 # TODO: New dumper for LSQ specific obs info! (or merge with LSQ_info dumper)
 # TODO: would be great to have the following information
-#       - Num sats with valid obs per epoch
-#       - Num sats to LSQ algorithm
 #       - Reference coordinates from station --> extract from IGS file?
 #       - ENU position and sigma for receiver position
 #       - ...
@@ -675,11 +673,10 @@ sub DumpRecPosition {
   # ************************************** #
 
   # Retrieve dumper configuration:
-  my $separator          = $ref_dump_conf->{ SEPARATOR      };
-  my $ref_epoch_sub      = $ref_dump_conf->{ EPOCH_FORMAT   };
-  my $ref_angle_sub      = $ref_dump_conf->{ ANGLE_FORMAT   };
-  my $sigma_factor       = $ref_dump_conf->{ SIGMA_FACTOR   };
-  my $ref_rec_xyz_format = $ref_dump_conf->{ REC_POS_FORMAT };
+  my $separator     = $ref_dump_conf->{ SEPARATOR      };
+  my $ref_epoch_sub = $ref_dump_conf->{ EPOCH_FORMAT   };
+  my $ref_angle_sub = $ref_dump_conf->{ ANGLE_FORMAT   };
+  my $sigma_factor  = $ref_dump_conf->{ SIGMA_FACTOR   };
 
   # 1. Open dumper file at output path:
     my $rec_name = $ref_obs_data->{HEAD}{MARKER_NAME};
@@ -687,19 +684,17 @@ sub DumpRecPosition {
     my $fh; open($fh, '>', $file_path) or croak "Could not create $!";
 
   # 2. Write title line:
-    say $fh sprintf("# > Receiver: $rec_name adjusted coordinates.\n".
-                    "# > Created  : %s \n".
-                    "# > Observation epoch status info:\n".
-                    "#   0   --> OK\n".
-                    "#   1-6 --> NOK\n".
+    say $fh sprintf("# > Marker '$rec_name' adjusted coordinates.\n".
+                    "# > Created : %s \n".
+                    "# > NumSat  : satellites used in LSQ estimation\n".
                     "# > Reference system for ECEF coordinates : %s",
                     GetPrettyLocalDate(), $ref_gen_conf->{ELIPSOID});
 
   # 3. Write header line:
-    my @header_items = qw( Epoch Status
-                           Rec-ECEF_X Rec-ECEF_Y Rec-ECEF_Z RecClkBias
-                           Rec-Sigma_X Rec-Sigma_Y Rec-Sigma_Z Rec-Sigma_ClkBias
-                           Rec-GEO_Lat Rec-GEO_Lon Rec-GEO_ElipHeight );
+    my @header_items = qw( Epoch Status NumSat
+                           ECEF_X ECEF_Y ECEF_Z ClkBias
+                           Sigma_X Sigma_Y Sigma_Z Sigma_ClkBias
+                           GEO_Lat GEO_Lon GEO_ElipHeight );
 
     say $fh "#".join($separator, @header_items);
 
@@ -714,26 +709,27 @@ sub DumpRecPosition {
       my @epoch =
          &{ $ref_epoch_sub }( $ref_obs_data->{BODY}[$i]{EPOCH} );
 
-      # Receiver position is transformed according to configuration:
-      my @rec_xyz =
-         @{ $ref_rec_xyz_data->{XYZDT} };
+      # Number of satellites:
+      my $num_sat = $ref_obs_data->{BODY}[$i]{NUM_LSQ_SAT}{ALL};
 
-      # Apply sigma factor:
+      # ECEF receiver coordinates:
+      my @rec_xyz = @{ $ref_rec_xyz_data->{XYZDT} };
+
+      # ECEF coordinates related sigma error.
+      # NOTE: sclaing factor is applied:
       my @rec_xyz_sigma =
-         map {$_*$sigma_factor} @{ $ref_rec_xyz_data->{SIGMA_XYZDT} };
+        map {$_*$sigma_factor} @{ $ref_rec_xyz_data->{SIGMA_XYZDT} };
 
       # Geodetic receiver coordinates:
       my ($rec_lat, $rec_lon, $rec_helip) =
          ECEF2Geodetic( @rec_xyz[0..2], $ref_gen_conf->{ELIPSOID} );
 
-      # Latitude & Longitude are transformed according to configuration:
-      my @geodetic_angles =
-         &{ $ref_angle_sub }( $rec_lat, $rec_lon );
+      # Trasform angle measurments accoring to configuration:
+      my @geodetic_angles = &{ $ref_angle_sub }( $rec_lat, $rec_lon );
 
       # Set data items:
-      my @line_items = ( @epoch, $ref_rec_xyz_data->{STATUS},
-                         @rec_xyz, @rec_xyz_sigma,
-                         @geodetic_angles, $rec_helip );
+      my @line_items = (@epoch, $ref_rec_xyz_data->{STATUS}, $num_sat,
+                        @rec_xyz, @rec_xyz_sigma, @geodetic_angles, $rec_helip);
 
       # Write data line:
       say $fh join($separator, @line_items);
