@@ -296,13 +296,13 @@ sub ComputeIonoNeQuickDelay {
     # 2. Effective Ionisation Level &          #
     #    Effective Sunspot Number computation: #
     # **************************************** #
-      my ($eff_iono_level, $eff_sunspot_number) = # [SFU]
+      my ($eff_iono_level, $eff_sunspot_number) = # [SFU], [n/a]
          ComputeEffectiveIonisationLevel( $ref_iono_coeff, $modip );
 
     # ************************************ #
     # 3. Obtain necessary Model Parameters #
     # ************************************ #
-      my $ref_model_parameters =
+      my $ref_model_parameters = # [HASH]
          ComputeNeQuickModelParameters( $lat, $lon, $modip,
                                         $month, $ut_time, $local_time,
                                         $eff_iono_level, $eff_sunspot_number );
