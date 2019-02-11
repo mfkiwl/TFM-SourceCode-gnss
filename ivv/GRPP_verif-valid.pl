@@ -64,8 +64,6 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
 
   # print Dumper $ref_gen_conf; exit 0;
 
-  # print Dumper $ref_gen_conf;
-
   if ($ref_gen_conf == KILLED) {
     croak "*** ERROR *** Failed when reading configuration file: $path_conf_file"
   }
@@ -87,9 +85,6 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
   ReportElapsedTime([gettimeofday],
                     $ini_rinex_obs_time_stamp, "ReadObservationRinex()");
   $MEM_USAGE->record('-> ReadObsRinex');
-
-  # print Dumper $ref_obs_data->{HEAD};
-  # print Dumper $ref_obs_data->{BODY}[0]; exit 0;
 
 # Compute satellite positions:
   my $ini_rinex_nav_time_stamp = [gettimeofday];
