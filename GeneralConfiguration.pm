@@ -6,6 +6,11 @@ package GeneralConfiguration;
 
 # SCRIPT DESCRIPTION GOES HERE:
 
+# Load bash enviroments:
+# ---------------------------------------------------------------------------- #
+use lib $ENV{ ENV_ROOT };
+use Enviroments qq(:CONSTANTS);
+
 # Import Modules:
 # ---------------------------------------------------------------------------- #
 use strict; # enables strict syntax...
@@ -18,8 +23,7 @@ use Data::Dumper; # enables pretty print...
 use Scalar::Util qq(looks_like_number); # scalar utility...
 
 # Import dedicated libraries:
-use lib qq(/home/ppinto/TFM/src/lib/); # TODO: this should be an enviroment!
-
+use lib LIB_ROOT_PATH;
 use MyUtil   qq(:ALL); # useful subs and constants...
 use MyPrint  qq(:ALL); # error and warning utilities...
 use TimeGNSS qq(:ALL); # GNSS time transforming utilities...
