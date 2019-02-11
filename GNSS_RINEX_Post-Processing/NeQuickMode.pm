@@ -149,7 +149,6 @@ sub LoadCCIRFiles {
     my $fh; open($fh, '<', $ccir_file_path) or croak $!;
 
     # Load file in memory as single line string:
-    # TODO: consider constants for CCIR file format
     my @ccir_array;
     while (my $line = <$fh>) {
       chomp $line;
