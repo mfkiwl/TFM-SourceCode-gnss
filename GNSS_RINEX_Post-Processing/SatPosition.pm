@@ -233,7 +233,8 @@ sub ComputeSatPosition {
 
         # If the navigation status is valid, increment counter information:
         if ( $sat_status ) {
-          $ref_rinex_obs->{BODY}[$i]{NUM_NAV_SAT}{$sat_sys} += 1;
+          $ref_rinex_obs->{BODY}[$i]{NUM_NAV_SAT}{ ALL      } += 1;
+          $ref_rinex_obs->{BODY}[$i]{NUM_NAV_SAT}{ $sat_sys } += 1;
         }
 
         # Save the satellite position in the observation hash:
@@ -252,11 +253,10 @@ sub ComputeSatPosition {
 # Private Subroutines:                                                         #
 # ............................................................................ #
 sub InitValidNavSatCounter {
-  my ($ref_obs_epoch_info, $ref_selected_sat_sys) = @_;
+  my ($ref_epoch_info, $ref_selected_sat_sys) = @_;
 
-  for my $sat_sys (@{ $ref_selected_sat_sys }) {
-    $ref_obs_epoch_info->{NUM_NAV_SAT}{$sat_sys} = 0;
-  }
+  $ref_epoch_info->{NUM_NAV_SAT}{ ALL } = 0;
+  $ref_epoch_info->{NUM_NAV_SAT}{ $_  } = 0 for (@{ $ref_selected_sat_sys });
 
   return TRUE;
 }
