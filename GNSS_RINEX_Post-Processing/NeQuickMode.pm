@@ -341,6 +341,7 @@ sub ComputeNeQuickModelParameters {
                                $eff_solar_zenit_angle,
                                $ref_model_parameters );
 
+
     # 2.b. F2 ionosphere layer parameters:
     #      f0F2 --> F2 layer critical frequency [MHz]
     #      NmF2 --> F2 layer maximum density    [10e11m-3]
@@ -518,8 +519,8 @@ sub ComputeLayerMaxDensityHeight {
 
   # Init model parameters to be computed:
   my ($e_max_density_height,
-      $f2_max_density_height,
-      $f1_max_density_height);
+      $f1_max_density_height,
+      $f2_max_density_height);
 
   # Computation steps:
 
@@ -613,7 +614,7 @@ sub ComputeLayerAmplitude {
 }
 
 sub ComputeShapeParameter {
-  my ($ref_model_parameters) = @_;
+  my ($month, $eff_sunspot_number, $ref_model_parameters) = @_;
 
   # Necessary model parameters:
   my ( $f2_bot_thick,
