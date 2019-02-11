@@ -504,6 +504,10 @@ sub SelectSatForLSQ {
   my @sat_to_lsq;
   my @sat_not_to_lsq;
 
+  # Init satellite counter in observation hash:
+  InitLSQSatelliteCounter( $ref_epoch_info,
+                           $ref_gen_conf->{SELECTED_SAT_SYS} );
+
   # Iterate over observed satellites:
   for my $sat (keys %{$ref_epoch_info->{SAT_OBS}})
   {
@@ -561,6 +565,9 @@ sub SelectSatForLSQ {
         #    Mask criteria is only assumed:
         if ($rec_sat_elevation >= $ref_gen_conf->{SAT_MASK}) {
           push(@sat_to_lsq, $sat);
+          # Count LSQ satellites to enter LSQ algorithm:
+          $ref_epoch_info->{NUM_LSQ_SAT}{ ALL      } += 1;
+          $ref_epoch_info->{NUM_LSQ_SAT}{ $sat_sys } += 1;
         } else {
           push(@sat_not_to_lsq, $sat);
         }
@@ -824,6 +831,15 @@ sub FillIonoCoefficientWarning {
 
   return "Could not find ionosphere coefficients: $coeff_list, for ".
          "constellation '$sat_sys' in RINEX NAV V$rinex_nav_version file.";
+}
+
+sub InitLSQSatelliteCounter {
+  my ($ref_epoch_info, $ref_selected_sat_sys) = @_;
+
+  $ref_epoch_info->{NUM_LSQ_SAT}{ ALL } = 0;
+  $ref_epoch_info->{NUM_LSQ_SAT}{ $_  } = 0 for (@{ $ref_selected_sat_sys });
+
+  return TRUE;
 }
 
 sub SelectApproximateParameters {
