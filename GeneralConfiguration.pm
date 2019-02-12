@@ -13,6 +13,7 @@ use Enviroments qq(:CONSTANTS);
 
 # Import Modules:
 # ---------------------------------------------------------------------------- #
+use Carp;
 use strict; # enables strict syntax...
 
 use feature qq(say);    # same as print.$text.'\n'...
@@ -68,6 +69,51 @@ BEGIN {
                        DEFAULT     => \@EXPORT,
                        CONSTANTS   => \@EXPORT_CONST,
                        SUBROUTINES => \@EXPORT_SUB );
+}
+
+# ---------------------------------------------------------------------------- #
+# Prelimnary Subroutine --> Load IGS reference station coordinates
+# ---------------------------------------------------------------------------- #
+
+use constant IGS_REF_STATIONS_FILE_NAME     => qq(ITRF2008_R.CRD);
+use constant IGS_REF_STATIONS_LINE_TEMPLATE => 'A3A6A10x4A13x2A13x2A13x4A5';
+use constant IGS_REF_STATIONS_END_OF_HEADER => 11;
+
+sub LoadIGSReferenceStations {
+
+  my $ref_igs_stations = {};
+
+  # IGS reference stations path:
+  my $igs_file_path =
+    join('/', DAT_ROOT_PATH, "igs", IGS_REF_STATIONS_FILE_NAME);
+
+  # Open file:
+  my $fh; open($fh, '<', $igs_file_path) or die $!;
+
+  # Skip file header:
+  SkipLines( $fh, IGS_REF_STATIONS_END_OF_HEADER );
+
+  # Read IGS file and store in a dedicated hash the
+  # reference coordinates:
+  while ( my $line = <$fh> ) {
+    # Remove carriage jumps from line:
+    chomp $line;
+
+    # Identify line elements:
+    my ( $num, $name, $id,
+         $x, $y, $z, $flag ) = map{ PurgeExtraSpaces($_) }
+                                unpack(IGS_REF_STATIONS_LINE_TEMPLATE, $line);
+
+    # Build hash:
+    $ref_igs_stations->{$name}{FLAG} = $id;
+    $ref_igs_stations->{$name}{FLAG} = $flag;
+    $ref_igs_stations->{$name}{ECEF} = [$x, $y, $z];
+  }
+
+  # Close file:
+  close($fh);
+
+  return $ref_igs_stations;
 }
 
 
@@ -128,6 +174,19 @@ use constant SUPPORTED_TROPO_MODELS => qw(Saastamoinen);
 # Supported elipsoids:
 use constant SUPPORTED_ELIPSOIDS => qw(WGS84 GRS80 HAYFORD);
 
+# Supported static reference modes:
+use constant {
+  IGS_STATIC_MODE => qq(igs),
+  MEAN_STATIC_MODE => qq(mean),
+  MANUAL_STATIC_MODE => qq(manual),
+};
+
+use constant SUPPORTED_STATIC_MODES => ( IGS_STATIC_MODE,
+                                         MEAN_STATIC_MODE,
+                                         MANUAL_STATIC_MODE );
+
+use constant REF_IGS_REFERENCE_STATIONS => LoadIGSReferenceStations();
+
 # Class private Error and Warning codes:
 # Errors:
 use constant {
@@ -140,6 +199,8 @@ use constant {
   ERR_OPTION_IS_NOT_NUMERIC  => 30407,
   ERR_OPTION_IS_NOT_BOOLEAN  => 30408,
   ERR_NO_SAT_SYS_CONFIGURED  => 30409,
+  ERR_STATIC_MODE_NOT_SUPPORTED => 30410,
+  ERR_IGS_REFERENCE_STATION_NOT_FOUND => 30411,
 };
 # Warnings:
 use constant {
@@ -489,6 +550,81 @@ sub LoadConfiguration {
         return KILLED;
       }
     }
+
+  # Static mode section:
+    # Static mode activated?
+    if ( $config_content =~ /^Static Mode +: +(.+)$/gim ) {
+      my $static_status = ReadBoolean($1);
+      if (defined $static_status) {
+        $ref_config_hash->{STATIC}{STATUS} = $static_status;
+      } else {
+        RaiseError(*STDOUT, ERR_OPTION_IS_NOT_BOOLEAN,
+          "Unrecognized option for 'Static Mode' parameter",
+          "Please, indicate one of the following: \'TRUE\' or \'FALSE\'");
+        return KILLED;
+      }
+    }
+
+    # Only if static mode has been activated:
+    if ($ref_config_hash->{STATIC}{STATUS}) {
+
+      # Reference mode:
+      if ($config_content =~ /^Reference Mode +: +(.+)$/gim) {
+        my $reference_mode = lc $1;
+        if (grep(/^$reference_mode$/, SUPPORTED_STATIC_MODES)) {
+          $ref_config_hash->{STATIC}{REFERENCE_MODE} = $reference_mode;
+        } else {
+          RaiseError(*STDOUT, ERR_STATIC_MODE_NOT_SUPPORTED,
+            "Static Mode \'$reference_mode\' is not supported",
+            "Supported elipsoids are: ".join(', ', SUPPORTED_STATIC_MODES));
+          return KILLED;
+        }
+      }
+
+      # Reference selection switch statement:
+      given ( $ref_config_hash->{STATIC}{REFERENCE_MODE} ) {
+
+        when ($_ eq &IGS_STATIC_MODE) {
+          # Read reference station:
+          if ($config_content =~ /^IGS Reference Station +: +(.+)$/gim) {
+            my $selected_station = $1;
+            if (defined REF_IGS_REFERENCE_STATIONS->{$selected_station}) {
+              $ref_config_hash->{STATIC}{REFERENCE} =
+                REF_IGS_REFERENCE_STATIONS->{$selected_station}{ECEF};
+            } else {
+              RaiseError(*STDOUT, ERR_IGS_REFERENCE_STATION_NOT_FOUND,
+                "IGS station '$selected_station' could not be found.");
+              return KILLED;
+            }
+          }
+        } # end when (igs)
+
+        when ($_ eq &MANUAL_STATIC_MODE) {
+          # Read reference coordinates:
+          if ($config_content =~ /^Reference ECEF X, Y, Z +: +(.+)$/gim ) {
+            my @ecef_xyz = split(/[\s,;]+/, $1);
+            for my $coordinate (@ecef_xyz) {
+              unless (looks_like_number($coordinate)) {
+                RaiseError(*STDOUT, ERR_OPTION_IS_NOT_NUMERIC,
+                  "Reference coordinate '$coordinate' is not numeric type".
+                  "at 'Reference ECEF X, Y, Z' parameter");
+                return KILLED;
+              }
+            }
+            $ref_config_hash->{STATIC}{REFERENCE} = \@ecef_xyz;
+          }
+        } # end when (manual)
+
+        when ($_ eq &MEAN_STATIC_MODE){
+          # Reference will be computed when all positions
+          # are available:
+          $ref_config_hash->{STATIC}{REFERENCE} = undef;
+        } # end when (mean)
+
+      } # end given static_reference_mode
+
+    } # end if static mode activated
+
 
   # Plot diagrams section:
     # Satellite information sub-section:
