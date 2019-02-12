@@ -5,7 +5,8 @@ IMPORTANT --> set DatDumper configuration in GeneralConfiguration.pm
 (for all): change base names accordignly to this file
 
 <MARKER_NAME>_rec-xyz.out:
-  · Include number of satellites used for position estimation
+  · Include number of satellites used for position estimation --> OK
+  · Additional configuration for this feature
   · ENU increments --> review documentation for commiting this
     - ENU incrments respect MARKER reference position (lat, lon)
     - If no marker reference position is provided, do it with the mean receiver position or other statistical measurement
