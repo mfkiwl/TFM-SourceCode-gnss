@@ -608,8 +608,22 @@ sub ReadObservationRinexV3 {
           my $sat     = ConsistentSatID( unpack('A3', $line) );
           my $sat_sys = substr( $sat, 0, 1 );
 
-          # Read only those sat_sys selected in general configuration...
-          if ( grep(/^$sat_sys$/, @{$ref_gen_conf->{SELECTED_SAT_SYS}}) )
+          # Set flag for reading the selected constellations according to
+          # configuration:
+          my $selected_sat_sys_flag =
+            (grep(/^$sat_sys$/, @{$ref_gen_conf->{SELECTED_SAT_SYS}})
+              ? TRUE : FALSE;
+
+          # Set flag for discard the specified satellites accoring to
+          # configuration:
+          my $sat_to_discard_flag =
+            (grep(/^$sat$/, @{ $ref_gen_conf->{SAT_TO_DISCARD}{$sat_sys} }))
+              ? TRUE : FALSE;
+
+          # Read satellites from configured constellations and not to be
+          # discarded:
+          if ( $selected_sat_sys_flag == TRUE &&
+               $sat_to_discard_flag   == FALSE )
           {
             # Iterate over the number of observations of each constellation:
             my    $i;
@@ -643,10 +657,10 @@ sub ReadObservationRinexV3 {
 
               # Fill observation block hash:
               $ref_obs_block->{SAT_OBS}{$sat}{$obs_id} = $raw_obs;
-            } # enf id $sat_sys in SUPPORTED_SAT_SYS
+            } # end for $i ($num_obs)
 
-          } # end for $num_obs
-        } # end for $num_sat
+          } # enf if $sat_sys in SUPPORTED_SAT_SYS
+        } # end for $j ($num_sat)
 
         # Fill observation array:
         push(@rinex_obs_arr, $ref_obs_block);
@@ -662,7 +676,7 @@ sub ReadObservationRinexV3 {
         "Observation Block was not found after END_OF_HEADER at ".
         $ref_gen_conf->{RINEX_OBS_PATH});
     } # end if (index($line, OBSERVATION_BLOCK_ID) ... )
-  }
+  } # end while $line
 
   # Check if no epochs were read due to time configuration parameters:
   unless (scalar(@rinex_obs_arr)) {
