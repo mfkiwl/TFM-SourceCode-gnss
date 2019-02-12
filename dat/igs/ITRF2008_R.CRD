@@ -2,6 +2,11 @@ ITRF2008 FOR GPS
 --------------------------------------------------------------------------------
 LOCAL GEODETIC DATUM: ITRF2008          EPOCH: 2016-07-01 00:00:00
 
+Meaning of flags:
+-----------------
+ITR08 : ITRF2008
+PPP   : Precise point positioning solution
+
 NUM  STATION NAME           X (M)          Y (M)          Z (M)     FLAG
 
   1  0194 21752S001    -3766965.4504   3211877.1442   4008334.3092    ITR08
@@ -611,11 +616,3 @@ NUM  STATION NAME           X (M)          Y (M)          Z (M)     FLAG
 605  DENI 13498M001     4974895.5484      9001.2577   3978090.0716    ITR08
 606  AYOR 13499M001     4958705.3676    -91680.2728   3998024.0132    ITR08
 607  ABAN 19430M001     5019756.8874    -92323.9781   3920866.6067    ITR08
-
-
-Meaning of flags:
------------------
-ITR08 : ITRF2008
-PPP   : Precise point positioning solution
-
-
