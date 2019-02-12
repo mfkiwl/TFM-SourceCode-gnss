@@ -176,16 +176,38 @@ use constant SUPPORTED_ELIPSOIDS => qw(WGS84 GRS80 HAYFORD);
 
 # Supported static reference modes:
 use constant {
-  IGS_STATIC_MODE => qq(igs),
-  MEAN_STATIC_MODE => qq(mean),
+  IGS_STATIC_MODE    => qq(igs),
+  MEAN_STATIC_MODE   => qq(mean),
   MANUAL_STATIC_MODE => qq(manual),
 };
 
+# List of supported static modes:
 use constant SUPPORTED_STATIC_MODES => ( IGS_STATIC_MODE,
                                          MEAN_STATIC_MODE,
                                          MANUAL_STATIC_MODE );
 
+# Hash to store IGS reference stations coordinates:
 use constant REF_IGS_REFERENCE_STATIONS => LoadIGSReferenceStations();
+
+# Supported epoch formats:
+use constant {
+  GPS_EPOCH_FORMAT      => qq(gps),
+  DATE_EPOCH_FORMAT     => qq(date),
+  GPS_WEEK_EPOCH_FORMAT => qq(gps_week),
+};
+
+use constant SUPPORTED_EPOCH_FORMATS => ( GPS_EPOCH_FORMAT,
+                                          DATE_EPOCH_FORMAT,
+                                          GPS_WEEK_EPOCH_FORMAT );
+
+# Supported angle formats:
+use constant {
+  RADIAN_ANGLE_FORMAT => qq(rad),
+  DEGREE_ANGLE_FORMAT => qq(deg),
+};
+
+use constant SUPPORTED_ANGLE_FORMATS => ( RADIAN_ANGLE_FORMAT,
+                                          DEGREE_ANGLE_FORMAT );
 
 # Class private Error and Warning codes:
 # Errors:
@@ -199,8 +221,8 @@ use constant {
   ERR_OPTION_IS_NOT_NUMERIC  => 30407,
   ERR_OPTION_IS_NOT_BOOLEAN  => 30408,
   ERR_NO_SAT_SYS_CONFIGURED  => 30409,
+  ERR_IGS_STATION_NOT_FOUND  => 30411,
   ERR_STATIC_MODE_NOT_SUPPORTED => 30410,
-  ERR_IGS_REFERENCE_STATION_NOT_FOUND => 30411,
 };
 # Warnings:
 use constant {
@@ -477,7 +499,7 @@ sub LoadConfiguration {
 
     # Atmosphere model sub-section:
     if ( grep(/^${\RINEX_GPS_ID}$/, @{$ref_config_hash->{SELECTED_SAT_SYS}}) ) {
-      if ( $config_content =~ /^Ionosphere Model GPS +: +(.+)$/gim ) {
+      if ($config_content =~ /^Ionosphere Model GPS +: +(.+)$/gim) {
         my $gps_iono_model = lc $1;
         if ( grep(/^$gps_iono_model$/i, SUPPORTED_IONO_MODELS) ) {
           $ref_config_hash->{IONOSPHERE_MODEL}{&RINEX_GPS_ID} = $gps_iono_model;
@@ -490,7 +512,7 @@ sub LoadConfiguration {
       }
     }
     if ( grep(/^${\RINEX_GAL_ID}$/, @{$ref_config_hash->{SELECTED_SAT_SYS}}) ) {
-      if ( $config_content =~ /^Ionosphere Model GAL +: +(.+)$/gim ) {
+      if ($config_content =~ /^Ionosphere Model GAL +: +(.+)$/gim) {
         my $gal_iono_model = lc $1;
         if ( grep(/^$gal_iono_model$/i, SUPPORTED_IONO_MODELS) ) {
           $ref_config_hash->{IONOSPHERE_MODEL}{&RINEX_GAL_ID} = $gal_iono_model;
@@ -502,9 +524,9 @@ sub LoadConfiguration {
         }
       }
     }
-    if ( $config_content =~ /^Troposphere Model +: +(.+)$/gim ) {
+    if ($config_content =~ /^Troposphere Model +: +(.+)$/gim) {
       my $tropo_model = $1;
-      if ( grep(/^$tropo_model$/i, SUPPORTED_TROPO_MODELS) ) {
+      if (grep(/^$tropo_model$/i, SUPPORTED_TROPO_MODELS)) {
         $ref_config_hash->{TROPOSPHERE_MODEL} = lc $tropo_model;
       } else {
         RaiseError(*STDOUT, ERR_MODEL_NOT_SUPPORTED,
@@ -515,7 +537,7 @@ sub LoadConfiguration {
     }
 
     # Elipsoid:
-    if ( $config_content =~ /^Elipsoid Model +: +(.+)$/gim ) {
+    if ($config_content =~ /^Elipsoid Model +: +(.+)$/gim) {
       my $elip = uc $1;
       if ( grep(/^$elip$/, SUPPORTED_ELIPSOIDS) ) {
         $ref_config_hash->{ELIPSOID} = $elip;
@@ -528,7 +550,7 @@ sub LoadConfiguration {
     }
 
     # Position convergenece sub-section:
-    if ( $config_content =~ /^LSQ Maximum Number Iterations +: +(.+)$/gim ) {
+    if ($config_content =~ /^LSQ Maximum Number Iterations +: +(.+)$/gim) {
       my $max_num_iter = $1;
       if (looks_like_number($max_num_iter)) {
         $ref_config_hash->{LSQ_MAX_NUM_ITER} = $max_num_iter;
@@ -539,7 +561,7 @@ sub LoadConfiguration {
         return KILLED;
       }
     }
-    if ( $config_content =~ /^LSQ Convergence Threshold +: +(.+)$/gim ) {
+    if ($config_content =~ /^LSQ Convergence Threshold +: +(.+)$/gim) {
       my $convergence_threshold = $1;
       if ( looks_like_number($convergence_threshold) ) {
         $ref_config_hash->{CONVERGENCE_THRESHOLD} = $convergence_threshold;
@@ -553,7 +575,7 @@ sub LoadConfiguration {
 
   # Static mode section:
     # Static mode activated?
-    if ( $config_content =~ /^Static Mode +: +(.+)$/gim ) {
+    if ($config_content =~ /^Static Mode +: +(.+)$/gim) {
       my $static_status = ReadBoolean($1);
       if (defined $static_status) {
         $ref_config_hash->{STATIC}{STATUS} = $static_status;
@@ -592,7 +614,7 @@ sub LoadConfiguration {
               $ref_config_hash->{STATIC}{REFERENCE} =
                 REF_IGS_REFERENCE_STATIONS->{$selected_station}{ECEF};
             } else {
-              RaiseError(*STDOUT, ERR_IGS_REFERENCE_STATION_NOT_FOUND,
+              RaiseError(*STDOUT, ERR_IGS_STATION_NOT_FOUND,
                 "IGS station '$selected_station' could not be found.");
               return KILLED;
             }
@@ -628,7 +650,7 @@ sub LoadConfiguration {
 
   # Plot diagrams section:
     # Satellite information sub-section:
-    if ( $config_content =~ /^Satellite Observations +: +(.+)$/gim ) {
+    if ($config_content =~ /^Satellite Observations +: +(.+)$/gim) {
       my $plot_sat_obs = ReadBoolean($1);
       if (defined $plot_sat_obs) {
         $ref_config_hash->{PLOT}{SAT_OBSERVATIONS} = $plot_sat_obs;
@@ -639,7 +661,7 @@ sub LoadConfiguration {
         return KILLED;
       }
     }
-    if ( $config_content =~ /^Satellite Positions +: +(.+)$/gim ) {
+    if ($config_content =~ /^Satellite Positions +: +(.+)$/gim) {
       my $plot_sat_pos = ReadBoolean($1);
       if (defined $plot_sat_pos) {
         $ref_config_hash->{PLOT}{SAT_POSITIONS} = $plot_sat_pos;
@@ -650,7 +672,7 @@ sub LoadConfiguration {
         return KILLED;
       }
     }
-    if ( $config_content =~ /^Satellite Clocks +: +(.+)$/gim ) {
+    if ($config_content =~ /^Satellite Clocks +: +(.+)$/gim) {
       my $plot_sat_clk = ReadBoolean($1);
       if (defined $plot_sat_clk) {
         $ref_config_hash->{PLOT}{SAT_CLOCK} = $plot_sat_clk;
@@ -663,7 +685,7 @@ sub LoadConfiguration {
     }
 
     # Signal error sub-section:
-    if ( $config_content =~ /^Tropospheric Correction +: +(.+)$/gim ) {
+    if ($config_content =~ /^Tropospheric Correction +: +(.+)$/gim) {
       my $plot_tropo_corr = ReadBoolean($1);
       if (defined $plot_tropo_corr) {
         $ref_config_hash->{PLOT}{TROPOSPHERE_CORRECTION} = $plot_tropo_corr;
@@ -674,7 +696,7 @@ sub LoadConfiguration {
         return KILLED;
       }
     }
-    if ( $config_content =~ /^Ionospheric Correction +: +(.+)$/gim ) {
+    if ($config_content =~ /^Ionospheric Correction +: +(.+)$/gim) {
       my $plot_iono_corr = ReadBoolean($1);
       if (defined $plot_iono_corr) {
         $ref_config_hash->{PLOT}{IONOSPHERE_CORRECTION} = $plot_iono_corr;
@@ -687,7 +709,7 @@ sub LoadConfiguration {
     }
 
     # Receiver position sub-section:
-    if ( $config_content =~ /^Receiver Position EN +: +(.+)$/gim ) {
+    if ($config_content =~ /^Receiver Position EN +: +(.+)$/gim) {
       my $plot_rec_pos_en = ReadBoolean($1);
       if (defined $plot_rec_pos_en) {
         $ref_config_hash->{PLOT}{REC_POSITION_EN} = $plot_rec_pos_en;
@@ -698,7 +720,7 @@ sub LoadConfiguration {
         return KILLED;
       }
     }
-    if ( $config_content =~ /^Receiver Position U +: +(.+)$/gim ) {
+    if ($config_content =~ /^Receiver Position U +: +(.+)$/gim) {
       my $plot_rec_pos_u = ReadBoolean($1);
       if (defined $plot_rec_pos_u) {
         $ref_config_hash->{PLOT}{REC_POSITION_U} = $plot_rec_pos_u;
@@ -709,7 +731,7 @@ sub LoadConfiguration {
         return KILLED;
       }
     }
-    if ( $config_content =~ /^Receiver Residuals +: +(.+)$/gim ) {
+    if ($config_content =~ /^Receiver Residuals +: +(.+)$/gim) {
       my $plot_rec_res = ReadBoolean($1);
       if (defined $plot_rec_res) {
         $ref_config_hash->{PLOT}{REC_RESIDUALS} = $plot_rec_res;
@@ -721,7 +743,79 @@ sub LoadConfiguration {
       }
     }
 
-  # TODO: Data Dumper configuration:
+  # Data Dumper configuration section:
+    # File delimiter:
+    if ($config_content =~ /^Delimiter +: +"(.+)"$/gim) {
+      my $delimiter = eval "qq#$1#"; # NOTE: be aware of eval usage
+      $ref_config_hash->{DATA_DUMPER}{DELIMITER} = $delimiter;
+    }
+
+    # Epoch format:
+    if ($config_content =~ /^Epoch Format +: +(.+)$/gim) {
+      my $epoch_format = lc $1;
+      if (grep(/^$epoch_format$/, SUPPORTED_EPOCH_FORMATS)) {
+        $ref_config_hash->{DATA_DUMPER}{EPOCH_FORMAT} = $epoch_format;
+      } else {
+        RaiseError(*STDOUT, ERR_OPTION_NOT_SUPPORTED,
+          "Epoch format '$epoch_format' is note supported.".
+          "Please, indicate one of the following: ".
+          join(', ', SUPPORTED_EPOCH_FORMATS));
+        return KILLED;
+      }
+    }
+
+    # Angle format:
+    if ($config_content =~ /^Angle Format +: +(.+)$/gim) {
+      my $angle_format = lc $1;
+      if (grep(/^$angle_format$/, SUPPORTED_ANGLE_FORMATS)) {
+        $ref_config_hash->{DATA_DUMPER}{ANGLE_FORMAT} = $angle_format;
+      } else {
+        RaiseError(*STDOUT, ERR_OPTION_NOT_SUPPORTED,
+          "Anlge format '$angle_format' is not supported.".
+          "Please indicate one of the following: ".
+          join(', ', SUPPORTED_ANGLE_FORMATS));
+        return KILLED;
+      }
+    }
+
+    # Receiver sigma scale factor:
+    if ($config_content =~ /^Sigma Scale Factor +: +(.+)$/gim) {
+      my $sigma_factor = $1;
+      if (looks_like_number($sigma_factor)) {
+        $ref_config_hash->{DATA_DUMPER}{SIGMA_FACTOR} = $sigma_factor;
+      } else {
+        RaiseError(*STDOUT, ERR_OPTION_IS_NOT_NUMERIC,
+          "Sigma scale factor '$sigma_factor' is not numeric type!");
+        return KILLED;
+      }
+    }
+
+    # Output file names:
+      # Satellite observation data:
+      if ($config_content =~ /^Satellite Observation +: +(.+)$/gim) {
+        # TODO!
+      }
+
+      # Satellite navigation data:
+      if ($config_content =~ /^Satellite Navigation +: +(.+)$/gim) {
+        # TODO!
+      }
+
+      # Line of sight data:
+      if ($config_content =~ /^Line of Sight Data +: +(.+)$/gim) {
+        # TODO!
+      }
+
+      # Least Squares Report:
+      if ($config_content =~ /^Receiver Position +: +(.+)$/gim) {
+        # TODO!
+      }
+
+      # Receiver position:
+      if ($config_content =~ /^Least Squares Report +: +(.+)$/gim) {
+        # TODO!
+      }
+
 
   return $ref_config_hash;
 }
@@ -769,6 +863,5 @@ sub GetCarrierFrequency {
   # the returned value will be undef:
   return $carrier_freq;
 }
-
 
 TRUE;
