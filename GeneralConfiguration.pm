@@ -261,11 +261,11 @@ sub LoadConfiguration {
   # Save vonfiguration content in a scalar variable:
   my $config_content = join('',  @config_lines);
 
-  # print $config_content; # testing...
-
   # ****************************** #
   # Read configuration parameters: #
   # ****************************** #
+
+  # TODO: Module this crazy sub!
 
   # General section:
     # Verbosity:
@@ -285,14 +285,13 @@ sub LoadConfiguration {
     if ( $config_content =~ /^Satellite Systems +: +(.+)$/gim ) {
       my @sel_sat_sys;
       for my $sat_sys (split(/[\s,;]+/, $1)) {
-        unless (grep(/^$sat_sys$/, SUPPORTED_SAT_SYS)) {
+        if (grep(/^$sat_sys$/, SUPPORTED_SAT_SYS)) {
+          push(@sel_sat_sys, $sat_sys);
+        } else {
           RaiseWarning(*STDOUT, WARN_NOT_SUPPORTED_SAT_SYS,
             "Satellite system \'$sat_sys\' is not supported",
             "The observations from this constellation will be ignored!",
             "Supported constellations are: ".join(', ', SUPPORTED_SAT_SYS));
-          @sel_sat_sys = grep {$_ ne $sat_sys} @sel_sat_sys;
-        } else {
-          push(@sel_sat_sys, $sat_sys);
         }
       }
       if (scalar(@sel_sat_sys)) {
@@ -480,6 +479,38 @@ sub LoadConfiguration {
         RaiseError(*STDOUT, ERR_OPTION_IS_NOT_NUMERIC,
           "Satellite Mask \'$sat_mask\' is not a numeric value!");
         return KILLED;
+      }
+    }
+    # GPS satellites to discard:
+    if ( grep(/^${\RINEX_GPS_ID}$/, @{$ref_config_hash->{SELECTED_SAT_SYS}}) ) {
+      if ($config_content =~ /^GPS Satellites to Discard +: +(.+)$/gim) {
+        my @sat_to_discard;
+        for my $sat (split(/[\s,;]/, $1)) {
+          if (substr($sat, 0, 1) eq &RINEX_GPS_ID) {
+            push(@sat_to_discard, $sat);
+          } else {
+            RaiseWarning(*STDOUT, WARN_NOT_SUPPORTED_SAT_SYS,
+              "GPS Satellite to discard '$sat', does not belong to GPS ".
+              "constellation.", "Satellite will not be included in the list.");
+          }
+        }
+        $ref_config_hash->{SAT_TO_DISCARD}{&RINEX_GPS_ID} = \@sat_to_discard;
+      }
+    }
+    # GALILEO satellites to discard:
+    if ( grep(/^${\RINEX_GAL_ID}$/, @{$ref_config_hash->{SELECTED_SAT_SYS}}) ) {
+      if ($config_content =~ /^GAL Satellites to Discard +: +(.+)$/gim) {
+        my @sat_to_discard;
+        for my $sat (split(/[\s,;]/, $1)) {
+          if (substr($sat, 0, 1) eq &RINEX_GAL_ID) {
+            push(@sat_to_discard, $sat);
+          } else {
+            RaiseWarning(*STDOUT, WARN_NOT_SUPPORTED_SAT_SYS,
+              "GAL Satellite to discard '$sat', does not belong to GALILEO ".
+              "constellation.", "Satellite will not be included in the list.");
+          }
+        }
+        $ref_config_hash->{SAT_TO_DISCARD}{&RINEX_GAL_ID} = \@sat_to_discard;
       }
     }
 
