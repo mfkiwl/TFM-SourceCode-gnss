@@ -173,13 +173,16 @@
 @rec_delta_parameters = ( $d_x_ecef, $d_y_ecef, $d_z_ecef, $d_rec_clk_bias );
 
 # Position solution parameters:
-%position_parameters = ( STATUS      => $position_estimation_status,
-                         XYZDT       => \@estimated_position,
-                         SIGMA_XYZDT => \@sigma_position_parameters );
+%position_parameters = ( STATUS => $position_estimation_status,
+                         XYZ => \@ecef_position,
+                         CLK => $rec_clk_bias,
+                         VAR_XYZ => \@variance_ecef,
+                         VAR_CLK => $rec_clk_variance,
+                         VAR_ENU => \@variance_enu);
 
-@estimated_position        = ($x_ecef,  $y_ecef,  $z_ecef,  $rec_clk_bias);
-@approximate_position      = ($x_ecef,  $y_ecef,  $z_ecef,  $rec_clk_bias);
-@sigma_position_parameters = ($x_sigma, $y_sigma, $z_sigma, $clk_bias_sigma);
+@enu_position  = ($easting, $northing, $uping);
+@ecef_position = ($x_ecef,  $y_ecef,  $z_ecef);
+@variance_ecef = ($x_var, $y_var, $z_var);
 
 
 # Navigation data:
@@ -300,6 +303,6 @@ my %iono_layer_parameters = (
   #
   BOT_THICKNESS => $bot_thick,
   TOP_THICKNESS => $top_thick, # not for F2 layer
-  # 
+  #
   AMPLITUDE => $amplitude,
 );
