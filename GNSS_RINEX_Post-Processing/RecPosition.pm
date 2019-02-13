@@ -274,6 +274,10 @@ sub ComputeRecPosition {
                          \@rec_apx_xyzdt, $pdl_parameter_vector,
                          $pdl_residual_vector, $pdl_variance_estimator );
 
+            # Fill position solution hash with null info:
+            FillSolutionDataHash( $ref_epoch_info, $iter_status,
+                                  [0, 0, 0, 0], [0, 0, 0, 0] );
+
             # Exit iteration loop:
             last;
 
