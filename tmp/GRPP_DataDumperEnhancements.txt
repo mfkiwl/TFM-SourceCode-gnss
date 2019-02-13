@@ -6,12 +6,12 @@ IMPORTANT --> set DatDumper configuration in GeneralConfiguration.pm
 
 <MARKER_NAME>_rec-xyz.out:
   · Include number of satellites used for position estimation --> OK
-  · Additional configuration for this feature
+  · Additional configuration for this feature --> OK
   · ENU increments --> review documentation for commiting this
     - ENU incrments respect MARKER reference position (lat, lon)
     - If no marker reference position is provided, do it with the mean receiver position or other statistical measurement
   · Differences against reference station from data file
-  · Remove Observation epoch status information from header
+  · Remove Observation epoch status information from header --> OK
 
 <MARKER_NAME>_rec-lsq_report.out.:
   · Include residuals (maybe in another dumper file)**
