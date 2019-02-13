@@ -4,11 +4,15 @@
 package Geodetic;
 
 # Import useful modules:
-use strict;      # enables strict syntax...
+use strict; # enables strict syntax...
+
+use Math::Trig;
+
+use PDL::Core;
+use PDL::Basic;
+use PDL::MatrixOps;
 
 use Data::Dumper;
-
-use Math::Trig;      # trigonometry functions...
 use feature qq(say); # same as print but adding a carriage jump...
 
 # Set package exportation properties:
@@ -41,7 +45,8 @@ BEGIN {
                           &Venu2Vxyz
                           &Vxyz2Venu
                           &Geodetic2ECEF
-                          &ECEF2Geodetic );
+                          &ECEF2Geodetic
+                          &VarianceVxyz2Venu );
 
   # Merge constants and subroutines:
   our @EXPORT_OK = (@EXPORT_CONST, @EXPORT_SUB);
@@ -145,7 +150,6 @@ sub ComputeSphericalDistance {
   # TODO: finish this sub!
   # spherical geometry in a great circle:
 
-  
 
   return $spherical_distance*$radius;
 }
@@ -258,6 +262,23 @@ sub PrimeVerticalRadius {
 
   # Return prime's vertical curvature radius:
   return $nu;
+}
+
+sub VarianceVxyz2Venu {
+  my ( $lat, $lon, $pdl_ecef_covar_matrix ) = @_;
+
+  # Build ECEF to ENU rotation matrix:
+  my $pdl_ecef_enu_rotation =
+    pdl ( [[ -1*sin($lat), -1*sin($lat)*cos($lon), cos($lat)*cos($lon) ],
+           [    cos($lon), -1*sin($lat)*sin($lon), cos($lat)*sin($lon) ],
+           [            0,              cos($lat),           sin($lat) ]] );
+
+  # ENU covariance matrix = R' x CoVarECEF x R:
+  my $pdl_enu_covar_matrix = transpose($pdl_ecef_enu_rotation) x
+                                       $pdl_ecef_covar_matrix  x
+                                       $pdl_ecef_enu_rotation;
+
+  return $pdl_enu_covar_matrix;
 }
 
 1;
