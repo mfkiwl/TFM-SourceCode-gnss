@@ -15,8 +15,10 @@ use Enviroments qq(:CONSTANTS);
 # ---------------------------------------------------------------------------- #
 use strict;   # enables strict syntax...
 
-use PDL;  # loads Perl Data Language extension...
-use PDL::Constants qw(PI);
+use PDL::Core;  # loads Perl Data Language extension...
+use PDL::Basic;
+use Math::Trig;
+
 use Scalar::Util qq(looks_like_number); # scalar utility...
 
 use feature qq(say);    # print adding carriage return...
@@ -945,7 +947,7 @@ sub ReceiverSatelliteLoS {
                                           $rec_sat_iu );
 
   # Rec-Sat elevation is computed as follows:
-  my $rec_sat_elevation = PI/2 - $rec_sat_zenital;
+  my $rec_sat_elevation = pi/2 - $rec_sat_zenital;
 
   return ( $rec_lat, $rec_lon, $rec_helip,
            $rec_sat_ix, $rec_sat_iy, $rec_sat_iz,
