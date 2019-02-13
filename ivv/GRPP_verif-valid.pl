@@ -138,26 +138,16 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
   }
 
 
-# Data Dumper -> Set dumper configuration:
-# TODO: put this configuration in cfg file?
-  my %dump_conf = ( SEPARATOR        => "\t",
-                    EPOCH_FORMAT     => \&DummySub,
-                    ANGLE_FORMAT     => \&Rad2Deg,
-                    SAT_POS_FORMAT   => \&DummySub,
-                    REC_POS_FORMAT   => \&ECEF2Geodetic,
-                    SIGMA_FACTOR     => 1 );
 
 # Dump processed data:
   PrintTitle2($FH_LOG, "Dumping GRPP data:");
   my $ini_time_dump_data = [gettimeofday];
 
   PrintTitle3($FH_LOG, "Dumping Satellite Observation Data:");
-  DumpSatObsData( \%dump_conf,
-                  $ref_gen_conf,
-                  $ref_obs_data, [], # no sats to ignore
-                  [ $ref_gen_conf->{SELECTED_SIGNALS}{E},
-                    $ref_gen_conf->{SELECTED_SIGNALS}{G} ],
-                    # TODO: fix singular behaviour
+  DumpSatObsData( $ref_gen_conf,
+                  $ref_obs_data,
+                  [$ref_gen_conf->{SELECTED_SIGNALS}{E},
+                   $ref_gen_conf->{SELECTED_SIGNALS}{G}],
                   $ref_gen_conf->{OUTPUT_PATH}, $FH_LOG );
 
   ReportElapsedTime([gettimeofday],
@@ -167,9 +157,8 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
   $ini_time_dump_data = [gettimeofday];
 
   PrintTitle3($FH_LOG, "Dumping Satellite-Receiver LoS Data:");
-  DumpRecSatLoSData( \%dump_conf,
-                     $ref_gen_conf,
-                     $ref_obs_data, [], # no sats to ignore
+  DumpRecSatLoSData( $ref_gen_conf,
+                     $ref_obs_data,
                      $ref_gen_conf->{OUTPUT_PATH}, $FH_LOG );
 
   ReportElapsedTime([gettimeofday],
@@ -179,8 +168,7 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
   $ini_time_dump_data = [gettimeofday];
 
   PrintTitle3($FH_LOG, "Dumping Leas Squares report:");
-  DumpLSQReport( \%dump_conf,
-                 $ref_gen_conf,
+  DumpLSQReport( $ref_gen_conf,
                  $ref_obs_data,
                  $ref_gen_conf->{OUTPUT_PATH}, $FH_LOG );
 
@@ -191,9 +179,8 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
   $ini_time_dump_data = [gettimeofday];
 
   PrintTitle3($FH_LOG, "Dumping Satellite XYZ & clock bias:");
-  DumpSatPosition( \%dump_conf,
-                   $ref_gen_conf,
-                   $ref_obs_data, [], # no sats to ignore...
+  DumpSatPosition( $ref_gen_conf,
+                   $ref_obs_data,
                    $ref_gen_conf->{OUTPUT_PATH}, $FH_LOG );
 
   ReportElapsedTime([gettimeofday],
@@ -203,8 +190,7 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
   $ini_time_dump_data = [gettimeofday];
 
   PrintTitle3($FH_LOG, "Dumping Receiver position & clock bias:");
-  DumpRecPosition( \%dump_conf,
-                   $ref_gen_conf,
+  DumpRecPosition( $ref_gen_conf,
                    $ref_obs_data,
                    $ref_gen_conf->{OUTPUT_PATH}, $FH_LOG );
 
