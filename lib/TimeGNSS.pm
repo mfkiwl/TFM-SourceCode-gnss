@@ -11,7 +11,7 @@ use warnings;
 use Time::Local;
 use feature qq(say);
 
-use PDL::Constants qq(PI);
+use Math::Trig;
 
 # Set package exportation properties:
 BEGIN {
@@ -150,7 +150,7 @@ sub UniversalTime2LocalTime {
   #       $universal_time must be hour decimal format! --> hh.dddd
 
   # Longitude is transformed to degrees:
-  $longitude *= 180/PI;
+  $longitude *= 180/pi;
 
   # Magic number '15' is the degree arc resulting from dividing 360º (whole
   # earth's circumference) between 24 hours:
