@@ -26,8 +26,10 @@ use Scalar::Util qq(looks_like_number); # scalar utility...
 # Import dedicated libraries:
 use lib LIB_ROOT_PATH;
 use MyUtil   qq(:ALL); # useful subs and constants...
+use MyMath   qq(:ALL);
 use MyPrint  qq(:ALL); # error and warning utilities...
 use TimeGNSS qq(:ALL); # GNSS time transforming utilities...
+use Geodetic qq(:ALL);
 
 # Set package exportation properties:
 # ---------------------------------------------------------------------------- #
@@ -56,6 +58,11 @@ BEGIN {
                           &GAL_E5b_FREQ
                           &SUPPORTED_SAT_SYS
                           &ACCEPTED_SAT_SYS
+                          &GPS_EPOCH_FORMAT
+                          &DATE_EPOCH_FORMAT
+                          &GPS_WEEK_EPOCH_FORMAT
+                          &REF_EPOCH_SUB_CONF
+                          &REF_ANGLE_SUB_CONF
                           &WARN_NOT_SUPPORTED_SAT_SYS );
 
   # Define subroutines to export:
@@ -200,11 +207,19 @@ use constant SUPPORTED_EPOCH_FORMATS => ( GPS_EPOCH_FORMAT,
                                           DATE_EPOCH_FORMAT,
                                           GPS_WEEK_EPOCH_FORMAT );
 
+use constant REF_EPOCH_SUB_CONF => { &GPS_EPOCH_FORMAT      => \&DummySub,
+                                     &DATE_EPOCH_FORMAT     => \&GPS2Date,
+                                     &GPS_WEEK_EPOCH_FORMAT => \&GPS2ToW };
+
 # Supported angle formats:
 use constant {
   RADIAN_ANGLE_FORMAT => qq(rad),
   DEGREE_ANGLE_FORMAT => qq(deg),
 };
+
+# Angle-Subroutine configuration:
+use constant REF_ANGLE_SUB_CONF => { &RADIAN_ANGLE_FORMAT => \&DummySub,
+                                     &DEGREE_ANGLE_FORMAT => \&Rad2Deg, };
 
 use constant SUPPORTED_ANGLE_FORMATS => ( RADIAN_ANGLE_FORMAT,
                                           DEGREE_ANGLE_FORMAT );
