@@ -173,7 +173,8 @@ sub ComputeSatPosition {
         unless (exists $ref_nav_body->{$sat}) {
 
           # Set invalid data for satellite:
-          $sat_status = FALSE; @sat_coord  = ();
+          $sat_status = FALSE;
+          @sat_coord  = (0, 0, 0, 0);
 
           # Raise warning and skip code to next satellite:
           RaiseWarning($fh_log, WARN_NO_SAT_NAVIGATION,
@@ -191,7 +192,8 @@ sub ComputeSatPosition {
           unless ($sat_eph_epoch != FALSE) {
 
             # Set invalid data for satellite:
-            $sat_status = FALSE; @sat_coord  = ();
+            $sat_status = FALSE;
+            @sat_coord  = (0, 0, 0, 0);
 
             # Raise a warning and go to the next satellite:
             RaiseWarning($fh_log, WARN_NO_SAT_EPH_FOUND,
@@ -225,7 +227,8 @@ sub ComputeSatPosition {
                                             $carrier_freq_f1, $carrier_freq_f2);
             } else {
               # Satellite coordintes cannot be computed:
-              $sat_status = FALSE; @sat_coord = ();
+              $sat_status = FALSE;
+              @sat_coord  = (0, 0, 0, 0);
             } # end unless $obs_meas eq NULL_OBSERVATION
 
           } # end unless ($sat_eph_epoch != FALSE)
