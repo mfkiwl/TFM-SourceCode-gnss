@@ -165,7 +165,8 @@ sub ComputeRecPosition {
 
       # Init references to hold estimated position and associated
       # variances:
-      my ($ref_rec_est_xyzdt, $ref_rec_var_xyzdt);
+      my ($ref_rec_est_xyz, $rec_est_clk,
+          $ref_rec_var_xyz, $rec_var_clk, $ref_rec_var_enu);
 
       # Save observation epoch:
       my $epoch = $ref_epoch_info->{EPOCH};
@@ -234,15 +235,15 @@ sub ComputeRecPosition {
             my $pdl_rec_apx_xyzdt = pdl @rec_apx_xyzdt;
 
             # Get estimated receiver position and solution variances:
-            ( $ref_rec_est_xyzdt,
-              $ref_rec_var_xyzdt ) = GetReceiverPositionSolution (
-                                        $pdl_rec_apx_xyzdt,
-                                        $pdl_parameter_vector,
-                                        $pdl_covariance_matrix
-                                      );
+            ( $ref_rec_est_xyz, $rec_est_clk,
+              $ref_rec_var_xyz, $rec_var_clk, $ref_rec_var_enu ) =
+                GetReceiverPositionSolution ( $pdl_rec_apx_xyzdt,
+                                              $pdl_parameter_vector,
+                                              $pdl_covariance_matrix,
+                                              $ref_gen_conf->{ELIPSOID} );
 
             # Save iteration solution:
-            $iter_solution[$iteration] = $ref_rec_est_xyzdt;
+            $iter_solution[$iteration] = [ @{$ref_rec_est_xyz}, $rec_est_clk ];
 
             # Update number of elapsed iterations:
             $iteration += 1;
@@ -278,7 +279,7 @@ sub ComputeRecPosition {
 
             # Fill position solution hash with null info:
             FillSolutionDataHash( $ref_epoch_info, $iter_status,
-                                  [0, 0, 0, 0], [0, 0, 0, 0] );
+                                  [0, 0, 0], 0, [0, 0, 0], 0, [0, 0, 0] );
 
             # Exit iteration loop:
             last;
@@ -296,16 +297,14 @@ sub ComputeRecPosition {
           #       of iterations or the convergence criteria, has been produced!
           $first_solution_flag = TRUE;
 
-          # Compute standard deviations:
-          # NOTE: 68% reliability percentile
-          my @rec_sigma = map{ $_**0.5 } @{$ref_rec_var_xyzdt};
-
           # Store receiver position solution and standard deviations in
           # observation rinex hash:
           # NOTE: receiver solution and standard deviations come from last
           #       iteration solution
           FillSolutionDataHash( $ref_epoch_info, $iter_status,
-                                $ref_rec_est_xyzdt, \@rec_sigma );
+                                $ref_rec_est_xyz, $rec_est_clk,
+                                $ref_rec_var_xyz, $rec_var_clk,
+                                $ref_rec_var_enu );
 
         } # end if $iter_status
 
@@ -494,9 +493,12 @@ sub InitEpochInfoHash {
 
   $ref_epoch_info->{ SAT_LOS  } = undef;
   $ref_epoch_info->{ LSQ_INFO } = \@array_dummy;
-  $ref_epoch_info->{ POSITION_SOLUTION }{ STATUS      } = FALSE;
-  $ref_epoch_info->{ POSITION_SOLUTION }{ XYZDT       } = undef;
-  $ref_epoch_info->{ POSITION_SOLUTION }{ SIGMA_XYZDT } = undef;
+  $ref_epoch_info->{ POSITION_SOLUTION }{ STATUS  } = FALSE;
+  $ref_epoch_info->{ POSITION_SOLUTION }{ XYZ     } = undef;
+  $ref_epoch_info->{ POSITION_SOLUTION }{ CLK     } = undef;
+  $ref_epoch_info->{ POSITION_SOLUTION }{ VAR_XYZ } = undef;
+  $ref_epoch_info->{ POSITION_SOLUTION }{ VAR_CLK } = undef;
+  $ref_epoch_info->{ POSITION_SOLUTION }{ VAR_ENU } = undef;
 
   return TRUE;
 }
@@ -751,9 +753,7 @@ sub FillLSQInfo {
   my @res_vector    = list( $pdl_residual_vector  );
   my $var_estimator = sclr( $pdl_var_estimator    );
 
-  # Define iteration identifier:
-  # $iter = "ITER_$iter";
-
+  # Fill hash with retrieved data:
   $ref_epoch_info->{LSQ_INFO}[$iter]{ STATUS             } = $lsq_status;
   $ref_epoch_info->{LSQ_INFO}[$iter]{ CONVERGENCE        } = $conv_flag;
   $ref_epoch_info->{LSQ_INFO}[$iter]{ APX_PARAMETER      } = $ref_apx_prm;
@@ -763,18 +763,42 @@ sub FillLSQInfo {
 }
 
 sub GetReceiverPositionSolution {
-  my ($pdl_apx_parameters, $pdl_parameter_vector, $pdl_covar_matrix ) = @_;
+  my ($pdl_apx_parameters,
+      $pdl_parameter_vector,
+      $pdl_covar_matrix, $elipsoid ) = @_;
 
+  # Receiver estimated position --> X = aX + dX:
   my @rec_est_xyzdt =
     list($pdl_apx_parameters + transpose($pdl_parameter_vector)->flat);
 
-  # Retrieve estimated parameter variances from covariance matrix:
-  my @rec_var_xyzdt = ( sclr($pdl_covar_matrix->slice('0,0')),
-                        sclr($pdl_covar_matrix->slice('1,1')),
-                        sclr($pdl_covar_matrix->slice('2,2')),
-                        sclr($pdl_covar_matrix->slice('3,3')) );
+  # Split ECEF XYZ coordinate and receiver clock bias:
+  my @rec_est_xyz = @rec_est_xyzdt[0..2];
+  my $rec_est_clk = $rec_est_xyzdt[3];
 
-  return (\@rec_est_xyzdt, \@rec_var_xyzdt);
+  # Retrieve estimated parameter variances from covariance matrix:
+  my @rec_var_xyz = (sclr( $pdl_covar_matrix->slice('0,0') ),
+                     sclr( $pdl_covar_matrix->slice('1,1') ),
+                     sclr( $pdl_covar_matrix->slice('2,2') ));
+  my $rec_var_clk =  sclr( $pdl_covar_matrix->slice('3,3') );
+
+  # Compute local ENU variances:
+    # Get receiver geodetic coordinates:
+    my ($lat, $lon, $helip) = ECEF2Geodetic( @rec_est_xyz, $elipsoid );
+
+    # Slice Covaraicne matrix in order to trim the clock elements:
+    my $pdl_ecef_covar_matrix = $pdl_covar_matrix->slice('0:2', '0:2');
+
+    # Compute ENU covariance matrix:
+    my $pdl_enu_covar_matrix =
+      VarianceVxyz2Venu($lat, $lon, $pdl_ecef_covar_matrix);
+
+    # Finally, retrieve ENU variances from computed matrix:
+    my @rec_var_enu = ( sclr($pdl_enu_covar_matrix->slice('0,0')) ,
+                        sclr($pdl_enu_covar_matrix->slice('1,1')) ,
+                        sclr($pdl_enu_covar_matrix->slice('2,2'))  );
+
+  return (\@rec_est_xyz, $rec_est_clk,
+          \@rec_var_xyz, $rec_var_clk, \@rec_var_enu);
 }
 
 sub CheckConvergenceCriteria {
@@ -804,11 +828,17 @@ sub CheckConvergenceCriteria {
 }
 
 sub FillSolutionDataHash {
-  my ($ref_epoch_info, $status, $ref_rec_est_xyzdt, $ref_rec_sigma) = @_;
+  my ($ref_epoch_info, $status,
+      $ref_rec_est_xyz, $rec_est_clk,
+      $ref_rec_var_xyz, $rec_var_clk, $ref_rec_var_enu) = @_;
 
-  $ref_epoch_info->{POSITION_SOLUTION}{ STATUS      } = $status;
-  $ref_epoch_info->{POSITION_SOLUTION}{ XYZDT       } = $ref_rec_est_xyzdt;
-  $ref_epoch_info->{POSITION_SOLUTION}{ SIGMA_XYZDT } = $ref_rec_sigma;
+  $ref_epoch_info->{POSITION_SOLUTION}{ STATUS  } = $status;
+  $ref_epoch_info->{POSITION_SOLUTION}{ XYZ     } = $ref_rec_est_xyz;
+  $ref_epoch_info->{POSITION_SOLUTION}{ CLK     } = $rec_est_clk;
+  $ref_epoch_info->{POSITION_SOLUTION}{ VAR_XYZ } = $ref_rec_var_xyz;
+  $ref_epoch_info->{POSITION_SOLUTION}{ VAR_CLK } = $rec_var_clk;
+  $ref_epoch_info->{POSITION_SOLUTION}{ VAR_ENU } = $ref_rec_var_enu;
+
 
   return TRUE;
 }
@@ -869,9 +899,12 @@ sub SelectApproximateParameters {
       { $count += 1; }
 
       # Set found position solution as approximate parameters:
+      # Build array with receiver ECEF coordinates and clock bias
       @rec_apx_xyzdt =
-        @{ $ref_rinex_obs ->
-            {BODY}[$epoch_index - $count]{POSITION_SOLUTION}{XYZDT} };
+        ( @{ $ref_rinex_obs->
+              {BODY}[$epoch_index - $count]{POSITION_SOLUTION}{XYZ} },
+             $ref_rinex_obs->
+              {BODY}[$epoch_index - $count]{POSITION_SOLUTION}{CLK} );
 
     } else {
       # Approximate position parameters come from RINEX header:
