@@ -596,9 +596,9 @@ sub DumpRecPosition {
    return KILLED;
   }
 
-  # ************************************** #
-  # Receiver-Satellite LoS dumper routine: #
-  # ************************************** #
+  # ********************************* #
+  # Receiver Position dumper routine: #
+  # ********************************* #
 
   # Retrieve dumper configuration:
   my $delimiter    = $ref_gen_conf->{DATA_DUMPER}{ DELIMITER      };
@@ -646,22 +646,22 @@ sub DumpRecPosition {
       # Position estimation status:
       my $status = $ref_xyz_data->{STATUS};
 
-      # ECEF receiver coordinates:
-      my @rec_xyz = @{ $ref_xyz_data->{XYZDT} };
+      # ECEF receiver coordinates anc clock bias:
+      my @rec_xyz = @{ $ref_xyz_data->{XYZ} };
+      my $rec_clk = $ref_xyz_data->{CLK};
 
       # ECEF coordinates related sigma error.
       # NOTE: sclaing factor is applied:
-      my @rec_xyz_sigma =
-        map {$_*$sigma_factor} @{ $ref_xyz_data->{SIGMA_XYZDT} };
+      my @rec_xyz_clk_sigma =
+        map {($_**0.5)*$sigma_factor} ( @{ $ref_xyz_data->{VAR_XYZ} },
+                                           $ref_xyz_data->{VAR_CLK}    );
 
       # Geodetic receiver coordinates:
       my ($rec_lat, $rec_lon, $rec_helip);
 
       if ($status) {
-        ($rec_lat,
-         $rec_lon,
-         $rec_helip) = ECEF2Geodetic( @rec_xyz[0..2],
-                                      $ref_gen_conf->{ELIPSOID} );
+        ($rec_lat, $rec_lon, $rec_helip) =
+          ECEF2Geodetic( @rec_xyz, $ref_gen_conf->{ELIPSOID} );
       } else {
         ($rec_lat, $rec_lon, $rec_helip) = (0, 0, 0);
       }
@@ -672,7 +672,8 @@ sub DumpRecPosition {
       # Set data items:
       my @line_items = (@epoch,
                         $status, $num_sat,
-                        @rec_xyz, @rec_xyz_sigma,
+                        @rec_xyz, $rec_clk,
+                        @rec_xyz_clk_sigma,
                         $rec_lat, $rec_lon, $rec_helip);
 
       # Write data line:
