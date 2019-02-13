@@ -16,8 +16,7 @@ use Enviroments qq(:CONSTANTS);
 use Carp;
 use strict; # enables strict syntax...
 
-use PDL;
-use PDL::Constants qw(PI);
+use Math::Trig;
 use Scalar::Util qq(looks_like_number); # scalar utility...
 
 use feature qq(say); # print adding carriage return...
@@ -429,7 +428,7 @@ sub ComputeSolarZenitAngle {
   # Solar zenit angle cosine component:
   my $cos_solar_zenit_angle = sin($lat)*$sin_delta_sun +
                               cos($lat)*$cos_delta_sun +
-                              cos( PI/12*(12 - $local_time) );
+                              cos( pi/12*(12 - $local_time) );
 
   my $solar_zenit_angle = RADIANS_TO_DEGREE*
                           atan2( (1 - $cos_solar_zenit_angle**2)**0.5,
