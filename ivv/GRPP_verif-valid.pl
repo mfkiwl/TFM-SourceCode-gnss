@@ -107,6 +107,8 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
                                                 $ref_gps_nav_rinex,
                                                 $FH_LOG );
 
+  # print Dumper $ref_obs_data->{BODY}[0]; exit 0;
+
   ReportElapsedTime([gettimeofday],
                     $ini_rec_position_time_stamp, "ComputeRecPosition()");
   $MEM_USAGE->record('-> ComputeRecPosition');
@@ -124,13 +126,13 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
         join(' | ',
           sprintf( " %12.3f |" x 3,
                    @{$ref_obs_data->
-                      {BODY}[$_]{POSITION_SOLUTION}{XYZDT}}[0..2] )
+                      {BODY}[$_]{POSITION_SOLUTION}{XYZ}} )
         ),
       "| sX | sY | sZ =".
         join(' | ',
           sprintf(" %12.3f |" x 3,
-                  @{$ref_obs_data->
-                      {BODY}[$_]{POSITION_SOLUTION}{SIGMA_XYZDT}}[0..2])
+                  map{$_**0.5} @{$ref_obs_data->
+                                  {BODY}[$_]{POSITION_SOLUTION}{VAR_XYZ}})
         )
       );
 
