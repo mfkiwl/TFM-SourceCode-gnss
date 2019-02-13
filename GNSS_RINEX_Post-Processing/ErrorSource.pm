@@ -15,10 +15,11 @@ use Enviroments qq(:CONSTANTS);
 # ---------------------------------------------------------------------------- #
 use strict;   # enables strict syntax...
 
+use Math::Trig qq(pi);
+use Scalar::Util qq(looks_like_number); # scalar utility...
+
 use PDL;
 use PDL::GSL::INTERP;
-use PDL::Constants qw(PI);
-use Scalar::Util qq(looks_like_number); # scalar utility...
 
 use feature qq(say); # print adding carriage return...
 use Data::Dumper;    # enables pretty print...
@@ -119,7 +120,7 @@ sub ComputeTropoSaastamoinenDelay {
       # Interpolate B parameter:
       my $b_prm = $pdl_interp_func->eval($height);
 
-  # Troposhperic delay correction is computed as follows:
+  # Troposhperic delay correction is computed as followsx
     # Auxiliar variables:
     my $aux1 = (0.002277/cos($zenital));
     my $aux2 = (1255/$temp) + 0.05;
@@ -159,10 +160,10 @@ sub ComputeIonoKlobucharDelay {
 
   # Preliminary steps:
     # Elevation from [rad] --> [semicircles]:
-    $elevation /= PI;
+    $elevation /= pi;
 
     # Receiver latitude and longitude: [rad] --> [semicircles]
-    $rec_lat /= PI; $rec_lon /= PI;
+    $rec_lat /= pi; $rec_lon /= pi;
 
     # Time transfomation: GPS --> Num_week, Num_day, ToW [s]
     my ($week, $day, $tow) = GPS2ToW($gps_epoch);
@@ -182,11 +183,11 @@ sub ComputeIonoKlobucharDelay {
       # IPP's longitude [semicircles]:
       # NOTE: Cosine's argument is transformaed [semicircles] --> [rad]
       my $ipp_lon =
-         $rec_lon + ( $earth_center_angle*sin($azimut) )/( cos($ipp_lat*PI) );
+         $rec_lon + ( $earth_center_angle*sin($azimut) )/( cos($ipp_lat*pi) );
 
       # IPP's geomagnetic latitude [semicircles]:
       # NOTE: Sinus's argument is transformed [semicircles] --> [rad]
-      my $geomag_lat_ipp = $ipp_lat + 0.064*cos( ($ipp_lon - 1.617)*PI );
+      my $geomag_lat_ipp = $ipp_lat + 0.064*cos( ($ipp_lon - 1.617)*pi );
 
       # Local time at IPP [s]:
       my $ipp_time  = SECONDS_IN_DAY/2 * $ipp_lon + $tow;
@@ -204,7 +205,7 @@ sub ComputeIonoKlobucharDelay {
        $iono_period  = 72000 if ($iono_period < 72000);
 
     # Compute ionospheric delay phase [rad]:
-    my $iono_phase = ( 2*PI*($ipp_time - 50400) ) / $iono_period;
+    my $iono_phase = ( 2*pi*($ipp_time - 50400) ) / $iono_period;
 
     # Compute slant factor delay [m¿?]:
     my $slant_fact = 1.0 + 16.0*(0.53 - $elevation)**3;
