@@ -611,13 +611,13 @@ sub ReadObservationRinexV3 {
           # Set flag for reading the selected constellations according to
           # configuration:
           my $selected_sat_sys_flag =
-            (grep(/^$sat_sys$/, @{$ref_gen_conf->{SELECTED_SAT_SYS}})
+            ( grep(/^$sat_sys$/, @{$ref_gen_conf->{SELECTED_SAT_SYS}}) )
               ? TRUE : FALSE;
 
           # Set flag for discard the specified satellites accoring to
           # configuration:
           my $sat_to_discard_flag =
-            (grep(/^$sat$/, @{ $ref_gen_conf->{SAT_TO_DISCARD}{$sat_sys} }))
+            ( grep(/^$sat$/, @{ $ref_gen_conf->{SAT_TO_DISCARD}{$sat_sys} }) )
               ? TRUE : FALSE;
 
           # Read satellites from configured constellations and not to be
