@@ -9,8 +9,14 @@ use strict;   # enables perl strict syntax...
 
 use feature qq(say);
 
-use PDL; # loads Perl Data Language extension...
-use PDL::Constants qq(PI);
+# Perl Data Language modules:
+use PDL::Core;
+use PDL::Basic;
+use PDL::MatrixOps;
+
+# Trigonometric functions and constatns:
+use Math::Trig;
+
 
 # Set package exportation properties:
 BEGIN {
@@ -43,8 +49,8 @@ BEGIN {
 
 # Constants:
 # ---------------------------------------------------------------------------- #
-use constant DEGREE_TO_RADIANS => PI/180;
-use constant RADIANS_TO_DEGREE => 180/PI;
+use constant DEGREE_TO_RADIANS => pi/180;
+use constant RADIANS_TO_DEGREE => 180/pi;
 
 
 # Subroutines:
