@@ -107,7 +107,7 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
                                                 $ref_gps_nav_rinex,
                                                 $FH_LOG );
 
-  # print Dumper $ref_obs_data->{BODY}[0]; exit 0;
+  # print Dumper $ref_obs_data->{BODY}[0]{LSQ_INFO}; exit 0;
 
   ReportElapsedTime([gettimeofday],
                     $ini_rec_position_time_stamp, "ComputeRecPosition()");
