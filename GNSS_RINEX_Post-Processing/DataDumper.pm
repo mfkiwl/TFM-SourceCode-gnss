@@ -615,17 +615,60 @@ sub DumpRecPosition {
   my $ref_epoch_sub = REF_EPOCH_SUB_CONF->{$epoch_format};
   my $ref_angle_sub = REF_ANGLE_SUB_CONF->{$angle_format};
 
+  # Static mode parameters:
+  my $static_mode = $ref_gen_conf->{STATIC}{STATUS};
+
+  # Init reference position:
+  my ($ref_x, $ref_y, $ref_z);
+  my ($ref_lat, $ref_lon, $ref_helip);
+
+  # Set static reference position:
+  if ($static_mode) {
+
+    # Set ECEF coordinates
+    ($ref_x, $ref_y, $ref_z) =
+      SetStaticReference( $ref_gen_conf, $ref_obs_data );
+
+    # Compute geodetic coordinates:
+    ($ref_lat, $ref_lon, $ref_helip) =
+      ECEF2Geodetic( $ref_x, $ref_y, $ref_z, $ref_gen_conf->{ELIPSOID} );
+
+  } # end if $static_mode
+
   # 1. Open dumper file at output path:
     my $rec_name = $ref_obs_data->{HEAD}{MARKER_NAME};
     my $file_path = join('/', ($output_path, "$rec_name-xyz.out"));
     my $fh; open($fh, '>', $file_path) or die "Could not create $!";
 
-  # 2. Write title line:
+  # 2.a. Write title line:
     say $fh sprintf("# > Receiver marker '$rec_name' adjusted coordinates.\n".
                     "# > NumSat  : satellites used in LSQ estimation\n".
                     "# > Reference system for ECEF coordinates : %s\n".
                     "# > Created : %s ",
                     $ref_gen_conf->{ELIPSOID}, GetPrettyLocalDate());
+
+  # 2.b. Write reference coordinates if static mode is activated:
+  if ($static_mode) {
+
+    # Header:
+    my @ref_head_items =
+      qw(ECEF_X ECEF_Y ECEF_Z GEO_Lat GEO_Lon GEO_ElipHeight);
+
+    # Trasnform geodetic angles:
+    my ($ref_lat_print,
+        $ref_lon_print) = &{ $ref_angle_sub }( $ref_lat, $ref_lon );
+
+    # Reference coordinates to be printed:
+    my @ref_line_items =
+      ($ref_x, $ref_y, $ref_z, $ref_lat_print, $ref_lon_print, $ref_helip);
+
+    # Print information:
+    say $fh "# > Reference coordinates from static mode '".
+            $ref_gen_conf->{STATIC}{REFERENCE_MODE}."'";
+    say $fh "#".join($delimiter, @ref_head_items);
+    say $fh join($delimiter, @ref_line_items);
+  }
+
 
   # 3. Write header line:
     my @header_items = ( SetEpochHeaderItems( $epoch_format ),
@@ -634,6 +677,11 @@ sub DumpRecPosition {
                             Sigma_X Sigma_Y Sigma_Z Sigma_ClkBias
                             Sigma_E Sigma_N Sigma_U
                             GEO_Lat GEO_Lon GEO_ElipHeight) );
+
+    # ENU increments header items:
+    if ($static_mode) {
+      push( @header_items, $_ ) for qw(Easting Northing Upping);
+    }
 
     say $fh "#".join($delimiter, @header_items);
 
@@ -653,7 +701,7 @@ sub DumpRecPosition {
       my $status = $ref_xyz_data->{STATUS};
 
       # ECEF receiver coordinates anc clock bias:
-      my @rec_xyz = @{ $ref_xyz_data->{XYZ} };
+      my ($rec_x, $rec_y, $rec_z) = @{ $ref_xyz_data->{XYZ} };
       my $rec_clk = $ref_xyz_data->{CLK};
 
       # ECEF coordinates related sigma error.
@@ -669,13 +717,19 @@ sub DumpRecPosition {
       my $rec_clk_sigma = ($ref_xyz_data->{VAR_CLK}**0.5)*$sigma_factor;
 
       # Geodetic receiver coordinates:
-      my ($rec_lat, $rec_lon, $rec_helip);
+      my ( $rec_lat, $rec_lon,  $rec_helip );
+      my ( $easting, $northing, $upping    );
 
       if ($status) {
         ($rec_lat, $rec_lon, $rec_helip) =
-          ECEF2Geodetic( @rec_xyz, $ref_gen_conf->{ELIPSOID} );
+          ECEF2Geodetic( $rec_x, $rec_y, $rec_z, $ref_gen_conf->{ELIPSOID} );
+        ($easting, $northing, $upping) =
+          Venu2Vxyz( $rec_x - $ref_x,
+                     $rec_y - $ref_y,
+                     $rec_z - $ref_z, $ref_lat, $ref_lon ) if $static_mode;
       } else {
-        ($rec_lat, $rec_lon, $rec_helip) = (0, 0, 0);
+        ( $rec_lat, $rec_lon,  $rec_helip ) = (0, 0, 0);
+        ( $easting, $northing, $upping    ) = (0, 0, 0) if $static_mode;
       }
 
       # Trasform angle measurments accoring to configuration:
@@ -684,9 +738,14 @@ sub DumpRecPosition {
       # Set data items:
       my @line_items = (@epoch,
                         $status, $num_sat,
-                        @rec_xyz, $rec_clk,
+                        $rec_x, $rec_y, $rec_z, $rec_clk,
                         @rec_xyz_sigma, $rec_clk_sigma,
                         @rec_enu_sigma, $rec_lat, $rec_lon, $rec_helip);
+
+      # Append ENU increments:
+      if ($static_mode) {
+        push(@line_items, $_) for ($easting, $northing, $upping);
+      }
 
       # Write data line:
       say $fh join($delimiter, @line_items);
@@ -724,6 +783,65 @@ sub SetEpochHeaderItems {
   return @head_items;
 }
 
+sub SetStaticReference {
+  my ($ref_gen_conf, $ref_obs_data) = @_;
 
+  # Init reference position to be returned:
+  my @ref_ecef_xyz;
+
+  # Set reference position:
+  given ($ref_gen_conf->{STATIC}{REFERENCE_MODE}) {
+    when ($_ eq &MEAN_STATIC_MODE) {
+      @ref_ecef_xyz = ComputeMeanRecPosition( $ref_obs_data );
+    }
+    when ($_ eq &IGS_STATIC_MODE || $_ eq &MANUAL_STATIC_MODE) {
+      @ref_ecef_xyz = @{ $ref_gen_conf->{STATIC}{REFERENCE} };
+    }
+  } # end given $reference_mode
+
+
+  return @ref_ecef_xyz;
+}
+
+sub ComputeMeanRecPosition {
+  my ($ref_obs_data) = @_;
+
+  # Init summatory  variables and counter:
+  my $count_epoch = 0;
+  my ($sum_x, $sum_y, $sum_z) = (0, 0, 0);
+
+  # Go through all observation epochs:
+  for (my $i = 0; $i < scalar(@{ $ref_obs_data->{BODY} }); $i += 1)
+  {
+    # Set receiver position reference:
+    my $ref_rec_position =
+       $ref_obs_data->{BODY}[$i]{REC_POSITION};
+
+    # Check for receiver position status:
+    if ($ref_rec_position->{STATUS}) {
+
+      # Retrieve receiver ECEF coorindates:
+      my ($rec_x, $rec_y, $rec_z) = @{ $ref_obs_data->{XYZ} };
+
+      # Sum for each coordinate component:
+      $sum_x += $rec_x; $sum_y += $rec_y; $sum_z += $rec_z;
+
+      # Increment counter:
+      $count_epoch += 1;
+
+    } # end if STATUS
+
+  } # end for $i
+
+
+  # Compute mean position:
+  my ( $mean_x,
+       $mean_y,
+       $mean_z ) = ( $sum_x/$count_epoch,
+                     $sum_y/$count_epoch,
+                     $sum_z/$count_epoch );
+
+  return ($mean_x, $mean_y, $mean_z);
+}
 
 TRUE;
