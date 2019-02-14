@@ -679,6 +679,10 @@ sub BuildLSQMatrixSystem {
       my ( $sat_clk_bias,
            $rec_clk_bias ) = ( $sat_xyztc[3], $rec_apx_xyzdt[3] );
 
+      # *Update satellite reception coordinates in epoch hash:
+      $ref_epoch_info->{SAT_POSITION}{$sat}{RECEP} = [ @sat_xyz_recep,
+                                                       $sat_clk_bias ];
+
       # 2. Receiver-Satellite line of sight treatment:
       my ($rec_lat, # REC geodetic coordinates
           $rec_lon,
