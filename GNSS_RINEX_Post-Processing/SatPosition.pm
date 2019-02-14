@@ -135,15 +135,18 @@ sub ComputeSatPosition {
   # Iterate over the observation epochs:
   for (my $i = 0; $i < scalar(@{$ref_rinex_obs->{BODY}}); $i++)
   {
+    # Save reference to epoch info:
+    my $ref_epoch_data = $ref_rinex_obs->{BODY}[$i];
+
     # Save observation epoch:
-    my $obs_epoch = $ref_rinex_obs->{BODY}[$i]{EPOCH};
+    my $obs_epoch = $ref_epoch_data->{EPOCH};
 
     # Init valid navigation satellite counter:
-    InitValidNavSatCounter( $ref_rinex_obs->{BODY}[$i],
+    InitValidNavSatCounter( $ref_epoch_data,
                             $ref_gen_conf->{SELECTED_SAT_SYS} );
 
     # Check observation health status:
-    unless ( $ref_rinex_obs->{BODY}[$i]{STATUS} == HEALTHY_OBSERVATION_BLOCK )
+    unless ( $ref_epoch_data->{STATUS} == HEALTHY_OBSERVATION_BLOCK )
     {
       # Raise warning and jump to the next epoch:
       RasieWarning($fh_log, WARN_OBS_NOT_VALID,
@@ -154,7 +157,7 @@ sub ComputeSatPosition {
     }
 
     # Iterate over the observed satellites in the epoch:
-    for my $sat (keys %{$ref_rinex_obs->{BODY}[$i]{SAT_OBS}})
+    for my $sat (keys %{$ref_epoch_data->{SAT_OBS}})
     {
       # Save constellation:
       my $sat_sys = substr($sat, 0, 1);
@@ -210,7 +213,7 @@ sub ComputeSatPosition {
             my $signal =
                $ref_gen_conf->{SELECTED_SIGNALS}{$sat_sys};
             my $obs_meas =
-               $ref_rinex_obs->{BODY}[$i]{SAT_OBS}{$sat}{$signal};
+               $ref_epoch_data->{SAT_OBS}{$sat}{$signal};
 
             # Do not compute satellite coordinates if the observation is not
             # valid:
@@ -236,13 +239,13 @@ sub ComputeSatPosition {
 
         # If the navigation status is valid, increment counter information:
         if ( $sat_status ) {
-          $ref_rinex_obs->{BODY}[$i]{NUM_NAV_SAT}{ ALL      } += 1;
-          $ref_rinex_obs->{BODY}[$i]{NUM_NAV_SAT}{ $sat_sys } += 1;
+          $ref_epoch_data->{NUM_NAV_SAT}{ ALL      } += 1;
+          $ref_epoch_data->{NUM_NAV_SAT}{ $sat_sys } += 1;
         }
 
         # Save the satellite position in the observation hash:
-        $ref_rinex_obs->{BODY}[$i]{SAT_XYZTC}{$sat}{NAV}{STATUS} = $sat_status;
-        $ref_rinex_obs->{BODY}[$i]{SAT_XYZTC}{$sat}{NAV}{XYZTC}  = \@sat_coord;
+        $ref_epoch_data->{SAT_POSITION}{$sat}{NAV}{STATUS} = $sat_status;
+        $ref_epoch_data->{SAT_POSITION}{$sat}{NAV}{XYZ_TC} = \@sat_coord;
 
       } # end if grep($sat, SUPPORTED_SAT_SYS)
 

@@ -516,17 +516,17 @@ sub DumpSatPosition {
         # Epoch is transformed according to configuration:
         my @epoch = &{ $ref_epoch_sub }( $ref_obs_data->{BODY}[$i]{EPOCH} );
 
-        # Go through available satellites in SAT_XYZTC hash:
-        for my $sat (keys %{ $ref_obs_data->{BODY}[$i]{SAT_XYZTC} })
+        # Go through available satellites in hash:
+        for my $sat (keys %{ $ref_obs_data->{BODY}[$i]{SAT_POSITION} })
         {
           # Save satellite position data reference:
-          my $ref_sat_xyz_data = $ref_obs_data->{BODY}[$i]{SAT_XYZTC}{$sat};
+          my $ref_sat_xyz_data = $ref_obs_data->{BODY}[$i]{SAT_POSITION}{$sat};
 
           # Retrieve satellite navigation status:
           my $sat_status = $ref_sat_xyz_data->{NAV}{STATUS};
 
           # Satellite ECEF coordinates and clock bias:
-          my @sat_xyz_clkbias = @{ $ref_sat_xyz_data->{NAV}{XYZTC} };
+          my @sat_xyz_clkbias = @{ $ref_sat_xyz_data->{NAV}{XYZ_TC} };
 
           # Init ECEF and Geodetic satellite coordinates and clock bias:
           my ($sat_lat, $sat_lon, $sat_helip);
@@ -635,7 +635,7 @@ sub DumpRecPosition {
     for (my $i = 0; $i < scalar(@{ $ref_obs_data->{BODY} }); $i += 1)
     {
       # Save reference to receiver position hash:
-      my $ref_xyz_data = $ref_obs_data->{BODY}[$i]{POSITION_SOLUTION};
+      my $ref_xyz_data = $ref_obs_data->{BODY}[$i]{REC_POSITION};
 
       # Epoch is transformed according to configuration:
       my @epoch = &{ $ref_epoch_sub }( $ref_obs_data->{BODY}[$i]{EPOCH} );

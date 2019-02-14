@@ -493,12 +493,12 @@ sub InitEpochInfoHash {
 
   $ref_epoch_info->{ SAT_LOS  } = undef;
   $ref_epoch_info->{ LSQ_INFO } = \@array_dummy;
-  $ref_epoch_info->{ POSITION_SOLUTION }{ STATUS  } = FALSE;
-  $ref_epoch_info->{ POSITION_SOLUTION }{ XYZ     } = undef;
-  $ref_epoch_info->{ POSITION_SOLUTION }{ CLK     } = undef;
-  $ref_epoch_info->{ POSITION_SOLUTION }{ VAR_XYZ } = undef;
-  $ref_epoch_info->{ POSITION_SOLUTION }{ VAR_CLK } = undef;
-  $ref_epoch_info->{ POSITION_SOLUTION }{ VAR_ENU } = undef;
+  $ref_epoch_info->{ REC_POSITION }{ STATUS  } = FALSE;
+  $ref_epoch_info->{ REC_POSITION }{ XYZ     } = undef;
+  $ref_epoch_info->{ REC_POSITION }{ CLK     } = undef;
+  $ref_epoch_info->{ REC_POSITION }{ VAR_XYZ } = undef;
+  $ref_epoch_info->{ REC_POSITION }{ VAR_CLK } = undef;
+  $ref_epoch_info->{ REC_POSITION }{ VAR_ENU } = undef;
 
   return TRUE;
 }
@@ -520,7 +520,7 @@ sub SelectSatForLSQ {
   for my $sat (keys %{$ref_epoch_info->{SAT_OBS}})
   {
     # Select only satellites with available navigation data:
-    if ($ref_epoch_info->{SAT_XYZTC}{$sat}{NAV}{STATUS}) {
+    if ($ref_epoch_info->{SAT_POSITION}{$sat}{NAV}{STATUS}) {
       # Get constellation:
       my $sat_sys = substr($sat, 0, 1);
 
@@ -532,7 +532,7 @@ sub SelectSatForLSQ {
       unless ( $raw_obs eq NULL_OBSERVATION )
       {
         # Save satellite navigation coordinates:
-        my @sat_xyztc = @{$ref_epoch_info->{SAT_XYZTC}{$sat}{NAV}{XYZTC}};
+        my @sat_xyztc = @{$ref_epoch_info->{SAT_POSITION}{$sat}{NAV}{XYZ_TC}};
 
         # Select aproximate recevier position:
         # NOTE: possible approximate parameters come from RINEX
@@ -552,8 +552,8 @@ sub SelectSatForLSQ {
                                              $rec_apx_xyzdt [2] );
 
         # Save propagated coordinates in epoch info hash:
-        $ref_epoch_info->{SAT_XYZTC}{$sat}{RECEP} = [ @sat_xyz_recep,
-                                                      $sat_xyztc[3] ];
+        $ref_epoch_info->{SAT_POSITION}{$sat}{RECEP} = [ @sat_xyz_recep,
+                                                         $sat_xyztc[3] ];
 
         # Compute Rec-Sat LoS info:
         my ($rec_lat, # REC geodetic coordinates
@@ -653,7 +653,7 @@ sub BuildLSQMatrixSystem {
     unless ( $raw_obs eq NULL_OBSERVATION )
     {
       # Save navigation satellite coordinates:
-      my @sat_xyztc = @{ $ref_epoch_info->{SAT_XYZTC}{$sat}{NAV}{XYZTC} };
+      my @sat_xyztc = @{ $ref_epoch_info->{SAT_POSITION}{$sat}{NAV}{XYZ_TC} };
 
       # ************************************ #
       # Build pseudorange equation sequence: #
@@ -832,12 +832,12 @@ sub FillSolutionDataHash {
       $ref_rec_est_xyz, $rec_est_clk,
       $ref_rec_var_xyz, $rec_var_clk, $ref_rec_var_enu) = @_;
 
-  $ref_epoch_info->{POSITION_SOLUTION}{ STATUS  } = $status;
-  $ref_epoch_info->{POSITION_SOLUTION}{ XYZ     } = $ref_rec_est_xyz;
-  $ref_epoch_info->{POSITION_SOLUTION}{ CLK     } = $rec_est_clk;
-  $ref_epoch_info->{POSITION_SOLUTION}{ VAR_XYZ } = $ref_rec_var_xyz;
-  $ref_epoch_info->{POSITION_SOLUTION}{ VAR_CLK } = $rec_var_clk;
-  $ref_epoch_info->{POSITION_SOLUTION}{ VAR_ENU } = $ref_rec_var_enu;
+  $ref_epoch_info->{REC_POSITION}{ STATUS  } = $status;
+  $ref_epoch_info->{REC_POSITION}{ XYZ     } = $ref_rec_est_xyz;
+  $ref_epoch_info->{REC_POSITION}{ CLK     } = $rec_est_clk;
+  $ref_epoch_info->{REC_POSITION}{ VAR_XYZ } = $ref_rec_var_xyz;
+  $ref_epoch_info->{REC_POSITION}{ VAR_CLK } = $rec_var_clk;
+  $ref_epoch_info->{REC_POSITION}{ VAR_ENU } = $ref_rec_var_enu;
 
 
   return TRUE;
@@ -895,16 +895,16 @@ sub SelectApproximateParameters {
       # Count back until a valid position solution is found:
       my $count = 1;
       until ($ref_rinex_obs ->
-              {BODY}[$epoch_index - $count]{POSITION_SOLUTION}{STATUS})
+              {BODY}[$epoch_index - $count]{REC_POSITION}{STATUS})
       { $count += 1; }
 
       # Set found position solution as approximate parameters:
       # Build array with receiver ECEF coordinates and clock bias
       @rec_apx_xyzdt =
         ( @{ $ref_rinex_obs->
-              {BODY}[$epoch_index - $count]{POSITION_SOLUTION}{XYZ} },
+              {BODY}[$epoch_index - $count]{REC_POSITION}{XYZ} },
              $ref_rinex_obs->
-              {BODY}[$epoch_index - $count]{POSITION_SOLUTION}{CLK} );
+              {BODY}[$epoch_index - $count]{REC_POSITION}{CLK} );
 
     } else {
       # Approximate position parameters come from RINEX header:
