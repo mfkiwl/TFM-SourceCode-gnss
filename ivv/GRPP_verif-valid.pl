@@ -120,19 +120,19 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
     PrintComment( *STDOUT, "Observation epoch : ".
       BuildDateString(GPS2Date($ref_obs_data->{BODY}[$_]{EPOCH})).
       "| Status = ".
-      ($ref_obs_data->{BODY}[$_]{POSITION_SOLUTION}{STATUS} ? "OK":"NOK") );
+      ($ref_obs_data->{BODY}[$_]{REC_POSITION}{STATUS} ? "OK":"NOK") );
     PrintBulletedInfo(*STDOUT, "  ",
       "|  X |  Y |  Z =".
         join(' | ',
           sprintf( " %12.3f |" x 3,
                    @{$ref_obs_data->
-                      {BODY}[$_]{POSITION_SOLUTION}{XYZ}} )
+                      {BODY}[$_]{REC_POSITION}{XYZ}} )
         ),
       "| sX | sY | sZ =".
         join(' | ',
           sprintf(" %12.3f |" x 3,
                   map{$_**0.5} @{$ref_obs_data->
-                                  {BODY}[$_]{POSITION_SOLUTION}{VAR_XYZ}})
+                                  {BODY}[$_]{REC_POSITION}{VAR_XYZ}})
         )
       );
 
