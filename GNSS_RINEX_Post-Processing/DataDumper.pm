@@ -279,13 +279,13 @@ sub DumpRecSatLoSData {
       my $fh; open($fh, '>', $file_path) or croak "Could not create $!";
 
     # 2. Write title line:
-      say $fh sprintf("# > Receiver-Satellite ($sat_sys) Line of Sight data.\n".
-                      "# > Created : %s \n".
+      say $fh sprintf("# > Receiver-Satellite '$sat_sys' Line of Sight data.\n".
                       "# > Observation epoch status info:\n".
                       "#   0   --> OK\n".
                       "#   1-6 --> NOK\n".
-                      "# > Reference system for ECEF coordinates : %s",
-                      GetPrettyLocalDate(), $ref_gen_conf->{ELIPSOID});
+                      "# > Reference system for ECEF coordinates : %s\n".
+                      "# > Created : %s",
+                      $ref_gen_conf->{ELIPSOID}, GetPrettyLocalDate());
 
     # 3. Write header line:
       my @header_items = ( SetEpochHeaderItems( $epoch_format ),
@@ -306,7 +306,7 @@ sub DumpRecSatLoSData {
         my @epoch = &{ $ref_epoch_sub }( $ref_obs_data->{BODY}[$i]{EPOCH} );
 
         # Go through available satellites in LoS-Data hash:
-        for my $sat (keys %{ $ref_obs_data->{BODY}[$i]{SAT_LOS} })
+        for my $sat (sort (keys %{ $ref_obs_data->{BODY}[$i]{SAT_LOS} }))
         {
           # Save LoS data reference:
           my $ref_sat_los_data = $ref_obs_data->{BODY}[$i]{SAT_LOS}{$sat};
@@ -499,15 +499,17 @@ sub DumpSatPosition {
                       "# > Observation epoch status info:\n".
                       "#   0   --> OK\n".
                       "#   1-6 --> NOK\n".
-                      "# > Reference system for ECEF coordinates : %s".
-                      "# > Created  : %s \n",
+                      "# > Reference system for ECEF coordinates : %s\n".
+                      "# > Created  : %s",
                       $ref_gen_conf->{ELIPSOID}, GetPrettyLocalDate());
 
     # 3. Write header line:
       my @header_items = ( SetEpochHeaderItems( $epoch_format ),
-                           qw( ObsStatus SatID SatNavStatus
-                               ECEF_X ECEF_Y ECEF_Z SatClockBias
-                               GEO_Lat GEO_Lon GEO_ElipHeight ) );
+                           qw( ObsStatus NumNavSat SatID SatNavStatus
+                               NavX NavY NavZ SatClockBias
+                               RecepX RecepY RecepZ
+                               NavLat NavLon NavElipHeight
+                               RecepLat RecepLon RecepElipHeight ) );
 
       say $fh "#".join($delimiter, @header_items);
 
@@ -517,40 +519,63 @@ sub DumpSatPosition {
       {
         # Save observation epoch status:
         my $obs_status = $ref_obs_data->{BODY}[$i]{STATUS};
+
         # Epoch is transformed according to configuration:
         my @epoch = &{ $ref_epoch_sub }( $ref_obs_data->{BODY}[$i]{EPOCH} );
 
+        # Retrieve number of satellites with valid navigation data:
+        my $num_sat = $ref_obs_data->{BODY}[$i]{NUM_NAV_SAT}{$sat_sys};
+
         # Go through available satellites in hash:
-        for my $sat (keys %{ $ref_obs_data->{BODY}[$i]{SAT_POSITION} })
+        for my $sat (sort (keys %{ $ref_obs_data->{BODY}[$i]{SAT_POSITION} }))
         {
           # Save satellite position data reference:
-          my $ref_sat_xyz_data = $ref_obs_data->{BODY}[$i]{SAT_POSITION}{$sat};
+          my $ref_sat_position = $ref_obs_data->{BODY}[$i]{SAT_POSITION}{$sat};
 
           # Retrieve satellite navigation status:
-          my $sat_status = $ref_sat_xyz_data->{NAV}{STATUS};
+          my $sat_status = $ref_sat_position->{NAV}{STATUS};
 
           # Satellite ECEF coordinates and clock bias:
-          my @sat_xyz_clkbias = @{ $ref_sat_xyz_data->{NAV}{XYZ_TC} };
+          my @sat_xyz_clkbias = @{ $ref_sat_position->{NAV}{XYZ_TC} };
 
           # Init ECEF and Geodetic satellite coordinates and clock bias:
+          my @sat_recep_xyz;
           my ($sat_lat, $sat_lon, $sat_helip);
+          my ($recep_lat, $recep_lon, $recep_helip);
 
-          # Coodinates selction based on satellite navigation status:
+          # Set reception and geodetic coordinates if valid navigation data is
+          # available:
           if ($sat_status) {
-            # Compute geodetic coordinates:
+
+            # Retrieve reception ECEF coordinates:
+            @sat_recep_xyz = @{ $ref_sat_position->{RECEP} }[0..2];
+
+            # Compute geodetic navigation coordinates:
             ($sat_lat, $sat_lon, $sat_helip) =
               ECEF2Geodetic(@sat_xyz_clkbias[0..2], $ref_gen_conf->{ELIPSOID});
+
+            # Compute geodetic reception  coordinates:
+            ($recep_lat, $recep_lon, $recep_helip) =
+              ECEF2Geodetic(@sat_recep_xyz, $ref_gen_conf->{ELIPSOID});
+
           } else {
             # Set null information for invalid navigation status:
+            @sat_recep_xyz = (0, 0, 0);
             ($sat_lat, $sat_lon, $sat_helip) = (0, 0, 0);
+            ($recep_lat, $recep_lon, $recep_helip) = (0, 0, 0);
           }
 
           # Latitude and longitude are transformed according to configuration:
-          ($sat_lat, $sat_lon) = &{ $ref_angle_sub } ($sat_lat, $sat_lon);
+          ($sat_lat, $sat_lon,
+           $recep_lat, $recep_lon) = &{$ref_angle_sub}($sat_lat, $sat_lon,
+                                                       $recep_lat, $recep_lon);
 
           # Save line items:
-          my @line_items = (@epoch, $obs_status, $sat, $sat_status,
-                            @sat_xyz_clkbias, $sat_lat, $sat_lon, $sat_helip);
+          my @line_items = (@epoch,
+                            $obs_status, $num_sat, $sat, $sat_status,
+                            @sat_xyz_clkbias, @sat_recep_xyz,
+                            $sat_lat, $sat_lon, $sat_helip,
+                            $recep_lat, $recep_lon, $recep_helip );
 
           # Write data line:
           say $fh join($delimiter, @line_items);
