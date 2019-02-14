@@ -226,8 +226,20 @@ sub Vxyz2Venu {
   return ($ie, $in, $iu);
 }
 
-# TODO: Vector transformation from local (lat, lon) to ECEF....
-sub Venu2Vxyz {}
+
+sub Venu2Vxyz {
+  my ($ie, $in, $iu, $lat, $lon) = @_;
+
+  # Init local increments:
+  my ($ix, $iy, $iz);
+
+  # Compute local increments:
+  $ix = -1*sin($lon)*$ie + -1*cos($lon)*sin($lat)*$in + cos($lon)*cos($lat)*$iu;
+  $iy =    cos($lon)*$ie + -1*sin($lon)*sin($lat)*$in + sin($lon)*cos($lat)*$iu;
+  $iz =            0*$ie +              cos($lat)*$in +           sin($lat)*$iu;
+
+  return ($ix, $iy, $iz);
+}
 
 sub Venu2AzZeDs {
   my ($ie, $in, $iu) = @_;
