@@ -821,7 +821,7 @@ sub ComputeMeanRecPosition {
     if ($ref_rec_position->{STATUS}) {
 
       # Retrieve receiver ECEF coorindates:
-      my ($rec_x, $rec_y, $rec_z) = @{ $ref_obs_data->{XYZ} };
+      my ($rec_x, $rec_y, $rec_z) = @{ $ref_rec_position->{XYZ} };
 
       # Sum for each coordinate component:
       $sum_x += $rec_x; $sum_y += $rec_y; $sum_z += $rec_z;
