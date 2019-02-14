@@ -195,11 +195,16 @@ sub ComputeRecPosition {
                                          $ref_rinex_obs, $i,
                                          \@iter_solution, $iteration );
 
+          # Set number of observations and parameters to estimate:
+          my ( $num_obs,
+               $num_parameter ) = ( scalar(@sat_to_lsq),
+                                    NUM_PARAMETERS_TO_ESTIMATE );
+
           # Initialize LSQ matrix system:
           my ( $ref_design_matrix,
                $ref_weight_matrix,
-               $ref_ind_term_matrix ) = InitLSQ( scalar(@sat_to_lsq),
-                                                 NUM_PARAMETERS_TO_ESTIMATE );
+               $ref_ind_term_matrix ) = InitLSQ( $num_obs,
+                                                 $num_parameter );
 
           # Build up LSQ matrix system:
           BuildLSQMatrixSystem (
@@ -257,6 +262,7 @@ sub ComputeRecPosition {
             # NOTE: (iteration - 1) since it has been already increased:
             FillLSQInfo( $ref_epoch_info, $iteration - 1,
                          $lsq_status, $convergence_flag,
+                         $num_obs, $num_parameter,
                          \@rec_apx_xyzdt, $pdl_parameter_vector,
                          $pdl_residual_vector, $pdl_variance_estimator );
 
@@ -274,6 +280,7 @@ sub ComputeRecPosition {
             # Fill LSQ information with NULL content:
             FillLSQInfo( $ref_epoch_info, $iteration,
                          $lsq_status, FALSE,
+                         $num_obs, $num_parameter,
                          \@rec_apx_xyzdt, $pdl_parameter_vector,
                          $pdl_residual_vector, $pdl_variance_estimator );
 
@@ -745,6 +752,7 @@ sub BuildLSQMatrixSystem {
 sub FillLSQInfo {
   my ( $ref_epoch_info, $iter,
        $lsq_status, $conv_flag,
+       $num_obs, $num_parameter,
        $ref_apx_prm, $pdl_parameter_vector,
        $pdl_residual_vector, $pdl_var_estimator ) = @_;
 
@@ -753,9 +761,15 @@ sub FillLSQInfo {
   my @res_vector    = list( $pdl_residual_vector  );
   my $var_estimator = sclr( $pdl_var_estimator    );
 
+  # Compute degrees of freedom:
+  my $deg_of_free = $num_obs - $num_parameter;
+
   # Fill hash with retrieved data:
   $ref_epoch_info->{LSQ_INFO}[$iter]{ STATUS             } = $lsq_status;
   $ref_epoch_info->{LSQ_INFO}[$iter]{ CONVERGENCE        } = $conv_flag;
+  $ref_epoch_info->{LSQ_INFO}[$iter]{ NUM_PARAMETER      } = $num_parameter;
+  $ref_epoch_info->{LSQ_INFO}[$iter]{ NUM_OBSERVATION    } = $num_obs;
+  $ref_epoch_info->{LSQ_INFO}[$iter]{ DEGREES_OF_FREEDOM } = $deg_of_free;
   $ref_epoch_info->{LSQ_INFO}[$iter]{ APX_PARAMETER      } = $ref_apx_prm;
   $ref_epoch_info->{LSQ_INFO}[$iter]{ PARAMETER_VECTOR   } = \@prm_vector;
   $ref_epoch_info->{LSQ_INFO}[$iter]{ RESIDUAL_VECTOR    } = \@res_vector;
