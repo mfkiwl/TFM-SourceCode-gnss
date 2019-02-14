@@ -127,8 +127,8 @@
   SAT_OBS => \%sat_obs,
   SAT_LOS => \%line_of_sight_info, # filled after ComputeRecPosition
   LSQ_INFO => \@lsq_info,
-  SAT_XYZTC => \%sat_xyztc,
-  POSITION_SOLUTION => \%position_parameters, # filled after ComputeRecPosition
+  SAT_POSITION => \%sat_xyztc,
+  REC_POSITION => \%position_parameters, # filled after ComputeRecPosition
 );
 
 # Satellite's raw measurements:
@@ -138,8 +138,8 @@
 
 # Satellite's navigation parameters:
 %sat_xyztc = ( $sat_id = ( # navigation coordinates at observation epoch
-                           NAV   => ( STATUS => $boolean_status,
-                                      XYZTC  => \@sat_position_parameters ),
+                           NAV => ( STATUS => $boolean_status,
+                                    XYZ_TC => \@sat_position_parameters ),
                            # reception coordinates at observation epoch
                            RECEP => \@sat_position_parameters  ),
                '[...]' ); # not fixed length
@@ -174,11 +174,11 @@
 
 # Position solution parameters:
 %position_parameters = ( STATUS => $position_estimation_status,
-                         XYZ => \@ecef_position,
-                         CLK => $rec_clk_bias,
-                         VAR_XYZ => \@variance_ecef,
-                         VAR_CLK => $rec_clk_variance,
-                         VAR_ENU => \@variance_enu);
+                         XYZ => \@ecef_position, # ECEF coordinates
+                         CLK => $rec_clk_bias,   # Clock bias
+                         VAR_XYZ => \@variance_ecef,   # ECEF variances
+                         VAR_CLK => $rec_clk_variance, # Clock variance
+                         VAR_ENU => \@variance_enu);   # ENU variance
 
 @enu_position  = ($easting, $northing, $uping);
 @ecef_position = ($x_ecef,  $y_ecef,  $z_ecef);
