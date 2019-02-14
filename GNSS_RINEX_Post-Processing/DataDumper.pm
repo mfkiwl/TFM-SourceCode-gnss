@@ -5,13 +5,7 @@ package DataDumper;
 
 
 # TODO: SCRIPT DESCRIPTION GOES HERE:
-# TODO: Review headers!
-# TODO: implement dumper configuration as part of general configuration
 # TODO: New dumper for LSQ specific obs info! (or merge with LSQ_info dumper)
-# TODO: would be great to have the following information
-#       - Reference coordinates from station --> extract from IGS file?
-#       - ENU position and sigma for receiver position
-#       - ...
 
 # Load bash enviroments:
 # ---------------------------------------------------------------------------- #
@@ -186,7 +180,7 @@ sub DumpSatObsData {
       # Header line items:
       my @header_items = ( SetEpochHeaderItems($epoch_format),
                            qw(Status SatID) );
-      push(@header_items, "$_") for (@sat_sys_obs);
+      push(@header_items, ($_, "$_-NumSat")) for (@sat_sys_obs);
 
       # Write header:
       say $fh "#".join($delimiter, @header_items);
@@ -206,12 +200,17 @@ sub DumpSatObsData {
         # Write observation data:
         for my $sat (sort ( keys %{$ref_epoch_data->{SAT_OBS}} )) {
 
+          # Identify constellation:
+          my $sat_sys = substr($sat, 0, 1);
+
           # Set line elements:
           my @line_items = (@epoch, $status, $sat);
 
           # Include selected observations:
-          push(@line_items,
-               $ref_epoch_data->{SAT_OBS}{$sat}{$_}) for (@sat_sys_obs);
+          for (@sat_sys_obs) {
+            push(@line_items, ($ref_epoch_data->{SAT_OBS}{$sat}{$_},
+                               $ref_epoch_data->{NUM_OBS_SAT}{$sat_sys}{$_}));
+          }
 
           # Dump observation data:
           say $fh join($delimiter, @line_items);
