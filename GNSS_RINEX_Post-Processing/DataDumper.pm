@@ -724,7 +724,7 @@ sub DumpRecPosition {
         ($rec_lat, $rec_lon, $rec_helip) =
           ECEF2Geodetic( $rec_x, $rec_y, $rec_z, $ref_gen_conf->{ELIPSOID} );
         ($easting, $northing, $upping) =
-          Venu2Vxyz( $rec_x - $ref_x,
+          Vxyz2Venu( $rec_x - $ref_x,
                      $rec_y - $ref_y,
                      $rec_z - $ref_z, $ref_lat, $ref_lon ) if $static_mode;
       } else {
