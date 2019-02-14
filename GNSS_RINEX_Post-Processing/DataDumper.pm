@@ -396,7 +396,8 @@ sub DumpLSQReport {
 
   # 3. Write header line:
     my @header_items =( SetEpochHeaderItems( $epoch_format ),
-                        qw(Iteration Status StdDevEstimator ConvergenceFlag) );
+                        qw(Iteration Status NumObs NumParameter DegOfFree
+                           StdDevEstimator ConvergenceFlag) );
 
     # Insert number of apx parameters:
     push(@header_items,
@@ -420,8 +421,12 @@ sub DumpLSQReport {
         my $ref_iter_data = $ref_obs_data->{BODY}[$i]{LSQ_INFO}[$iter];
 
         # Save line items to print:
+        # NOTE: dumping std deviation estimator
         my @line_items = ( @epoch, $iter,
                            $ref_iter_data->{STATUS},
+                           $ref_iter_data->{NUM_OBSERVATION},
+                           $ref_iter_data->{NUM_PARAMETER},
+                           $ref_iter_data->{DEGREES_OF_FREEDOM},
                            $ref_iter_data->{VARIANCE_ESTIMATOR}**(0.5),
                            $ref_iter_data->{CONVERGENCE},
                            @{ $ref_iter_data->{APX_PARAMETER} },
