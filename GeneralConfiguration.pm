@@ -63,6 +63,9 @@ BEGIN {
                           &GPS_WEEK_EPOCH_FORMAT
                           &REF_EPOCH_SUB_CONF
                           &REF_ANGLE_SUB_CONF
+                          &IGS_STATIC_MODE
+                          &MEAN_STATIC_MODE
+                          &MANUAL_STATIC_MODE
                           &WARN_NOT_SUPPORTED_SAT_SYS );
 
   # Define subroutines to export:
