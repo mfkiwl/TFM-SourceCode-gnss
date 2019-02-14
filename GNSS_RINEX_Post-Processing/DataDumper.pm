@@ -632,6 +632,7 @@ sub DumpRecPosition {
                          qw(Status NumSat
                             ECEF_X ECEF_Y ECEF_Z ClkBias
                             Sigma_X Sigma_Y Sigma_Z Sigma_ClkBias
+                            Sigma_E Sigma_N Sigma_U
                             GEO_Lat GEO_Lon GEO_ElipHeight) );
 
     say $fh "#".join($delimiter, @header_items);
@@ -657,9 +658,15 @@ sub DumpRecPosition {
 
       # ECEF coordinates related sigma error.
       # NOTE: sclaing factor is applied:
-      my @rec_xyz_clk_sigma =
-        map {($_**0.5)*$sigma_factor} ( @{ $ref_xyz_data->{VAR_XYZ} },
-                                           $ref_xyz_data->{VAR_CLK}    );
+      my @rec_xyz_sigma =
+        map {($_**0.5)*$sigma_factor} @{ $ref_xyz_data->{VAR_XYZ} };
+
+      # ENU sigma:
+      my @rec_enu_sigma =
+        map {($_**0.5)*$sigma_factor} @{ $ref_xyz_data->{VAR_ENU} };
+
+      # Clock bias sigma:
+      my $rec_clk_sigma = ($ref_xyz_data->{VAR_CLK}**0.5)*$sigma_factor;
 
       # Geodetic receiver coordinates:
       my ($rec_lat, $rec_lon, $rec_helip);
@@ -678,8 +685,8 @@ sub DumpRecPosition {
       my @line_items = (@epoch,
                         $status, $num_sat,
                         @rec_xyz, $rec_clk,
-                        @rec_xyz_clk_sigma,
-                        $rec_lat, $rec_lon, $rec_helip);
+                        @rec_xyz_sigma, $rec_clk_sigma,
+                        @rec_enu_sigma, $rec_lat, $rec_lon, $rec_helip);
 
       # Write data line:
       say $fh join($delimiter, @line_items);
