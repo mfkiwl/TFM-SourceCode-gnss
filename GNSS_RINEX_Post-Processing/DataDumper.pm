@@ -61,11 +61,11 @@ BEGIN {
   our @EXPORT_CONST = qw(  );
 
   # Define subroutines to export:
-  our @EXPORT_SUB   = qw( &DumpLSQReport
-                          &DumpSatObsData
+  our @EXPORT_SUB   = qw( &DumpSatObsData
                           &DumpSatPosition
-                          &DumpRecPosition
-                          &DumpRecSatLoSData );
+                          &DumpRecSatLoSData
+                          &DumpLSQReport
+                          &DumpRecPosition );
 
   # Merge constants and subroutines:
   our @EXPORT_OK = (@EXPORT_CONST, @EXPORT_SUB);
@@ -147,11 +147,11 @@ sub DumpSatObsData {
   for my $sat_sys (@{$ref_gen_conf->{SELECTED_SAT_SYS}})
   {
     # 1. Open dumper file at output path:
-      my $file_path = join('/', ($output_path, "$sat_sys-sat_obs_data.out"));
+      my $file_path = join('/', ($output_path, "$sat_sys-sat-obs-data.out"));
       my $fh; open($fh, '>', $file_path) or die "Could not create $!";
 
     # 2. Write title line:
-      say $fh sprintf("# > Satellite system: $sat_sys, RINEX observations.\n".
+      say $fh sprintf("# > Constellation '$sat_sys' acquired observations.\n".
                       "# > Observation epoch status info:\n".
                       "#   0   --> OK\n".
                       "#   1-6 --> NOK\n".
@@ -179,8 +179,8 @@ sub DumpSatObsData {
 
       # Header line items:
       my @header_items = ( SetEpochHeaderItems($epoch_format),
-                           qw(Status SatID) );
-      push(@header_items, ($_, "$_-NumSat")) for (@sat_sys_obs);
+                           qw(ObsStatus SatID) );
+      push(@header_items, ($_, "$_-NumValidSat")) for (@sat_sys_obs);
 
       # Write header:
       say $fh "#".join($delimiter, @header_items);
@@ -275,22 +275,22 @@ sub DumpRecSatLoSData {
   for my $sat_sys (@{ $ref_gen_conf->{SELECTED_SAT_SYS} })
   {
     # 1. Open dumper file at output path:
-      my $file_path = join('/', ($output_path, "$sat_sys-los-data.out"));
+      my $file_path = join('/', ($output_path, "$sat_sys-LoS-data.out"));
       my $fh; open($fh, '>', $file_path) or croak "Could not create $!";
 
     # 2. Write title line:
-      say $fh sprintf("# > Receiver-Satellite '$sat_sys' Line of Sight data.\n".
-                      "# > Observation epoch status info:\n".
-                      "#   0   --> OK\n".
-                      "#   1-6 --> NOK\n".
+      my $rec_name = $ref_obs_data->{HEAD}{MARKER_NAME};
+      say $fh sprintf("# > Constellation '$sat_sys' Line of Sight data ".
+                      "from '$rec_name' receiver\n".
                       "# > Reference system for ECEF coordinates : %s\n".
                       "# > Created : %s",
                       $ref_gen_conf->{ELIPSOID}, GetPrettyLocalDate());
 
     # 3. Write header line:
       my @header_items = ( SetEpochHeaderItems( $epoch_format ),
-                          qw(ObsStatus SatID TropoCorr IonoCorr
+                          qw(SatID TropoCorr IonoCorr
                              Azimut Zenital Elevation Distance
+                             ENU_IE ENU_IN ENU_IU
                              ECEF_IX ECEF_IY ECEF_IZ) );
 
       say $fh "#".join($delimiter, @header_items);
@@ -299,9 +299,6 @@ sub DumpRecSatLoSData {
       # Go through the observations epochs:
       for (my $i = 0; $i < scalar(@{ $ref_obs_data->{BODY} }); $i += 1)
       {
-        # Save observation epoch status:
-        my $status = $ref_obs_data->{BODY}[$i]{STATUS};
-
         # Epoch is transformed according to configuration:
         my @epoch = &{ $ref_epoch_sub }( $ref_obs_data->{BODY}[$i]{EPOCH} );
 
@@ -318,11 +315,14 @@ sub DumpRecSatLoSData {
                                  $ref_sat_los_data->{ ELEVATION } );
 
           # Save line items:
-          my @line_items = ( @epoch, $status, $sat,
+          my @line_items = ( @epoch, $sat,
                              $ref_sat_los_data->{ TROPO_CORR },
                              $ref_sat_los_data->{ IONO_CORR  },
                              $azimut, $zenital, $elev,
                              $ref_sat_los_data->{ DISTANCE    },
+                             $ref_sat_los_data->{ ENU_VECTOR  }[0],
+                             $ref_sat_los_data->{ ENU_VECTOR  }[1],
+                             $ref_sat_los_data->{ ENU_VECTOR  }[2],
                              $ref_sat_los_data->{ ECEF_VECTOR }[0],
                              $ref_sat_los_data->{ ECEF_VECTOR }[1],
                              $ref_sat_los_data->{ ECEF_VECTOR }[2] );
@@ -385,7 +385,7 @@ sub DumpLSQReport {
   my $ref_epoch_sub = REF_EPOCH_SUB_CONF->{$epoch_format};
 
   # 1. Open dumper file at output path:
-    my $file_path = join('/', ($output_path, "lsq_report_info.out"));
+    my $file_path = join('/', ($output_path, "LSQ-report-info.out"));
     my $fh; open($fh, '>', $file_path) or die "Could not create $!";
 
   # 2. Write title line:
@@ -395,8 +395,8 @@ sub DumpLSQReport {
 
   # 3. Write header line:
     my @header_items =( SetEpochHeaderItems( $epoch_format ),
-                        qw(Iteration Status NumObs NumParameter DegOfFree
-                           StdDevEstimator ConvergenceFlag) );
+                        qw(Iteration LSQ_Status ConvergenceFlag
+                           NumObs NumParameter DegOfFree StdDevEstimator) );
 
     # Insert number of apx parameters:
     push(@header_items,
@@ -423,11 +423,11 @@ sub DumpLSQReport {
         # NOTE: dumping std deviation estimator
         my @line_items = ( @epoch, $iter,
                            $ref_iter_data->{STATUS},
+                           $ref_iter_data->{CONVERGENCE},
                            $ref_iter_data->{NUM_OBSERVATION},
                            $ref_iter_data->{NUM_PARAMETER},
                            $ref_iter_data->{DEGREES_OF_FREEDOM},
                            $ref_iter_data->{VARIANCE_ESTIMATOR}**(0.5),
-                           $ref_iter_data->{CONVERGENCE},
                            @{ $ref_iter_data->{APX_PARAMETER} },
                            @{ $ref_iter_data->{PARAMETER_VECTOR} } );
 
@@ -495,17 +495,14 @@ sub DumpSatPosition {
       my $fh; open($fh, '>', $file_path) or die "Could not create $!";
 
     # 2. Write title line:
-      say $fh sprintf("# > Constellation '$sat_sys' navigation positions.\n".
-                      "# > Observation epoch status info:\n".
-                      "#   0   --> OK\n".
-                      "#   1-6 --> NOK\n".
+      say $fh sprintf("# > Constellation '$sat_sys' navigation data.\n".
                       "# > Reference system for ECEF coordinates : %s\n".
                       "# > Created  : %s",
                       $ref_gen_conf->{ELIPSOID}, GetPrettyLocalDate());
 
     # 3. Write header line:
       my @header_items = ( SetEpochHeaderItems( $epoch_format ),
-                           qw( ObsStatus NumNavSat SatID SatNavStatus
+                           qw( NumSatValidNav SatID SatNavStatus
                                NavX NavY NavZ SatClockBias
                                RecepX RecepY RecepZ
                                NavLat NavLon NavElipHeight
@@ -517,9 +514,6 @@ sub DumpSatPosition {
       # Go through the observations epochs:
       for (my $i = 0; $i < scalar(@{ $ref_obs_data->{BODY} }); $i += 1)
       {
-        # Save observation epoch status:
-        my $obs_status = $ref_obs_data->{BODY}[$i]{STATUS};
-
         # Epoch is transformed according to configuration:
         my @epoch = &{ $ref_epoch_sub }( $ref_obs_data->{BODY}[$i]{EPOCH} );
 
@@ -572,7 +566,7 @@ sub DumpSatPosition {
 
           # Save line items:
           my @line_items = (@epoch,
-                            $obs_status, $num_sat, $sat, $sat_status,
+                            $num_sat, $sat, $sat_status,
                             @sat_xyz_clkbias, @sat_recep_xyz,
                             $sat_lat, $sat_lon, $sat_helip,
                             $recep_lat, $recep_lon, $recep_helip );
@@ -666,14 +660,14 @@ sub DumpRecPosition {
 
   # 2.a. Write title line:
     say $fh sprintf("# > Receiver marker '$rec_name' adjusted coordinates.\n".
-                    "# > NumSat  : satellites used in LSQ estimation\n".
+                    "# > NumObs: number of satellite observations used in ".
+                    "LSQ estimation\n".
                     "# > Reference system for ECEF coordinates : %s\n".
                     "# > Created : %s ",
                     $ref_gen_conf->{ELIPSOID}, GetPrettyLocalDate());
 
   # 2.b. Write reference coordinates if static mode is activated:
   if ($static_mode) {
-
     # Header:
     my @ref_head_items =
       qw(ECEF_X ECEF_Y ECEF_Z GEO_Lat GEO_Lon GEO_ElipHeight);
@@ -693,10 +687,9 @@ sub DumpRecPosition {
     say $fh join($delimiter, @ref_line_items);
   }
 
-
   # 3. Write header line:
     my @header_items = ( SetEpochHeaderItems( $epoch_format ),
-                         qw(Status NumSat
+                         qw(Status NumObs
                             ECEF_X ECEF_Y ECEF_Z ClkBias
                             Sigma_X Sigma_Y Sigma_Z Sigma_ClkBias
                             Sigma_E Sigma_N Sigma_U
@@ -704,7 +697,7 @@ sub DumpRecPosition {
 
     # ENU increments header items:
     if ($static_mode) {
-      push( @header_items, $_ ) for qw(Easting Northing Upping);
+      push( @header_items, $_ ) for qw(REF_IE REF_IN REF_IU);
     }
 
     say $fh "#".join($delimiter, @header_items);
