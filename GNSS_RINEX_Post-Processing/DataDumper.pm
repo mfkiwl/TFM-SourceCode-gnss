@@ -5,7 +5,8 @@ package DataDumper;
 
 
 # TODO: SCRIPT DESCRIPTION GOES HERE:
-# TODO: New dumper for LSQ specific obs info! (or merge with LSQ_info dumper)
+# TODO: New dumper for satellite residual from LSQ info (by sat_sys/by epoch)
+# TODO: New dumper that includes DOP information (by epoch)
 
 # Load bash enviroments:
 # ---------------------------------------------------------------------------- #
