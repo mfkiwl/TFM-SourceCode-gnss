@@ -569,6 +569,9 @@ sub SelectSatForLSQ {
             $rec_sat_ix, # REC-SAT ECEF vector
             $rec_sat_iy,
             $rec_sat_iz,
+            $rec_sat_ie, # REC-SAT ENU vector
+            $rec_sat_in,
+            $rec_sat_iu,
             $rec_sat_azimut, # REC-SAT polar coordiantes
             $rec_sat_zenital,
             $rec_sat_distance,
@@ -690,6 +693,9 @@ sub BuildLSQMatrixSystem {
           $rec_sat_ix, # REC-SAT ECEF vector
           $rec_sat_iy,
           $rec_sat_iz,
+          $rec_sat_ie, # REC-SAT ECEF vector
+          $rec_sat_in,
+          $rec_sat_iu,
           $rec_sat_azimut, # REC-SAT polar coordiantes
           $rec_sat_zenital,
           $rec_sat_distance,
@@ -719,11 +725,12 @@ sub BuildLSQMatrixSystem {
         );
 
       # Fill LoS data in epoch info hash:
-      FillLoSDataHash($ref_epoch_info, $sat,
-                      $rec_sat_azimut, $rec_sat_zenital,
-                      $rec_sat_distance, $rec_sat_elevation,
-                      $ionosphere_corr_f2, $troposhpere_corr,
-                      [$rec_sat_ix, $rec_sat_iy, $rec_sat_iz]);
+      FillLoSDataHash( $ref_epoch_info, $sat,
+                       $rec_sat_azimut, $rec_sat_zenital,
+                       $rec_sat_distance, $rec_sat_elevation,
+                       $ionosphere_corr_f2, $troposhpere_corr,
+                       [$rec_sat_ix, $rec_sat_iy, $rec_sat_iz],
+                       [$rec_sat_ie, $rec_sat_in, $rec_sat_iu] );
 
       # Retrieve configured observation mean error:
       my $obs_err = $ref_gen_conf->{OBS_MEAN_ERR}{$sat_sys};
@@ -1002,6 +1009,7 @@ sub ReceiverSatelliteLoS {
 
   return ( $rec_lat, $rec_lon, $rec_helip,
            $rec_sat_ix, $rec_sat_iy, $rec_sat_iz,
+           $rec_sat_ie, $rec_sat_in, $rec_sat_iu,
            $rec_sat_azimut, $rec_sat_zenital,
            $rec_sat_distance, $rec_sat_elevation );
 }
@@ -1042,7 +1050,8 @@ sub FillLoSDataHash {
   my ( $ref_epoch_info, $sat,
        $rec_sat_azimut, $rec_sat_zenital,
        $rec_sat_distance, $rec_sat_elevation,
-       $ionosphere_corr, $troposphere_corr, $ref_rec_sat_ecef_vector ) = @_;
+       $ionosphere_corr, $troposphere_corr,
+       $ref_rec_sat_ecef_vector, $ref_rec_sat_enu_vector ) = @_;
 
   $ref_epoch_info->{SAT_LOS}{$sat}->{ AZIMUT      } = $rec_sat_azimut;
   $ref_epoch_info->{SAT_LOS}{$sat}->{ ZENITAL     } = $rec_sat_zenital;
@@ -1050,6 +1059,7 @@ sub FillLoSDataHash {
   $ref_epoch_info->{SAT_LOS}{$sat}->{ ELEVATION   } = $rec_sat_elevation;
   $ref_epoch_info->{SAT_LOS}{$sat}->{ IONO_CORR   } = $ionosphere_corr;
   $ref_epoch_info->{SAT_LOS}{$sat}->{ TROPO_CORR  } = $troposphere_corr;
+  $ref_epoch_info->{SAT_LOS}{$sat}->{ ENU_VECTOR  } = $ref_rec_sat_enu_vector;
   $ref_epoch_info->{SAT_LOS}{$sat}->{ ECEF_VECTOR } = $ref_rec_sat_ecef_vector;
 
   return TRUE;
