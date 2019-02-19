@@ -590,8 +590,6 @@ sub DumpSatPosition {
 sub DumpRecPosition {
   my ( $ref_gen_conf, $ref_obs_data, $output_path, $fh_log ) = @_;
 
-  # TODO: include static reference information
-
   # Default input values if not defined:
   $fh_log = *STDOUT unless $fh_log;
 
