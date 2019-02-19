@@ -257,8 +257,6 @@ use constant {
 
 # TODO: Read for the following configuration items
 #       - Integrity configuration
-#       - Data dumper configuration
-#       - Satellites to discard
 
 sub LoadConfiguration {
   my ($file_path, $fh_log) = @_;
@@ -839,30 +837,27 @@ sub LoadConfiguration {
       }
     }
 
+    # TODO: Set configuration for data dumper base file names...
+
     # Output file names:
       # Satellite observation data:
       if ($config_content =~ /^Satellite Observation +: +(.+)$/gim) {
-        # TODO!
       }
 
       # Satellite navigation data:
       if ($config_content =~ /^Satellite Navigation +: +(.+)$/gim) {
-        # TODO!
       }
 
       # Line of sight data:
       if ($config_content =~ /^Line of Sight Data +: +(.+)$/gim) {
-        # TODO!
       }
 
       # Least Squares Report:
       if ($config_content =~ /^Receiver Position +: +(.+)$/gim) {
-        # TODO!
       }
 
       # Receiver position:
       if ($config_content =~ /^Least Squares Report +: +(.+)$/gim) {
-        # TODO!
       }
 
 
