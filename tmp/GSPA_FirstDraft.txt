@@ -1,0 +1,158 @@
+
+# GNSS Service Performance Analyzer:
+
+# Plots to create:
+
+  1. Satellite System information:
+    Graph 1.a
+              · Title --> Satellite System $sat_sys: Constellation availability
+              · Plot type --> Line
+              · X axis/range --> epochs (format??) / from first to last epoch
+              · Y axis/range --> Num sat           / from 0 to $max_num_sat + 2
+              · Datasets --> { Num sat observed in epoch,
+                               Num sat with no-NULL observation,
+                               Num sat with valid navigation data
+                               Num sat for position estimation routine }
+              · Plot style --> Different colors for each dataset
+    Graph 1.b
+              · Title --> Satellite System $sat_sys: Observed Elevation
+              · Plot type --> Line
+              · X axis/range --> epochs    / from first to last epoch
+              · Y axis/range --> elevation / from 0º to 90º (pi/2)
+              · Datasets --> { Elevation sat (from sat_sys) 1
+                               Elevation sat (from sat_sys) 2
+                               ...
+                               Satellite mask  }
+              · Plot style --> different colors for each sat
+                               dotted line for mask threshold
+    Graph 1.c
+              · Title --> Setellite System $sat_sys: Sky Plot
+              · Plot type --> Circular
+              · x axis/range --> sin(az)*cos(el) / from 0º to 360º
+              · y axis/range --> cos(az)*cos(el) / from 0º to 90º
+              · Datasets --> { Sat trace 1,
+                               Sat trace 2,
+                               ...
+                               Satellite mask }
+              · PLot stye --> different colors for each sat
+                              dotted line for satellite mask
+                              epoch of each position is colored in order to value the geometry of each epoch
+
+  2. Dilution of Precision plot:
+    Graph 2.a
+              · Title --> Ex-Post Dilution of Precision (DOP): ECEF Reference Frame
+              · Plot Type --> Line
+              · x axis/range --> epoch / from first to last
+              · y axis/range --> DOP / from 0 to $max_dop + 2
+              · Datasets --> { GDOP --> XYZ + tc
+                               PDOP --> XYZ
+                               TDOP --> tc
+                               * DOPS are given for 1 sigma --> represent 2 sigma and 3 sigma bounds!
+                               }
+              · Plot Style --> color line for each dataset
+                               boundaries with same dataset but transparent color
+    Graph 2.b
+              · Title --> Ex-Post Dilution of Precision (DOP): ENU Reference Frame
+              · Plot Type --> Line
+              · x axis/range --> epoch / from first to last
+              · y axis/range --> DOP / from 0 to $max_dop + 2
+              · Datasets --> { HDOP --> EN,
+                               VDOP --> U,
+                               * DOPS are given for 1 sigma --> represent at 2.5 sigma and 3 sigma!
+                               }
+              · Plot Style --> color line for each dataset
+                               boundaries with same dataset but transparent color
+
+  3. Position plot:
+    Graph 3.a
+              · Title --> Positioning Results: Easting and Northing Against Reference ($ref_station_marker)
+              · Plot Type --> XY position (circular grid!)
+              · x axis/range --> Easting / +- $mean_hdop_std * 3
+              · y axis/range --> Northing / +- $mean_hdop_std * 3
+              · Datasets --> { Receiver easting,
+                               Receiver Northing }
+              · Plot style --> Add density color legend for points!
+                               major grid separators = 0.5m
+                               minor grid separators = 0.2m (dotted line)
+                               x and y axis must be same range and locked on aspect ratio
+                               x = 0 and y = 0 --> Reference!
+    Graph 3.b
+              · Title --> Positioning Results: Upping Against Reference ($ref_station_marker)
+              · PLot type --> Line
+              · x axis/range --> Epoch / from first to last
+              · y axis/range --> Upping / automatic
+              · Datasets --> { Receiver Upping,
+                               +/- Receiver vdop 1.0 sigma,
+                               +/- Receiver vdop 2.5 sigma,
+                               +/- Receiver vdop 3.0 sigma }
+              · Plot style --> Transparent colors for sigma bundaries
+    Graph 3.c
+              · Title --> Positioning Results: ENU Against reference
+              · Plot type --> 3D XYZ
+              · x axis/range --> Easting / +- $mean_pdop_std * 3
+              · y axis/range --> Northing / +- $mean_pdop_std * 3
+              · z axis/range --> Upping / +- $mean_pdop_std * 3
+              · Datasets --> { Easting,
+                               Northing,
+                               Upping }
+              · Plot style --> x = 0; y = 0; z = 0; must be reference!
+                               point with certain transparency to value point density
+
+  4. Ionosphere and Troposphere plots:
+    Graph 4.a
+              · Title --> Troposphere correction ($tropo_model)
+              · Plot type --> horizontal colored bars
+              · x axis/range --> Epoch / from first to last
+              · y axis/range --> SatID / automatic
+              · z value      --> correction using color
+              · Datasets --> { Tropo for sat 1,
+                               ...
+                               Tropo for sat n }
+              · Plot style --> colored bars accoriding to correction magnitude
+    Graph 4.b
+              · Title --> Ionosphere correction ($iono_model)
+              · Plot type --> horizontal colored bars
+              · x axis/range --> Epoch / from first to last
+              · y axis/range --> SatID / automatic
+              · z value      --> correction using color
+              · Datasets --> { Iono for sat 1,
+                               ...
+                               Iono for sat n }
+              · Plot style --> colored bars accoriding to correction magnitude
+
+    **NOTE: would be awesome to add elevation plot under these ones!
+
+  5. Least Squares estimation information:
+    Graph 5.a
+              · Title --> Standard Deviation Estimator
+              · Plot Type --> Line
+              · x axis/range --> Epoch / from first to last
+              · y axis/range --> StdDevEst / automatic
+              · Datasets --> { StdDevEst }
+              · Plot style --> mark value 1 as reference
+    Graph 5.b
+              · Title --> Delta Parameter Estimation
+              · Plot Type --> Line
+              · x axis/range --> Epoch / from first to last
+              · y axis/range --> correction (meters) / automatic
+              · Datasets --> { X delta est,
+                               Y delta est,
+                               Z delta est,
+                               dt delta est, }
+              · Plot style --> ignore first epoch (write down results in plot title or adjacent description note)
+    Graph 5.c
+              · Title --> Satellite observation residuals
+              · Plot type --> horizontal colored bars
+              · x axis/range --> Epoch / from first to last
+              · y axis/range --> SatID / automatic
+              · z value      --> correction using color
+              · Datasets --> { Residual for sat 1,
+                               ...
+                               Residual for sat n }
+              · Plot style --> colored bars according to residual magnitude
+
+
+
+
+** More plots:
+  NONE!
