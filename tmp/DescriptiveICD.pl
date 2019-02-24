@@ -18,8 +18,12 @@
   INTERVAL  => $processing_interval,
 
   # Observation configuration:
-  SELECTED_SIGNALS => \%selected_signals,
-  SAT_MASK         => $satellite_mask,
+  SELECTED_SIGNALS  => \%selected_signals,
+  OBS_MEAN_ERROR    => \%sat_sys_obs_mean_err,
+  CARRIER_FREQUENCY => \%sat_sys_carrier_freq, # filled according to selected
+                                               # observations
+  SAT_MASK          => $satellite_mask,
+  SAT_TO_DISCARD    => \%sat_sys_sat_discard,
 
   # Navigation selection:
   EPH_TIME_THRESHOLD => $ephemerids_selection_threshold,
@@ -35,6 +39,9 @@
   LSQ_MAX_NUM_ITER      => $max_num_of_iterations,
   CONVERGENCE_THRESHOLD => $convergence_threshold,
 
+  # Satic mode configuration:
+  STATIC => \%static_mode,
+
   # Plot configuration:
   PLOT => \%plot_configuration,
 
@@ -49,8 +56,27 @@
                            E => $path_to_gal_nav_file );
 %selected_signals     = (  G => $selected_gps_signal,
                            E => $selected_gal_signal );
+%sat_sys_obs_mean_err = (  G => $obs_mean_error,
+                           E => $obs_mean_error );
+%sat_sys_carrier_freq = (  G => \%carrier_freq,
+                           E => \%carrier_freq );
+%sat_sys_sat_discard  = (  G => \@sats_to_discard,
+                           E => \@sats_to_discard );
 %selected_iono_models = (  G => $gps_iono_model,
                            E => $gal_iono_model );
+
+# Carrier frequency selection hash:
+%carrier_freq = ( F1 => $f1_carrier_frequency,
+                  F2 => $f2_carrier_frequency );
+
+# Static configuration:
+%static_mode = ( STATUS => $boolean_status,
+                 # Flollowing parameters are only filled if static mode status
+                 # is TRUE:
+                 REFERENCE_MODE => $reference_mode,
+                 REFERENCE => \@reference_ecef_coordinates );
+
+@reference_ecef_coordinates = ($x_ecef, $y_ecef, $z_ecef);
 
 # Plot configuration:
 %plot_configuration = 'TBD'; # TODO!
@@ -60,17 +86,15 @@
 # Data Daumper configuration:                                                  #
 # ---------------------------------------------------------------------------- #
 %data_dumper_conf = (
-  SEPARATOR      => $text_delimiter,
-  EPOCH_FORMAT   => \&gnss_time_sub,
-  ANGLE_FORMAT   => \&angle_transformation_sub,
-  SAT_POS_FORMAT => \&coordinate_transformation_sub,
-  REC_POS_FORMAT => \&coordinate_transformation_sub,
-  SIGMA_FACTOR   => $sigma_confidence_level_factor,
-  SAT_SYS_OBS_NAME      => $file_base_name,
-  REC_POSITION_NAME     => $file_base_name,
-  LSQ_REPORT_INFO_NAME  => $file_base_name,
-  SAT_SYS_POSITION_NAME => $file_base_name,
-  REC_SAT_LOS_DATA_NAME => $file_base_name,
+  DELIMITER      => $text_delimiter,
+  EPOCH_FORMAT   => $epoch_format,
+  ANGLE_FORMAT   => $angle_format,
+  SIGMA_FACTOR   => $sigma_confidence_level_scale_factor,
+  SAT_SYS_OBS_NAME      => $file_base_name, # TODO!
+  REC_POSITION_NAME     => $file_base_name, # TODO!
+  LSQ_REPORT_INFO_NAME  => $file_base_name, # TODO!
+  SAT_SYS_POSITION_NAME => $file_base_name, # TODO!
+  REC_SAT_LOS_DATA_NAME => $file_base_name, # TODO!
 );
 
 
