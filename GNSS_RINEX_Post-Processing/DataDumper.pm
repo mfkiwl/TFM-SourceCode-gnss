@@ -221,8 +221,10 @@ sub DumpSatObsData {
 
           # Include selected observations:
           for (@sat_sys_obs) {
-            push(@line_items, ($ref_epoch_data->{SAT_OBS}{$sat}{$_},
-                               $ref_epoch_data->{NUM_OBS_SAT}{$sat_sys}{$_}));
+            push( @line_items,
+                  ($ref_epoch_data->{SAT_OBS}{$sat}{$_},
+                   $ref_epoch_data->{NUM_SAT_INFO}{$sat_sys}
+                                    {VALID_OBS}{$_}{NUM_SAT}) );
           }
 
           # Dump observation data:
@@ -531,7 +533,8 @@ sub DumpSatPosition {
         my @epoch = &{ $ref_epoch_sub }( $ref_obs_data->{BODY}[$i]{EPOCH} );
 
         # Retrieve number of satellites with valid navigation data:
-        my $num_sat = $ref_obs_data->{BODY}[$i]{NUM_NAV_SAT}{$sat_sys};
+        my $num_sat =
+          $ref_obs_data->{BODY}[$i]{NUM_SAT_INFO}{$sat_sys}{VALID_NAV}{NUM_SAT};
 
         # Go through available satellites in hash:
         for my $sat (sort (keys %{ $ref_obs_data->{BODY}[$i]{SAT_POSITION} }))
@@ -723,7 +726,8 @@ sub DumpRecPosition {
       my @epoch = &{ $ref_epoch_sub }( $ref_obs_data->{BODY}[$i]{EPOCH} );
 
       # Number of satellites:
-      my $num_sat = $ref_obs_data->{BODY}[$i]{NUM_LSQ_SAT}{ALL};
+      my $num_sat =
+        $ref_obs_data->{BODY}[$i]{NUM_SAT_INFO}{ALL}{VALID_LSQ}{NUM_SAT};
 
       # Position estimation status:
       my $status = $ref_xyz_data->{STATUS};
