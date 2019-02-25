@@ -237,10 +237,12 @@ sub ComputeSatPosition {
           } # end unless ($sat_eph_epoch != FALSE)
         } # end unless (exists $ref_nav_body->{$sat})
 
-        # If the navigation status is valid, increment counter information:
+        # If the navigation status is valid, account for valid navgation
+        # number of satellites:
+
         if ( $sat_status ) {
-          $ref_epoch_data->{NUM_NAV_SAT}{ ALL      } += 1;
-          $ref_epoch_data->{NUM_NAV_SAT}{ $sat_sys } += 1;
+          CountValidNavigationSat( $sat_sys, $sat,
+                                   $ref_epoch_data->{NUM_SAT_INFO} );
         }
 
         # Save the satellite position in the observation hash:
@@ -261,8 +263,22 @@ sub ComputeSatPosition {
 sub InitValidNavSatCounter {
   my ($ref_epoch_info, $ref_selected_sat_sys) = @_;
 
-  $ref_epoch_info->{NUM_NAV_SAT}{ ALL } = 0;
-  $ref_epoch_info->{NUM_NAV_SAT}{ $_  } = 0 for (@{ $ref_selected_sat_sys });
+  for my $entry (@{ $ref_selected_sat_sys }, 'ALL') {
+    $ref_epoch_info->{NUM_SAT_INFO}{$entry}{VALID_NAV}{NUM_SAT} = 0;
+    $ref_epoch_info->{NUM_SAT_INFO}{$entry}{VALID_NAV}{SAT_IDS} = [];
+  }
+
+  return TRUE;
+}
+
+sub CountValidNavigationSat {
+  my ($sat_sys, $sat_id, $ref_num_sat_info) = @_;
+
+  # Account for cosntellation and ALL hash entries:
+  for my $entry ($sat_sys, 'ALL') {
+    $ref_num_sat_info->{$entry}{VALID_NAV}{NUM_SAT} += 1;
+    PushUnique( $ref_num_sat_info->{$entry}{VALID_NAV}{SAT_IDS}, $sat_id );
+  }
 
   return TRUE;
 }
