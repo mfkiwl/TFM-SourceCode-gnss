@@ -587,8 +587,7 @@ sub SelectSatForLSQ {
         if ($rec_sat_elevation >= $ref_gen_conf->{SAT_MASK}) {
           push(@sat_to_lsq, $sat);
           # Count LSQ satellites to enter LSQ algorithm:
-          $ref_epoch_info->{NUM_LSQ_SAT}{ ALL      } += 1;
-          $ref_epoch_info->{NUM_LSQ_SAT}{ $sat_sys } += 1;
+          CountValidSatForLSQ($sat_sys, $sat, $ref_epoch_info->{NUM_SAT_INFO});
         } else {
           push(@sat_not_to_lsq, $sat);
         }
@@ -900,8 +899,21 @@ sub FillIonoCoefficientWarning {
 sub InitLSQSatelliteCounter {
   my ($ref_epoch_info, $ref_selected_sat_sys) = @_;
 
-  $ref_epoch_info->{NUM_LSQ_SAT}{ ALL } = 0;
-  $ref_epoch_info->{NUM_LSQ_SAT}{ $_  } = 0 for (@{ $ref_selected_sat_sys });
+  for my $entry (@{ $ref_selected_sat_sys }, 'ALL') {
+    $ref_epoch_info->{NUM_SAT_INFO}{$entry}{VALID_LSQ}{NUM_SAT} = 0;
+    $ref_epoch_info->{NUM_SAT_INFO}{$entry}{VALID_LSQ}{SAT_IDS} = [];
+  }
+
+  return TRUE;
+}
+
+sub CountValidSatForLSQ {
+  my ($sat_sys, $sat_id, $ref_num_sat_info) = @_;
+
+  for my $entry ($sat_sys, 'ALL') {
+    $ref_num_sat_info->{$entry}{VALID_LSQ}{NUM_SAT} += 1;
+    PushUnique( $ref_num_sat_info->{$entry}{VALID_LSQ}{SAT_IDS}, $sat_id);
+  }
 
   return TRUE;
 }
