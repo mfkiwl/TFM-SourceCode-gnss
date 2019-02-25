@@ -147,7 +147,8 @@
 %obs_epoch = (
   STATUS  => $obs_epoch_status,
   EPOCH   => $observation_epoch,
-  NUM_SAT => $num_of_observed_sat # same as length of @{keys %sat_obs}
+  NUM_SAT => $num_of_observed_sat, # same as length of @{keys %sat_obs}
+  NUM_SAT_INFO => \%num_sat_hash,
   SAT_OBS => \%sat_obs,
   SAT_LOS => \%line_of_sight_info, # filled after ComputeRecPosition
   LSQ_INFO => \@lsq_info,
@@ -159,6 +160,23 @@
 %sat_obs = ( $sat_id => \%signal_raw_measurements, '[...]' ); # not fixed length
 %signal_raw_measurements = ( $signal_id => $signal_raw_measurement,
                              '[...]' ); # keys are @gps_signals items
+
+# Satellite's number info hash:
+%num_sat_hash = ( G   => \%sat_sys_num_sat,
+                  E   => \%sat_sys_num_sat,
+                  ALL => \%sat_sys_num_sat,  );
+
+%sat_sys_num_sat = ( VALID_NAV => \%num_sat_info,
+                     VALID_LSQ => \%num_sat_info,
+                     VALID_OBS => \%num_sat_info_obs, );
+
+%num_sat_info_obs = ( C1C => %num_sat_info,
+                      C8Q => %num_sat_info, '[...]' );
+                      # keys are the available observations for each
+                      # constellation
+
+%num_sat_info = ( NUM_SAT => $number_of_satellites,
+                  SAT_IDS => \@satellite_id_list );
 
 # Satellite's navigation parameters:
 %sat_xyztc = ( $sat_id = ( # navigation coordinates at observation epoch
@@ -179,7 +197,10 @@
                       ELEVATION   => $rec_to_sat_elevation,
                       IONO_CORR   => $ionosphere_los_delay,
                       TROPO_CORR  => $troposphere_los_delay,
+                      ENU_VECTOR  => \@rec_to_sat_enu_vector,
                       ECEF_VECTOR => \@rec_to_sat_ecef_vector );
+
+@rec_to_sat_enu_vector  = ( $e_enu, $n_enu, $u_enu );
 @rec_to_sat_ecef_vector = ( $x_ecef, $y_ecef, $z_ecef );
 
 # LSQ information:
@@ -187,6 +208,9 @@
 
 %iteration_info = ( STATUS => $boolean_status,
                     CONVERGENCE   => $boolean_status,
+                    NUM_PARAMETER      => $num_parameter,
+                    NUM_OBSERVATION    => $num_obs,
+                    DEGREES_OF_FREEDOM =>  $num_obs - $num_parameter,
                     APX_PARAMETER => \@rec_parameters,
                     PARAMETER_VECTOR => \@rec_delta_parameters,
                     RESIDUAL_VECTOR  => \@residuals,
