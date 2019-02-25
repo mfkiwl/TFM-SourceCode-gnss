@@ -594,7 +594,7 @@ sub ReadObservationRinexV3 {
         $ref_obs_block->{ NUM_SAT } = $num_sat;
 
         # Init hash counter for number of satellites with no-NULL observations:
-        $ref_obs_block->{ NUM_OBS_SAT } =
+        $ref_obs_block->{ NUM_SAT_INFO } =
           InitSatSysNoNullObsCounter( $ref_gen_conf->{SELECTED_SAT_SYS},
                                       $ref_rinex_header->{SYS_OBS_TYPES} );
 
@@ -652,7 +652,8 @@ sub ReadObservationRinexV3 {
 
               # Count no-null observation:
               unless( $raw_obs eq NULL_OBSERVATION ) {
-                $ref_obs_block->{NUM_OBS_SAT}{$sat_sys}{$obs_id} += 1;
+                CountNoNullObservation( $sat_sys, $sat, $obs_id,
+                                        $ref_obs_block->{NUM_SAT_INFO} );
               }
 
               # Fill observation block hash:
@@ -835,10 +836,21 @@ sub InitSatSysNoNullObsCounter {
   # Init hash:
   my $ref_sat_sys_counter = {};
 
-  # Init to 0 all counters:
+  # Init to 0 all counters and init an empty array to store the satellite IDs:
   for my $sat_sys (@{ $ref_selected_sat_sys }) {
     for my $sat_sys_obs (@{ $ref_sat_sys_obs->{$sat_sys}{OBS} }){
-      $ref_sat_sys_counter->{$sat_sys}{$sat_sys_obs} = 0;
+
+      # Init entries for each observation of each constellation:
+      $ref_sat_sys_counter->{$sat_sys}{VALID_OBS}{$sat_sys_obs}{NUM_SAT} = 0;
+      $ref_sat_sys_counter->{$sat_sys}{VALID_OBS}{$sat_sys_obs}{SAT_IDS} = [];
+
+      # Init 'ALL' counter observation entry:
+      # Observation ID is trimmed to not account for tracking mode: only
+      # observation type and band frequency are relevant
+      my $simple_sat_obs = substr($sat_sys_obs, 0, 2);
+      $ref_sat_sys_counter->{ALL}{VALID_OBS}{$simple_sat_obs}{NUM_SAT} = 0;
+      $ref_sat_sys_counter->{ALL}{VALID_OBS}{$simple_sat_obs}{SAT_IDS} = [];
+
     }
   }
 
@@ -855,6 +867,24 @@ sub ConsistentSatID {
   }
 
   return $sat;
+}
+
+sub CountNoNullObservation {
+  my ($sat_sys, $sat_id, $obs_id, $ref_num_sat_info) = @_;
+
+  # Account for constellation, satellite and observation id:
+  $ref_num_sat_info->{$sat_sys}{VALID_OBS}{$obs_id}{NUM_SAT} += 1;
+  PushUnique( $ref_num_sat_info->
+                {$sat_sys}{VALID_OBS}{$obs_id}{SAT_IDS}, $sat_id );
+
+  # Account for 'ALL' hash entry:
+  # Build simple observation identifier (obs type and frquency channel):
+  my $simple_obs_id = substr($obs_id, 0, 2);
+  $ref_num_sat_info->{ALL}{VALID_OBS}{$simple_obs_id}{NUM_SAT} += 1;
+  PushUnique( $ref_num_sat_info->
+                {ALL}{VALID_OBS}{$simple_obs_id}{SAT_IDS}, $sat_id );
+
+  return TRUE;
 }
 
 sub ReadIonParameters {
