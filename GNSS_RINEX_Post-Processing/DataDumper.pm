@@ -6,6 +6,18 @@ package DataDumper;
 
 # TODO: SCRIPT DESCRIPTION GOES HERE:
 # TODO: New dumper for satellite residual from LSQ info (by sat_sys/by epoch)
+#       \_ Include this in already existing LSQ_info dumper
+# TODO: New dumper file with LSQ info per epoch!
+# TODO: New dumper files in the form of:
+#       Epoch    SatID1    SatID2    ... --> all observed satellites (??)
+#       t1       x1        y1
+#       ...      ...       ...
+# For:
+#      1. Ionosphere correction
+#      2. Troposhpere correction
+#      3. Azimut
+#      4. Elevation
+#      5. Residual (last iteration of LSQ)
 # TODO: New dumper that includes DOP information (by epoch)
 
 # Load bash enviroments:
