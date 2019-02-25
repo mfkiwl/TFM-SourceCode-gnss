@@ -6,6 +6,9 @@ package GeneralConfiguration;
 
 # SCRIPT DESCRIPTION GOES HERE:
 
+# TODO: set null ionosphere and tropsphere model configuration
+#       Possibility of not computing these corrections
+
 # Load bash enviroments:
 # ---------------------------------------------------------------------------- #
 use lib $ENV{ ENV_ROOT };
