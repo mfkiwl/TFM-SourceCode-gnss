@@ -12,8 +12,9 @@
               · Datasets --> { Num sat observed in epoch,
                                Num sat with no-NULL observation,
                                Num sat with valid navigation data
-                               Num sat for position estimation routine }
+                               Num sat for LSQ routine }
               · Plot style --> Different colors for each dataset
+                           --> Specify selected observation
     Graph 1.b
               · Title --> Satellite System $sat_sys: Observed Elevation
               · Plot type --> Line
@@ -25,6 +26,7 @@
                                Satellite mask  }
               · Plot style --> different colors for each sat
                                dotted line for mask threshold
+                               specify mask value
     Graph 1.c
               · Title --> Setellite System $sat_sys: Sky Plot
               · Plot type --> Circular
@@ -128,7 +130,10 @@
               · Plot Type --> Line
               · x axis/range --> Epoch / from first to last
               · y axis/range --> StdDevEst / automatic
-              · Datasets --> { StdDevEst }
+              · Datasets --> { StdDevEst
+                               DegOfFree }
+              # May be better to create a separate graph with number of
+              # parameters, observations and degrees of freedom...
               · Plot style --> mark value 1 as reference
     Graph 5.b
               · Title --> Delta Parameter Estimation
