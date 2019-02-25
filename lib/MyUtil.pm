@@ -35,6 +35,7 @@ BEGIN {
                        &GENERIC_WARN_CODE
                        &DummySub
                        &SkipLines
+                       &PushUnique
                        &ReadBoolean
                        &PurgeExtraSpaces
                        &GetPrettyLocalDate );
@@ -82,6 +83,21 @@ sub PurgeExtraSpaces {
   $string =~ s/^ +| +$//;
 
   return $string;
+}
+
+sub PushUnique {
+  my ( $ref_array, $push_value ) = @_;
+
+  unless (ref($ref_array) eq 'ARRAY') {
+    croak "Not a valid array reference in ".
+          "'PushUnique($ref_array, $push_value)'";
+  }
+
+  unless (grep( /^$push_value$/, @{ $ref_array } )) {
+    push( @$ref_array, $push_value );
+  }
+
+  return TRUE;
 }
 
 sub ReadBoolean {
