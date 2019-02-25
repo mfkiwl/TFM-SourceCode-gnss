@@ -111,7 +111,7 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
                                                 $ref_gps_nav_rinex,
                                                 $FH_LOG );
 
-  # print Dumper $ref_obs_data->{BODY}[0]{LSQ_INFO}; exit 0;
+  # print Dumper $ref_obs_data->{BODY}[0]; exit 0;
 
   ReportElapsedTime([gettimeofday],
                     $ini_rec_position_time_stamp, "ComputeRecPosition()");
@@ -152,8 +152,10 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
   PrintTitle3($FH_LOG, "Dumping Satellite Observation Data:");
   DumpSatObsData( $ref_gen_conf,
                   $ref_obs_data,
-                  [$ref_gen_conf->{SELECTED_SIGNALS}{E},
-                   $ref_gen_conf->{SELECTED_SIGNALS}{G}],
+                  [
+                   $ref_gen_conf->{SELECTED_SIGNALS}{E},
+                   $ref_gen_conf->{SELECTED_SIGNALS}{G}
+                   ],
                   $ref_gen_conf->{OUTPUT_PATH}, $FH_LOG );
 
   ReportElapsedTime([gettimeofday],
