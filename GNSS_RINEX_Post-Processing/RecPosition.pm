@@ -196,6 +196,9 @@ sub ComputeRecPosition {
                                          \@iter_solution, $iteration );
 
           # Set number of observations and parameters to estimate:
+          # NOTE: as far as only one observation types is processed,
+          #       number of observations for LSQ is equal to the number
+          #       of satellites selected for the LSQ routine
           my ( $num_obs,
                $num_parameter ) = ( scalar(@sat_to_lsq),
                                     NUM_PARAMETERS_TO_ESTIMATE );
