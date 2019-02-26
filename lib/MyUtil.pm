@@ -86,15 +86,19 @@ sub PurgeExtraSpaces {
 }
 
 sub PushUnique {
-  my ( $ref_array, $push_value ) = @_;
+  my ( $ref_array, @values ) = @_;
 
+  # Consistency check for array:
   unless (ref($ref_array) eq 'ARRAY') {
     croak "Not a valid array reference in ".
-          "'PushUnique($ref_array, $push_value)'";
+          "'PushUnique($ref_array, ".join(', ', @values).")'";
   }
 
-  unless (grep( /^$push_value$/, @{ $ref_array } )) {
-    push( @$ref_array, $push_value );
+  # Push each passed value if not present already:
+  for my $push_value (@values) {
+    unless (grep( /^$push_value$/, @{ $ref_array } )) {
+      push( @$ref_array, $push_value );
+    }
   }
 
   return TRUE;
