@@ -791,6 +791,21 @@ sub DumpRecPosition {
   return TRUE;
 }
 
+sub DumpNumValidSat {}
+
+sub DumpEpochDOP {}
+
+sub DumpAzimutBySat {}
+
+sub DumpElevationBySat {}
+
+sub DumpIonoCorrBySat {}
+
+sub DumpTropoCorrBySat {}
+
+sub DumpResidualsBySat {}
+
+
 # Private Subrutines:
 # ............................................................................ #
 sub SetEpochHeaderItems {
