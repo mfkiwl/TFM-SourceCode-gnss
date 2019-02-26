@@ -243,6 +243,149 @@ sub DumpSatObsData {
   return TRUE;
 }
 
+sub DumpSatPosition {
+  my ( $ref_gen_conf, $ref_obs_data, $output_path, $fh_log ) = @_;
+
+  # Default input values if not defined:
+  $fh_log = *STDOUT unless $fh_log;
+
+  # ************************* #
+  # Input consistency cehcks: #
+  # ************************* #
+
+  # Output path must exist and have write permissions:
+  unless (-w $output_path) {
+   RaiseError($fh_log, ERR_WRITE_PERMISSION_DENIED,
+     "User '".$ENV{USER}."' does not have write permissions at $output_path");
+   return KILLED;
+  }
+
+  # General configuration must be hash type:
+  unless (ref($ref_gen_conf) eq 'HASH') {
+   RaiseError($fh_log, ERR_WRONG_HASH_REF,
+     "Input argument \'$ref_gen_conf\' is not HASH type");
+   return KILLED;
+  }
+
+  # Observation data must be hash type:
+  unless (ref($ref_obs_data) eq 'HASH') {
+   RaiseError($fh_log, ERR_WRONG_HASH_REF,
+     "Input argument \'$ref_obs_data\' is not HASH type");
+   return KILLED;
+  }
+
+
+  # ********************************** #
+  # Satellite position dumper routine: #
+  # ********************************** #
+
+  # Save dumper useful configuration:
+  my $delimiter    = $ref_gen_conf->{DATA_DUMPER}{ DELIMITER    };
+  my $epoch_format = $ref_gen_conf->{DATA_DUMPER}{ EPOCH_FORMAT };
+  my $angle_format = $ref_gen_conf->{DATA_DUMPER}{ ANGLE_FORMAT };
+
+  my $ref_epoch_sub = REF_EPOCH_SUB_CONF->{$epoch_format};
+  my $ref_angle_sub = REF_ANGLE_SUB_CONF->{$angle_format};
+
+  for my $sat_sys (@{ $ref_gen_conf->{SELECTED_SAT_SYS} })
+  {
+    # 1. Open dumper file at output path:
+      my $file_path = join('/', ($output_path, "$sat_sys-sat-xyz.out"));
+      my $fh; open($fh, '>', $file_path) or die "Could not create $!";
+
+    # 2. Write title line:
+      say $fh sprintf("# > Constellation '$sat_sys' navigation data.\n".
+                      "# > Reference system for ECEF coordinates : %s\n".
+                      "# > Created  : %s",
+                      $ref_gen_conf->{ELIPSOID}, GetPrettyLocalDate());
+
+    # 3. Write header line:
+      my @header_items = ( SetEpochHeaderItems( $epoch_format ),
+                           qw( NumSatValidNav SatID SatNavStatus
+                               NavX NavY NavZ SatClockBias
+                               RecepX RecepY RecepZ
+                               NavLat NavLon NavElipHeight
+                               RecepLat RecepLon RecepElipHeight ) );
+
+      say $fh "#".join($delimiter, @header_items);
+
+    # 4. Write Line of Sight data:
+      # Go through the observations epochs:
+      for (my $i = 0; $i < scalar(@{ $ref_obs_data->{BODY} }); $i += 1)
+      {
+        # Epoch is transformed according to configuration:
+        my @epoch = &{ $ref_epoch_sub }( $ref_obs_data->{BODY}[$i]{EPOCH} );
+
+        # Retrieve number of satellites with valid navigation data:
+        my $num_sat =
+          $ref_obs_data->{BODY}[$i]{NUM_SAT_INFO}{$sat_sys}{VALID_NAV}{NUM_SAT};
+
+        # Go through available satellites in hash:
+        for my $sat (sort (keys %{ $ref_obs_data->{BODY}[$i]{SAT_POSITION} }))
+        {
+          # Save satellite position data reference:
+          my $ref_sat_position = $ref_obs_data->{BODY}[$i]{SAT_POSITION}{$sat};
+
+          # Retrieve satellite navigation status:
+          my $sat_status = $ref_sat_position->{NAV}{STATUS};
+
+          # Satellite ECEF coordinates and clock bias:
+          my @sat_xyz_clkbias = @{ $ref_sat_position->{NAV}{XYZ_TC} };
+
+          # Init ECEF and Geodetic satellite coordinates and clock bias:
+          my @sat_recep_xyz;
+          my ($sat_lat, $sat_lon, $sat_helip);
+          my ($recep_lat, $recep_lon, $recep_helip);
+
+          # Set reception and geodetic coordinates if valid navigation data is
+          # available:
+          if ($sat_status) {
+
+            # Retrieve reception ECEF coordinates:
+            @sat_recep_xyz = @{ $ref_sat_position->{RECEP} }[0..2];
+
+            # Compute geodetic navigation coordinates:
+            ($sat_lat, $sat_lon, $sat_helip) =
+              ECEF2Geodetic(@sat_xyz_clkbias[0..2], $ref_gen_conf->{ELIPSOID});
+
+            # Compute geodetic reception  coordinates:
+            ($recep_lat, $recep_lon, $recep_helip) =
+              ECEF2Geodetic(@sat_recep_xyz, $ref_gen_conf->{ELIPSOID});
+
+          } else {
+            # Set null information for invalid navigation status:
+            @sat_recep_xyz = (0, 0, 0);
+            ($sat_lat, $sat_lon, $sat_helip) = (0, 0, 0);
+            ($recep_lat, $recep_lon, $recep_helip) = (0, 0, 0);
+          }
+
+          # Latitude and longitude are transformed according to configuration:
+          ($sat_lat, $sat_lon,
+           $recep_lat, $recep_lon) = &{$ref_angle_sub}($sat_lat, $sat_lon,
+                                                       $recep_lat, $recep_lon);
+
+          # Save line items:
+          my @line_items = (@epoch,
+                            $num_sat, $sat, $sat_status,
+                            @sat_xyz_clkbias, @sat_recep_xyz,
+                            $sat_lat, $sat_lon, $sat_helip,
+                            $recep_lat, $recep_lon, $recep_helip );
+
+          # Write data line:
+          say $fh join($delimiter, @line_items);
+
+        } # end for $sat
+      } # end for $i
+
+    # 5. Close dumper file:
+    close($fh);
+
+  } # end for $sat_sys
+
+  # Sub's answer is TRUE if successfull:
+  return TRUE;
+}
+
 sub DumpRecSatLoSData {
   my ($ref_gen_conf, $ref_obs_data, $output_path, $fh_log) = @_;
 
@@ -454,149 +597,6 @@ sub DumpLSQReport {
 
   # 5. Close dumper file:
   close($fh);
-
-  # Sub's answer is TRUE if successfull:
-  return TRUE;
-}
-
-sub DumpSatPosition {
-  my ( $ref_gen_conf, $ref_obs_data, $output_path, $fh_log ) = @_;
-
-  # Default input values if not defined:
-  $fh_log = *STDOUT unless $fh_log;
-
-  # ************************* #
-  # Input consistency cehcks: #
-  # ************************* #
-
-  # Output path must exist and have write permissions:
-  unless (-w $output_path) {
-   RaiseError($fh_log, ERR_WRITE_PERMISSION_DENIED,
-     "User '".$ENV{USER}."' does not have write permissions at $output_path");
-   return KILLED;
-  }
-
-  # General configuration must be hash type:
-  unless (ref($ref_gen_conf) eq 'HASH') {
-   RaiseError($fh_log, ERR_WRONG_HASH_REF,
-     "Input argument \'$ref_gen_conf\' is not HASH type");
-   return KILLED;
-  }
-
-  # Observation data must be hash type:
-  unless (ref($ref_obs_data) eq 'HASH') {
-   RaiseError($fh_log, ERR_WRONG_HASH_REF,
-     "Input argument \'$ref_obs_data\' is not HASH type");
-   return KILLED;
-  }
-
-
-  # ********************************** #
-  # Satellite position dumper routine: #
-  # ********************************** #
-
-  # Save dumper useful configuration:
-  my $delimiter    = $ref_gen_conf->{DATA_DUMPER}{ DELIMITER    };
-  my $epoch_format = $ref_gen_conf->{DATA_DUMPER}{ EPOCH_FORMAT };
-  my $angle_format = $ref_gen_conf->{DATA_DUMPER}{ ANGLE_FORMAT };
-
-  my $ref_epoch_sub = REF_EPOCH_SUB_CONF->{$epoch_format};
-  my $ref_angle_sub = REF_ANGLE_SUB_CONF->{$angle_format};
-
-  for my $sat_sys (@{ $ref_gen_conf->{SELECTED_SAT_SYS} })
-  {
-    # 1. Open dumper file at output path:
-      my $file_path = join('/', ($output_path, "$sat_sys-sat-xyz.out"));
-      my $fh; open($fh, '>', $file_path) or die "Could not create $!";
-
-    # 2. Write title line:
-      say $fh sprintf("# > Constellation '$sat_sys' navigation data.\n".
-                      "# > Reference system for ECEF coordinates : %s\n".
-                      "# > Created  : %s",
-                      $ref_gen_conf->{ELIPSOID}, GetPrettyLocalDate());
-
-    # 3. Write header line:
-      my @header_items = ( SetEpochHeaderItems( $epoch_format ),
-                           qw( NumSatValidNav SatID SatNavStatus
-                               NavX NavY NavZ SatClockBias
-                               RecepX RecepY RecepZ
-                               NavLat NavLon NavElipHeight
-                               RecepLat RecepLon RecepElipHeight ) );
-
-      say $fh "#".join($delimiter, @header_items);
-
-    # 4. Write Line of Sight data:
-      # Go through the observations epochs:
-      for (my $i = 0; $i < scalar(@{ $ref_obs_data->{BODY} }); $i += 1)
-      {
-        # Epoch is transformed according to configuration:
-        my @epoch = &{ $ref_epoch_sub }( $ref_obs_data->{BODY}[$i]{EPOCH} );
-
-        # Retrieve number of satellites with valid navigation data:
-        my $num_sat =
-          $ref_obs_data->{BODY}[$i]{NUM_SAT_INFO}{$sat_sys}{VALID_NAV}{NUM_SAT};
-
-        # Go through available satellites in hash:
-        for my $sat (sort (keys %{ $ref_obs_data->{BODY}[$i]{SAT_POSITION} }))
-        {
-          # Save satellite position data reference:
-          my $ref_sat_position = $ref_obs_data->{BODY}[$i]{SAT_POSITION}{$sat};
-
-          # Retrieve satellite navigation status:
-          my $sat_status = $ref_sat_position->{NAV}{STATUS};
-
-          # Satellite ECEF coordinates and clock bias:
-          my @sat_xyz_clkbias = @{ $ref_sat_position->{NAV}{XYZ_TC} };
-
-          # Init ECEF and Geodetic satellite coordinates and clock bias:
-          my @sat_recep_xyz;
-          my ($sat_lat, $sat_lon, $sat_helip);
-          my ($recep_lat, $recep_lon, $recep_helip);
-
-          # Set reception and geodetic coordinates if valid navigation data is
-          # available:
-          if ($sat_status) {
-
-            # Retrieve reception ECEF coordinates:
-            @sat_recep_xyz = @{ $ref_sat_position->{RECEP} }[0..2];
-
-            # Compute geodetic navigation coordinates:
-            ($sat_lat, $sat_lon, $sat_helip) =
-              ECEF2Geodetic(@sat_xyz_clkbias[0..2], $ref_gen_conf->{ELIPSOID});
-
-            # Compute geodetic reception  coordinates:
-            ($recep_lat, $recep_lon, $recep_helip) =
-              ECEF2Geodetic(@sat_recep_xyz, $ref_gen_conf->{ELIPSOID});
-
-          } else {
-            # Set null information for invalid navigation status:
-            @sat_recep_xyz = (0, 0, 0);
-            ($sat_lat, $sat_lon, $sat_helip) = (0, 0, 0);
-            ($recep_lat, $recep_lon, $recep_helip) = (0, 0, 0);
-          }
-
-          # Latitude and longitude are transformed according to configuration:
-          ($sat_lat, $sat_lon,
-           $recep_lat, $recep_lon) = &{$ref_angle_sub}($sat_lat, $sat_lon,
-                                                       $recep_lat, $recep_lon);
-
-          # Save line items:
-          my @line_items = (@epoch,
-                            $num_sat, $sat, $sat_status,
-                            @sat_xyz_clkbias, @sat_recep_xyz,
-                            $sat_lat, $sat_lon, $sat_helip,
-                            $recep_lat, $recep_lon, $recep_helip );
-
-          # Write data line:
-          say $fh join($delimiter, @line_items);
-
-        } # end for $sat
-      } # end for $i
-
-    # 5. Close dumper file:
-    close($fh);
-
-  } # end for $sat_sys
 
   # Sub's answer is TRUE if successfull:
   return TRUE;
