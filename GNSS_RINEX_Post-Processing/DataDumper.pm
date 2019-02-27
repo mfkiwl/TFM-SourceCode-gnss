@@ -78,7 +78,8 @@ BEGIN {
                           &DumpSatPosition
                           &DumpRecSatLoSData
                           &DumpLSQReport
-                          &DumpRecPosition );
+                          &DumpRecPosition
+                          &DumpNumValidSat );
 
   # Merge constants and subroutines:
   our @EXPORT_OK = (@EXPORT_CONST, @EXPORT_SUB);
@@ -791,7 +792,126 @@ sub DumpRecPosition {
   return TRUE;
 }
 
-sub DumpNumValidSat {}
+sub DumpNumValidSat {
+  my ( $ref_gen_conf, $ref_obs_data, $output_path, $fh_log ) = @_;
+
+  # Default input values if not defined:
+  $fh_log = *STDOUT unless $fh_log;
+
+  # ************************* #
+  # Input consistency cehcks: #
+  # ************************* #
+  # Output path must exist and have write permissions:
+  unless (-w $output_path) {
+   RaiseError($fh_log, ERR_WRITE_PERMISSION_DENIED,
+     "User '".$ENV{USER}."' does not have write permissions at $output_path");
+   return KILLED;
+  }
+
+  # General configuration must be hash type:
+  unless (ref($ref_gen_conf) eq 'HASH') {
+   RaiseError($fh_log, ERR_WRONG_HASH_REF,
+     "Input argument \'$ref_gen_conf\' is not HASH type");
+   return KILLED;
+  }
+
+  # Observation data must be hash type:
+  unless (ref($ref_obs_data) eq 'HASH') {
+   RaiseError($fh_log, ERR_WRONG_HASH_REF,
+     "Input argument \'$ref_obs_data\' is not HASH type");
+   return KILLED;
+  }
+
+  # ********************************* #
+  # Receiver Position dumper routine: #
+  # ********************************* #
+
+  # Retrieve dumper configuration:
+  my $delimiter    = $ref_gen_conf->{DATA_DUMPER}{ DELIMITER      };
+  my $epoch_format = $ref_gen_conf->{DATA_DUMPER}{ EPOCH_FORMAT   };
+
+  # Set epoch and angle subroutine references:
+  my $ref_epoch_sub = REF_EPOCH_SUB_CONF->{$epoch_format};
+
+
+  # Produce an output for each selected constellation and for the sum of
+  # all of them:
+  for my $sat_sys (@{ $ref_gen_conf->{SELECTED_SAT_SYS} }, 'ALL') {
+
+    # 1. Open dumper file at output path:
+      my $file_path = join('/', ($output_path, "$sat_sys-num-sat-info.out"));
+      my $fh; open($fh, '>', $file_path) or die "Could not create $!";
+
+    # 2.a. Write title line:
+      say $fh sprintf("# > Satellite system '$sat_sys' ".
+                      "number of valid satellites.\n".
+                      "# > Created : %s ", GetPrettyLocalDate());
+
+    # TODO: include here the seleceted observations as a informantion
+
+    # 3. Write header line:
+      my @header_items = ( SetEpochHeaderItems( $epoch_format ),
+                           'ValidObs', 'ValidNav', 'ValidLSQ' );
+      say $fh "#".join($delimiter, @header_items);
+
+    # 4. Write Num satellites info:
+      # Iterate over observation epochs:
+      for (my $i = 0; $i < scalar(@{ $ref_obs_data->{BODY} }); $i += 1) {
+
+        # Set reference to number of satellites info:
+        my $ref_num_sat_info = $ref_obs_data->{BODY}[$i]{NUM_SAT_INFO};
+
+        # Get epoch:
+        my @epoch =
+          &{ $ref_epoch_sub }($ref_obs_data->{BODY}[$i]{EPOCH});
+
+        # Retrieve number of satellites with no null observation:
+        my $num_sat_valid_obs;
+
+        # 'ALL' entry is treated as the sum of the available satellites with the
+        # corresponding observation for each constellation:
+        if ($sat_sys eq 'ALL') {
+
+          for my $obs_id (values %{ $ref_gen_conf->{SELECTED_SIGNALS} }) {
+            $num_sat_valid_obs +=
+              $ref_num_sat_info->{$sat_sys}{VALID_OBS}{$obs_id}{NUM_SAT};
+          }
+
+        } else {
+
+          my $obs_id = $ref_gen_conf->{SELECTED_SIGNALS}{$sat_sys};
+          $num_sat_valid_obs =
+            $ref_num_sat_info->{$sat_sys}{VALID_OBS}{$obs_id}{NUM_SAT};
+
+        }
+
+        # Retrieve number of satellites with valid computed navigation:
+        my $num_sat_valid_nav =
+           $ref_num_sat_info->{$sat_sys}{VALID_NAV}{NUM_SAT};
+
+        # Retrieve number of satellites to enter LSQ algorithm:
+        my $num_sat_valid_lsq =
+           $ref_num_sat_info->{$sat_sys}{VALID_LSQ}{NUM_SAT};
+
+        # Write data line:
+        my @line_items = ( @epoch,
+                           $num_sat_valid_obs,
+                           $num_sat_valid_nav,
+                           $num_sat_valid_lsq );
+
+        say $fh join($delimiter, @line_items);
+
+      } # end for $i
+
+    # 5. Close dumper file:
+    close($fh);
+
+  } # end for $sat_sys
+
+  # Subroutine's answer is TRUE if the
+  # information has been successfully dumped:
+  return TRUE;
+}
 
 sub DumpEpochDOP {}
 
