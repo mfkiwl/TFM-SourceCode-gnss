@@ -206,6 +206,15 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
                     $ini_time_dump_data, "DumpRecPosition()");
   $MEM_USAGE->record('-> DumpRecPosition');
 
+  PrintTitle3($FH_LOG, "Dumping Number of satellites information:");
+  DumpNumValidSat( $ref_gen_conf,
+                   $ref_obs_data,
+                   $ref_gen_conf->{OUTPUT_PATH}, $FH_LOG );
+
+  ReportElapsedTime([gettimeofday],
+                    $ini_time_dump_data, "DumpNumValidSat()");
+  $MEM_USAGE->record('-> DumpNumValidSat');
+
 # Terminal:
   # Close output log file:
     close($FH_LOG);
