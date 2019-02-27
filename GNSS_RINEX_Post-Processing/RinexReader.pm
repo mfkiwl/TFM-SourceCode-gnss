@@ -845,11 +845,8 @@ sub InitSatSysNoNullObsCounter {
       $ref_sat_sys_counter->{$sat_sys}{VALID_OBS}{$sat_sys_obs}{SAT_IDS} = [];
 
       # Init 'ALL' counter observation entry:
-      # Observation ID is trimmed to not account for tracking mode: only
-      # observation type and band frequency are relevant
-      my $simple_sat_obs = substr($sat_sys_obs, 0, 2);
-      $ref_sat_sys_counter->{ALL}{VALID_OBS}{$simple_sat_obs}{NUM_SAT} = 0;
-      $ref_sat_sys_counter->{ALL}{VALID_OBS}{$simple_sat_obs}{SAT_IDS} = [];
+      $ref_sat_sys_counter->{ALL}{VALID_OBS}{$sat_sys_obs}{NUM_SAT} = 0;
+      $ref_sat_sys_counter->{ALL}{VALID_OBS}{$sat_sys_obs}{SAT_IDS} = [];
 
     }
   }
@@ -878,11 +875,9 @@ sub CountNoNullObservation {
                 {$sat_sys}{VALID_OBS}{$obs_id}{SAT_IDS}, $sat_id );
 
   # Account for 'ALL' hash entry:
-  # Build simple observation identifier (obs type and frquency channel):
-  my $simple_obs_id = substr($obs_id, 0, 2);
-  $ref_num_sat_info->{ALL}{VALID_OBS}{$simple_obs_id}{NUM_SAT} += 1;
+  $ref_num_sat_info->{ALL}{VALID_OBS}{$obs_id}{NUM_SAT} += 1;
   PushUnique( $ref_num_sat_info->
-                {ALL}{VALID_OBS}{$simple_obs_id}{SAT_IDS}, $sat_id );
+                {ALL}{VALID_OBS}{$obs_id}{SAT_IDS}, $sat_id );
 
   return TRUE;
 }
