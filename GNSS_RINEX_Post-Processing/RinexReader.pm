@@ -593,6 +593,9 @@ sub ReadObservationRinexV3 {
         $ref_obs_block->{ STATUS  } = $epoch_status;
         $ref_obs_block->{ NUM_SAT } = $num_sat;
 
+        # TODO: inlcude in NUM_SAT the number of observed satellites for
+        #       each constellation.
+
         # Init hash counter for number of satellites with no-NULL observations:
         $ref_obs_block->{ NUM_SAT_INFO } =
           InitSatSysNoNullObsCounter( $ref_gen_conf->{SELECTED_SAT_SYS},
