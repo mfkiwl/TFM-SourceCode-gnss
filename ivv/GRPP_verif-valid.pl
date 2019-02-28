@@ -224,6 +224,24 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
                     $ini_time_dump_data, "DumpEpochDOP()");
   $MEM_USAGE->record('-> DumpEpochDOP');
 
+  PrintTitle3($FH_LOG, "Dumping Elevation by Satellite:");
+  DumpElevationBySat( $ref_gen_conf,
+                      $ref_obs_data,
+                      $ref_gen_conf->{OUTPUT_PATH}, $FH_LOG );
+
+  ReportElapsedTime([gettimeofday],
+                    $ini_time_dump_data, "DumpElevationBySat()");
+  $MEM_USAGE->record('-> DumpElevationBySat');
+
+  PrintTitle3($FH_LOG, "Dumping Azimut by Satellite:");
+  DumpAzimutBySat( $ref_gen_conf,
+                   $ref_obs_data,
+                   $ref_gen_conf->{OUTPUT_PATH}, $FH_LOG );
+
+  ReportElapsedTime([gettimeofday],
+                    $ini_time_dump_data, "DumpAzimutBySat()");
+  $MEM_USAGE->record('-> DumpAzimutBySat');
+
 # Terminal:
   # Close output log file:
     close($FH_LOG);
