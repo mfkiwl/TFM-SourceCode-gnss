@@ -582,6 +582,17 @@ sub SelectSatForLSQ {
                                                        \@rec_apx_xyzdt,
                                                        \@sat_xyz_recep );
 
+        # Update LoS hash info:
+        # NOTE: ionosphere and troposphere corrections are set to 0
+        #       they will be filled after when building the observation
+        #       equation
+        FillLoSDataHash( $ref_epoch_info, $sat,
+                         $rec_sat_azimut, $rec_sat_zenital,
+                         $rec_sat_distance, $rec_sat_elevation,
+                                         0,                  0,
+                         [$rec_sat_ix, $rec_sat_iy, $rec_sat_iz],
+                         [$rec_sat_ie, $rec_sat_in, $rec_sat_iu] );
+
         # 3. Determine if sat accomplishes selection criteria.
         #    Mask criteria is only assumed:
         if ($rec_sat_elevation >= $ref_gen_conf->{SAT_MASK}) {
