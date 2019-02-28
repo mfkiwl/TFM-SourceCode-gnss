@@ -471,10 +471,17 @@ sub DumpRecSatLoSData {
                                  $ref_sat_los_data->{ ZENITAL   },
                                  $ref_sat_los_data->{ ELEVATION } );
 
+          # Check if iono and tropo corrections have been computed:
+          my $iono_corr  =
+            (defined $ref_sat_los_data->{IONO_CORR}) ?
+              $ref_sat_los_data->{IONO_CORR} : NULL_DATA;
+          my $tropo_corr =
+            (defined $ref_sat_los_data->{TROPO_CORR}) ?
+              $ref_sat_los_data->{TROPO_CORR} : NULL_DATA;
+
           # Save line items:
           my @line_items = ( @epoch, $sat,
-                             $ref_sat_los_data->{ TROPO_CORR },
-                             $ref_sat_los_data->{ IONO_CORR  },
+                             $tropo_corr, $iono_corr,
                              $azimut, $zenital, $elev,
                              $ref_sat_los_data->{ DISTANCE    },
                              $ref_sat_los_data->{ ENU_VECTOR  }[0],
