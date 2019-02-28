@@ -591,15 +591,15 @@ sub ReadObservationRinexV3 {
         # Fill observation block hash:
         $ref_obs_block->{ EPOCH   } = $gps_epoch;
         $ref_obs_block->{ STATUS  } = $epoch_status;
-        $ref_obs_block->{ NUM_SAT } = $num_sat;
+        $ref_obs_block->{ NUM_SAT_INFO } = {};
 
-        # TODO: inlcude in NUM_SAT the number of observed satellites for
-        #       each constellation.
+        # Init observed satellite system counter:
+        InitObservedSatSysCounter( $num_sat, $ref_obs_block->{NUM_SAT_INFO} );
 
         # Init hash counter for number of satellites with no-NULL observations:
-        $ref_obs_block->{ NUM_SAT_INFO } =
-          InitSatSysNoNullObsCounter( $ref_gen_conf->{SELECTED_SAT_SYS},
-                                      $ref_rinex_header->{SYS_OBS_TYPES} );
+        InitSatSysNoNullObsCounter( $ref_obs_block->{NUM_SAT_INFO},
+                                    $ref_gen_conf->{SELECTED_SAT_SYS},
+                                    $ref_rinex_header->{SYS_OBS_TYPES} );
 
         # Read the observations for each satellite:
         for (my $j = 0; $j < $num_sat; $j++)
@@ -610,6 +610,10 @@ sub ReadObservationRinexV3 {
           # Identify satellite and constellation:
           my $sat     = ConsistentSatID( unpack('A3', $line) );
           my $sat_sys = substr( $sat, 0, 1 );
+
+          # Increment satellite system counter:
+          CountObservedSatSysCounter( $sat_sys, $sat,
+                                      $ref_obs_block->{NUM_SAT_INFO} );
 
           # Set flag for reading the selected constellations according to
           # configuration:
@@ -833,29 +837,46 @@ sub CheckRinexHeaderOptional {
 
 # Private Subrutines: #
 # ............................................................................ #
-sub InitSatSysNoNullObsCounter {
-  my ($ref_selected_sat_sys, $ref_sat_sys_obs) = @_;
+sub InitObservedSatSysCounter {
+  my ($num_all_sat, $ref_num_sat_info) = @_;
 
-  # Init hash:
-  my $ref_sat_sys_counter = {};
+  # ALL entry is updated with the observed satellites as specified in the
+  # RINEX epoch record:
+  $ref_num_sat_info->{ALL}{AVAIL_OBS}{SAT_IDS} = [];
+  $ref_num_sat_info->{ALL}{AVAIL_OBS}{NUM_SAT} = $num_all_sat;
+
+  # UNKNOWN entry is also initiallized for consistency reasons:
+  $ref_num_sat_info->{UNKNOWN}{AVAIL_OBS}{NUM_SAT} = 0;
+  $ref_num_sat_info->{UNKNOWN}{AVAIL_OBS}{SAT_IDS} = [];
+
+  # Init to 0 all available constellations:
+  for my $sat_sys ( SUPPORTED_SAT_SYS, ACCEPTED_SAT_SYS ) {
+    $ref_num_sat_info->{$sat_sys}{AVAIL_OBS}{NUM_SAT} = 0;
+    $ref_num_sat_info->{$sat_sys}{AVAIL_OBS}{SAT_IDS} = [];
+  }
+
+  return TRUE;
+}
+
+sub InitSatSysNoNullObsCounter {
+  my ($ref_num_sat_info, $ref_selected_sat_sys, $ref_sat_sys_obs) = @_;
 
   # Init to 0 all counters and init an empty array to store the satellite IDs:
   for my $sat_sys (@{ $ref_selected_sat_sys }) {
     for my $sat_sys_obs (@{ $ref_sat_sys_obs->{$sat_sys}{OBS} }){
 
       # Init entries for each observation of each constellation:
-      $ref_sat_sys_counter->{$sat_sys}{VALID_OBS}{$sat_sys_obs}{NUM_SAT} = 0;
-      $ref_sat_sys_counter->{$sat_sys}{VALID_OBS}{$sat_sys_obs}{SAT_IDS} = [];
+      $ref_num_sat_info->{$sat_sys}{VALID_OBS}{$sat_sys_obs}{NUM_SAT} = 0;
+      $ref_num_sat_info->{$sat_sys}{VALID_OBS}{$sat_sys_obs}{SAT_IDS} = [];
 
       # Init 'ALL' counter observation entry:
-      $ref_sat_sys_counter->{ALL}{VALID_OBS}{$sat_sys_obs}{NUM_SAT} = 0;
-      $ref_sat_sys_counter->{ALL}{VALID_OBS}{$sat_sys_obs}{SAT_IDS} = [];
+      $ref_num_sat_info->{ALL}{VALID_OBS}{$sat_sys_obs}{NUM_SAT} = 0;
+      $ref_num_sat_info->{ALL}{VALID_OBS}{$sat_sys_obs}{SAT_IDS} = [];
 
     }
   }
 
-  # Return intiallized hash reference:
-  return $ref_sat_sys_counter;
+  return TRUE;
 }
 
 sub ConsistentSatID {
@@ -867,6 +888,23 @@ sub ConsistentSatID {
   }
 
   return $sat;
+}
+
+sub CountObservedSatSysCounter {
+  my ($sat_sys, $sat_id, $ref_num_sat_info) = @_;
+
+  # Count satellite if included in ACCEPTED_SAT_SYS.
+  # Otherwise, increment satellite in UNKNOWN entry:
+  if ( grep(/^$sat_sys$/, ACCEPTED_SAT_SYS)  ) {
+    $ref_num_sat_info->{$sat_sys}{AVAIL_OBS}{NUM_SAT} += 1;
+    PushUnique( $ref_num_sat_info->{ $sat_sys }{AVAIL_OBS}{SAT_IDS}, $sat_id );
+    PushUnique( $ref_num_sat_info->{ ALL      }{AVAIL_OBS}{SAT_IDS}, $sat_id );
+  } else {
+    $ref_num_sat_info->{UNKNOWN}{AVAIL_OBS}{NUM_SAT} += 1;
+    PushUnique( $ref_num_sat_info->{UNKNOWN}{AVAIL_OBS}{SAT_IDS}, $sat_id );
+  }
+
+  return TRUE;
 }
 
 sub CountNoNullObservation {
