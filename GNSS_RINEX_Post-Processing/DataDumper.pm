@@ -8,17 +8,6 @@ package DataDumper;
 # TODO: New dumper for satellite residual from LSQ info (by sat_sys/by epoch)
 #       \_ Include this in already existing LSQ_info dumper
 # TODO: New dumper file with LSQ info per epoch!
-# TODO: New dumper files in the form of:
-#       Epoch    SatID1    SatID2    ... --> all observed satellites (??)
-#       t1       x1        y1
-#       ...      ...       ...
-# For:
-#      1. Ionosphere correction
-#      2. Troposhpere correction
-#      3. Azimut
-#      4. Elevation
-#      5. Residual (last iteration of LSQ)
-# TODO: New dumper that includes DOP information (by epoch)
 
 # Load bash enviroments:
 # ---------------------------------------------------------------------------- #
@@ -80,7 +69,12 @@ BEGIN {
                           &DumpLSQReport
                           &DumpRecPosition
                           &DumpNumValidSat
-                          &DumpEpochDOP );
+                          &DumpEpochDOP
+                          &DumpAzimutBySat
+                          &DumpElevationBySat
+                          &DumpIonoCorrBySat
+                          &DumpTropoCorrBySat
+                          &DumpResidualsBySat );
 
   # Merge constants and subroutines:
   our @EXPORT_OK = (@EXPORT_CONST, @EXPORT_SUB);
@@ -96,6 +90,9 @@ BEGIN {
 # ---------------------------------------------------------------------------- #
 # Constants:
 # ---------------------------------------------------------------------------- #
+# NULL data constant:
+use constant NULL_DATA => 'NULL';
+
 use constant {
   WARN_NO_SELECTED_OBS => 90101,
 };
@@ -988,8 +985,6 @@ sub DumpEpochDOP {
       # Set reference to receiver position information:
       my $ref_rec_position = $ref_obs_data->{BODY}[$i]{REC_POSITION};
 
-      print Dumper $ref_rec_position;
-
       # Get epoch:
       my @epoch = &{ $ref_epoch_sub }( $ref_obs_data->{BODY}[$i]{EPOCH} );
 
@@ -1043,9 +1038,250 @@ sub DumpEpochDOP {
   return TRUE;
 }
 
-sub DumpAzimutBySat {}
+sub DumpAzimutBySat {
+  my ($ref_gen_conf, $ref_obs_data, $output_path, $fh_log) = @_;
 
-sub DumpElevationBySat {}
+  # Default input values if not defined:
+  $fh_log = *STDOUT unless $fh_log;
+
+  # ************************* #
+  # Input consistency cehcks: #
+  # ************************* #
+
+  # Output path must exist and have write permissions:
+  unless (-w $output_path) {
+   RaiseError($fh_log, ERR_WRITE_PERMISSION_DENIED,
+     "User '".$ENV{USER}."' does not have write permissions at $output_path");
+   return KILLED;
+  }
+
+  # General configuration must be hash type:
+  unless (ref($ref_gen_conf) eq 'HASH') {
+   RaiseError($fh_log, ERR_WRONG_HASH_REF,
+     "Input argument \'$ref_gen_conf\' is not HASH type");
+   return KILLED;
+  }
+
+  # Observation data must be hash type:
+  unless (ref($ref_obs_data) eq 'HASH') {
+   RaiseError($fh_log, ERR_WRONG_HASH_REF,
+     "Input argument \'$ref_obs_data\' is not HASH type");
+   return KILLED;
+  }
+
+  # ********************************* #
+  # Receiver Position dumper routine: #
+  # ********************************* #
+
+  # Retrieve dumper configuration:
+  my $delimiter    = $ref_gen_conf->{DATA_DUMPER}{ DELIMITER      };
+  my $epoch_format = $ref_gen_conf->{DATA_DUMPER}{ EPOCH_FORMAT   };
+  my $angle_format = $ref_gen_conf->{DATA_DUMPER}{ ANGLE_FORMAT   };
+
+  # Set epoch and angle subroutine references:
+  my $ref_epoch_sub = REF_EPOCH_SUB_CONF->{$epoch_format};
+  my $ref_angle_sub = REF_ANGLE_SUB_CONF->{$angle_format};
+
+  # Iterate over selected constellations:
+  for my $sat_sys (@{ $ref_gen_conf->{SELECTED_SAT_SYS} })
+  {
+    # 1. Open dumper file at output path:
+      my $file_path = join('/', ($output_path, "$sat_sys-sat-azimut.out"));
+      my $fh; open($fh, '>', $file_path) or die "Could not create $!";
+
+    # 2. Write title line:
+      say $fh sprintf("# > Receiver-Satellite '$sat_sys' azimut.\n".
+                      "# > Azimut values are given in [%s] format\n".
+                      "# > 'Status' refers to receiver position estimation\n".
+                      "# > Created : %s ",
+                      $angle_format, GetPrettyLocalDate());
+
+    # 3. Write header line:
+      # Retrieve all observed satellites:
+      my @all_obs_sat = GetAllObservedSats( $sat_sys, $ref_obs_data );
+
+      my @header_items = ( SetEpochHeaderItems($epoch_format),
+                           'Status', @all_obs_sat);
+
+      say $fh "#".join($delimiter, @header_items);
+
+    # 4. Write data:
+      # Iterate over observation epoch:
+      for (my $i = 0; $i < scalar(@{ $ref_obs_data->{BODY} }); $i += 1) {
+
+        # Set references to receiver position and LineOfSight info:
+        my $ref_sat_los_data = $ref_obs_data->{BODY}[$i]{SAT_LOS};
+        my $ref_rec_position = $ref_obs_data->{BODY}[$i]{REC_POSITION};
+
+        # Get epoch:
+        my @epoch = &{ $ref_epoch_sub }($ref_obs_data->{BODY}[$i]{EPOCH});
+
+        # Get receiver position estimation status:
+        my $status = $ref_rec_position->{STATUS};
+
+        # Init array to store elevation per sat:
+        my @azimut_by_sat;
+
+        # Iterate over available satellites:
+        for my $sat (@all_obs_sat) {
+
+          # Init azimut value:
+          my $sat_azimut;
+
+          # Check if sat is defined in LoS data:
+          # NOTE: if satellite has line of sight data,
+          #       azimut angle is transformed according to configuration
+          if (defined $ref_sat_los_data->{$sat}) {
+            $sat_azimut =
+              ( &{ $ref_angle_sub }($ref_sat_los_data->{$sat}{AZIMUT}) )[0];
+          } else {
+            $sat_azimut = NULL_DATA;
+          }
+
+          # Push azimut value:
+          push(@azimut_by_sat, $sat_azimut);
+
+        } # end for $sat
+
+        # Set line items and write them in dumper:
+        my @line_items = (@epoch, $status, @azimut_by_sat);
+        say $fh join($delimiter, @line_items);
+
+      } # end for $i
+
+    # 5. Close file:
+      close($fh);
+  }
+
+  # Subroutine's answer is true
+  # if the DOP data has been successfully dumped:
+  return TRUE;
+}
+
+sub DumpElevationBySat {
+  my ($ref_gen_conf, $ref_obs_data, $output_path, $fh_log) = @_;
+
+  # Default input values if not defined:
+  $fh_log = *STDOUT unless $fh_log;
+
+  # ************************* #
+  # Input consistency cehcks: #
+  # ************************* #
+
+  # Output path must exist and have write permissions:
+  unless (-w $output_path) {
+   RaiseError($fh_log, ERR_WRITE_PERMISSION_DENIED,
+     "User '".$ENV{USER}."' does not have write permissions at $output_path");
+   return KILLED;
+  }
+
+  # General configuration must be hash type:
+  unless (ref($ref_gen_conf) eq 'HASH') {
+   RaiseError($fh_log, ERR_WRONG_HASH_REF,
+     "Input argument \'$ref_gen_conf\' is not HASH type");
+   return KILLED;
+  }
+
+  # Observation data must be hash type:
+  unless (ref($ref_obs_data) eq 'HASH') {
+   RaiseError($fh_log, ERR_WRONG_HASH_REF,
+     "Input argument \'$ref_obs_data\' is not HASH type");
+   return KILLED;
+  }
+
+  # ********************************* #
+  # Receiver Position dumper routine: #
+  # ********************************* #
+
+  # Retrieve dumper configuration:
+  my $delimiter    = $ref_gen_conf->{DATA_DUMPER}{ DELIMITER      };
+  my $epoch_format = $ref_gen_conf->{DATA_DUMPER}{ EPOCH_FORMAT   };
+  my $angle_format = $ref_gen_conf->{DATA_DUMPER}{ ANGLE_FORMAT   };
+
+  # Set epoch and angle subroutine references:
+  my $ref_epoch_sub = REF_EPOCH_SUB_CONF->{$epoch_format};
+  my $ref_angle_sub = REF_ANGLE_SUB_CONF->{$angle_format};
+
+  # Iterate over selected constellations:
+  for my $sat_sys (@{ $ref_gen_conf->{SELECTED_SAT_SYS} })
+  {
+    # 1. Open dumper file at output path:
+      my $file_path = join('/', ($output_path, "$sat_sys-sat-elevation.out"));
+      my $fh; open($fh, '>', $file_path) or die "Could not create $!";
+
+    # 2. Write title line:
+      say $fh sprintf("# > Receiver-Satellite '$sat_sys' elevation.\n".
+                      "# > Configured elevation mask [%s] = %.3f \n".
+                      "# > 'Status' refers to receiver position estimation\n".
+                      "# > Created : %s ",
+                      $angle_format,
+                      &{$ref_angle_sub}($ref_gen_conf->{SAT_MASK}),
+                      GetPrettyLocalDate());
+
+    # 3. Write header line:
+      # Retrieve all observed satellites:
+      my @all_obs_sat = GetAllObservedSats( $sat_sys, $ref_obs_data );
+
+      # Retrieve configured satellite mask:
+      my $sat_mask = ( &{$ref_angle_sub}($ref_gen_conf->{SAT_MASK}) )[0];
+
+      my @header_items = ( SetEpochHeaderItems($epoch_format),
+                           'Status', 'SatMask', @all_obs_sat);
+
+      say $fh "#".join($delimiter, @header_items);
+
+    # 4. Write data:
+      # Iterate over observation epoch:
+      for (my $i = 0; $i < scalar(@{ $ref_obs_data->{BODY} }); $i += 1) {
+
+        # Set references to receiver position and LineOfSight info:
+        my $ref_sat_los_data = $ref_obs_data->{BODY}[$i]{SAT_LOS};
+        my $ref_rec_position = $ref_obs_data->{BODY}[$i]{REC_POSITION};
+
+        # Get epoch:
+        my @epoch = &{ $ref_epoch_sub }($ref_obs_data->{BODY}[$i]{EPOCH});
+
+        # Get receiver position estimation status:
+        my $status = $ref_rec_position->{STATUS};
+
+        # Init array to store elevation per sat:
+        my @elevation_by_sat;
+
+        # Iterate over available satellites:
+        for my $sat (@all_obs_sat) {
+
+          # Init elevation value:
+          my $sat_elevation;
+
+          # Check if sat is defined in LoS data:
+          # NOTE: if satellite has line of sight data,
+          #       elevation angle is transformed according to configuration
+          if (defined $ref_sat_los_data->{$sat}) {
+            $sat_elevation =
+              ( &{ $ref_angle_sub }($ref_sat_los_data->{$sat}{ELEVATION}) )[0];
+          } else {
+            $sat_elevation = NULL_DATA;
+          }
+
+          # Push elevation value:
+          push(@elevation_by_sat, $sat_elevation);
+
+        } # end for $sat
+
+        # Set line items and write them in dumper:
+        my @line_items = (@epoch, $status, $sat_mask, @elevation_by_sat);
+        say $fh join($delimiter, @line_items);
+
+      } # end for $i
+
+    # 5. Close file:
+      close($fh);
+  }
+
+  # Subroutine's answer is true
+  # if the DOP data has been successfully dumped:
+  return TRUE;
+}
 
 sub DumpIonoCorrBySat {}
 
@@ -1096,6 +1332,28 @@ sub SetStaticReference {
 
 
   return @ref_ecef_xyz;
+}
+
+sub GetAllObservedSats {
+  my ($sat_sys, $ref_obs_data) = @_;
+
+  # Init array to hold all observed satellites:
+  my @avail_sat;
+
+  # Iterate over the observation epochs:
+  for (my $i = 0; $i < scalar(@{ $ref_obs_data->{BODY} }); $i += 1) {
+
+    # Set reference to number fo satellites information:
+    my $ref_num_sat_info = $ref_obs_data->{BODY}[$i]{NUM_SAT_INFO};
+
+    # Push if not already, the observed satellites:
+    PushUnique(\@avail_sat,
+                @{ $ref_num_sat_info->{$sat_sys}{AVAIL_OBS}{SAT_IDS} });
+
+  }
+
+  # Return sorted available satellites:
+  return sort @avail_sat;
 }
 
 sub ComputeMeanRecPosition {
