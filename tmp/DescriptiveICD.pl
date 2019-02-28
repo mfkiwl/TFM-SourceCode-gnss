@@ -216,6 +216,7 @@
                     APX_PARAMETER => \@rec_parameters,
                     PARAMETER_VECTOR => \@rec_delta_parameters,
                     RESIDUAL_VECTOR  => \@residuals,
+                    SAT_RESIDUALS    => \%sat_residuals,
                     VARIANCE_ESTIMATOR => $variance_estimator )
 
 @residuals            = ( $res_sat_obs, '[...]' );
