@@ -164,7 +164,7 @@ use constant {
 
 # Accepted and Supported satellite systems:
 use constant SUPPORTED_SAT_SYS => qw(G E);
-use constant ACCEPTED_SAT_SYS  => qw(R C S J I);
+use constant ACCEPTED_SAT_SYS  => qw(G E R C S J I);
 
 # Supported satellite signals:
 # GPS pseudorange signals:
