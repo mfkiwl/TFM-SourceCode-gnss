@@ -147,7 +147,6 @@
 %obs_epoch = (
   STATUS  => $obs_epoch_status,
   EPOCH   => $observation_epoch,
-  NUM_SAT => $num_of_observed_sat, # same as length of @{keys %sat_obs}
   NUM_SAT_INFO => \%num_sat_hash,
   SAT_OBS => \%sat_obs,
   SAT_LOS => \%line_of_sight_info, # filled after ComputeRecPosition
@@ -164,9 +163,12 @@
 # Satellite's number info hash:
 %num_sat_hash = ( G   => \%sat_sys_num_sat,
                   E   => \%sat_sys_num_sat,
-                  ALL => \%sat_sys_num_sat,  );
+                  '[...]', # ACCEPTED_SAT_SYS
+                  ALL     => \%sat_sys_num_sat,
+                  UNKNOWN => \%sat_sys_num_sat  );
 
-%sat_sys_num_sat = ( VALID_NAV => \%num_sat_info,
+%sat_sys_num_sat = ( AVAIL_OBS => \%num_sat_info,
+                     VALID_NAV => \%num_sat_info,
                      VALID_LSQ => \%num_sat_info,
                      VALID_OBS => \%num_sat_info_obs, );
 
