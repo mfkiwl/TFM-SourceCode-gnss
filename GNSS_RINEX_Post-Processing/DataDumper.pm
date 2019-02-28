@@ -1407,7 +1407,6 @@ sub DumpIonoCorrBySat {
   return TRUE;
 }
 
-
 sub DumpTropoCorrBySat {
   my ($ref_gen_conf, $ref_obs_data, $output_path, $fh_log) = @_;
 
@@ -1524,7 +1523,6 @@ sub DumpTropoCorrBySat {
   # if the data has been successfully dumped:
   return TRUE;
 }
-
 
 sub DumpResidualsBySat {
   my ($ref_gen_conf, $ref_obs_data, $output_path, $fh_log) = @_;
