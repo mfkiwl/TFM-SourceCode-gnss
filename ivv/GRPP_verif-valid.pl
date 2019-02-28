@@ -112,6 +112,7 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
                                                 $FH_LOG );
 
   # print Dumper $ref_obs_data->{BODY}[0]{NUM_SAT_INFO}{ALL}; exit 0;
+  # print Dumper $ref_obs_data->{BODY}[0]{LSQ_INFO}[-1]; exit 0;
 
   ReportElapsedTime([gettimeofday],
                     $ini_rec_position_time_stamp, "ComputeRecPosition()");
@@ -241,6 +242,33 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
   ReportElapsedTime([gettimeofday],
                     $ini_time_dump_data, "DumpAzimutBySat()");
   $MEM_USAGE->record('-> DumpAzimutBySat');
+
+  PrintTitle3($FH_LOG, "Dumping Ionosphere delay by Satellite:");
+  DumpIonoCorrBySat( $ref_gen_conf,
+                     $ref_obs_data,
+                     $ref_gen_conf->{OUTPUT_PATH}, $FH_LOG );
+
+  ReportElapsedTime([gettimeofday],
+                    $ini_time_dump_data, "DumpIonoCorrBySat()");
+  $MEM_USAGE->record('-> DumpIonoCorrBySat');
+
+  PrintTitle3($FH_LOG, "Dumping Troposphere delay by Satellite:");
+  DumpTropoCorrBySat( $ref_gen_conf,
+                      $ref_obs_data,
+                      $ref_gen_conf->{OUTPUT_PATH}, $FH_LOG );
+
+  ReportElapsedTime([gettimeofday],
+                    $ini_time_dump_data, "DumpTropoCorrBySat()");
+  $MEM_USAGE->record('-> DumpTropoCorrBySat');
+
+  PrintTitle3($FH_LOG, "Dumping Residuals by Satellite:");
+  DumpResidualsBySat( $ref_gen_conf,
+                      $ref_obs_data,
+                      $ref_gen_conf->{OUTPUT_PATH}, $FH_LOG );
+
+  ReportElapsedTime([gettimeofday],
+                    $ini_time_dump_data, "DumpResidualsBySat()");
+  $MEM_USAGE->record('-> DumpResidualsBySat');
 
 # Terminal:
   # Close output log file:
