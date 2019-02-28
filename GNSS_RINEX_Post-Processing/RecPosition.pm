@@ -583,13 +583,13 @@ sub SelectSatForLSQ {
                                                        \@sat_xyz_recep );
 
         # Update LoS hash info:
-        # NOTE: ionosphere and troposphere corrections are set to 0
-        #       they will be filled after when building the observation
-        #       equation
+        # NOTE: ionosphere and troposphere corrections are set to undefined.
+        #       They will be filled after when building the observation
+        #       equation.
         FillLoSDataHash( $ref_epoch_info, $sat,
                          $rec_sat_azimut, $rec_sat_zenital,
                          $rec_sat_distance, $rec_sat_elevation,
-                                         0,                  0,
+                                     undef,              undef,
                          [$rec_sat_ix, $rec_sat_iy, $rec_sat_iz],
                          [$rec_sat_ie, $rec_sat_in, $rec_sat_iu] );
 
