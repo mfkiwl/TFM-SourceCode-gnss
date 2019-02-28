@@ -1154,7 +1154,7 @@ sub DumpAzimutBySat {
   }
 
   # Subroutine's answer is true
-  # if the DOP data has been successfully dumped:
+  # if the data has been successfully dumped:
   return TRUE;
 }
 
@@ -1279,15 +1279,368 @@ sub DumpElevationBySat {
   }
 
   # Subroutine's answer is true
-  # if the DOP data has been successfully dumped:
+  # if the data has been successfully dumped:
   return TRUE;
 }
 
-sub DumpIonoCorrBySat {}
+sub DumpIonoCorrBySat {
+  my ($ref_gen_conf, $ref_obs_data, $output_path, $fh_log) = @_;
 
-sub DumpTropoCorrBySat {}
+  # Default input values if not defined:
+  $fh_log = *STDOUT unless $fh_log;
 
-sub DumpResidualsBySat {}
+  # ************************* #
+  # Input consistency cehcks: #
+  # ************************* #
+
+  # Output path must exist and have write permissions:
+  unless (-w $output_path) {
+   RaiseError($fh_log, ERR_WRITE_PERMISSION_DENIED,
+     "User '".$ENV{USER}."' does not have write permissions at $output_path");
+   return KILLED;
+  }
+
+  # General configuration must be hash type:
+  unless (ref($ref_gen_conf) eq 'HASH') {
+   RaiseError($fh_log, ERR_WRONG_HASH_REF,
+     "Input argument \'$ref_gen_conf\' is not HASH type");
+   return KILLED;
+  }
+
+  # Observation data must be hash type:
+  unless (ref($ref_obs_data) eq 'HASH') {
+   RaiseError($fh_log, ERR_WRONG_HASH_REF,
+     "Input argument \'$ref_obs_data\' is not HASH type");
+   return KILLED;
+  }
+
+  # ********************************* #
+  # Receiver Position dumper routine: #
+  # ********************************* #
+
+  # Retrieve dumper configuration:
+  my $delimiter    = $ref_gen_conf->{DATA_DUMPER}{ DELIMITER      };
+  my $epoch_format = $ref_gen_conf->{DATA_DUMPER}{ EPOCH_FORMAT   };
+
+  # Set epoch and angle subroutine references:
+  my $ref_epoch_sub = REF_EPOCH_SUB_CONF->{$epoch_format};
+
+  # Iterate over selected constellations:
+  for my $sat_sys (@{ $ref_gen_conf->{SELECTED_SAT_SYS} })
+  {
+    # 1. Open dumper file at output path:
+      my $file_path = join('/', ($output_path, "$sat_sys-sat-iono-delay.out"));
+      my $fh; open($fh, '>', $file_path) or die "Could not create $!";
+
+    # 2. Write title line:
+      say $fh sprintf("# > Receiver-Satellite '$sat_sys' ionosphere delay.\n".
+                      "# > Model for ionosphere correction -> %s \n".
+                      "# > 'Status' refers to receiver position estimation\n".
+                      "# > Created : %s ",
+                      $ref_gen_conf->{IONOSPHERE_MODEL}{$sat_sys},
+                      GetPrettyLocalDate());
+
+    # 3. Write header line:
+      # Retrieve all observed satellites:
+      my @all_obs_sat = GetAllObservedSats( $sat_sys, $ref_obs_data );
+
+      # Retrieve configured satellite mask:
+      my @header_items = ( SetEpochHeaderItems($epoch_format),
+                           'Status', @all_obs_sat);
+
+      say $fh "#".join($delimiter, @header_items);
+
+    # 4. Write data:
+      # Iterate over observation epoch:
+      for (my $i = 0; $i < scalar(@{ $ref_obs_data->{BODY} }); $i += 1) {
+
+        # Set references to receiver position and LineOfSight info:
+        my $ref_sat_los_data = $ref_obs_data->{BODY}[$i]{SAT_LOS};
+        my $ref_rec_position = $ref_obs_data->{BODY}[$i]{REC_POSITION};
+
+        # Get epoch:
+        my @epoch = &{ $ref_epoch_sub }($ref_obs_data->{BODY}[$i]{EPOCH});
+
+        # Get receiver position estimation status:
+        my $status = $ref_rec_position->{STATUS};
+
+        # Init array to store ionosphere correction per sat:
+        my @iono_corr_by_sat;
+
+        # Iterate over available satellites:
+        for my $sat (@all_obs_sat) {
+
+          # Init ionosphere delay value:
+          my $sat_iono_corr;
+
+          # Check if sat is defined in LoS data:
+          if (defined $ref_sat_los_data->{$sat}) {
+            $sat_iono_corr = $ref_sat_los_data->{$sat}{IONO_CORR};
+          } else {
+            $sat_iono_corr = NULL_DATA;
+          }
+
+          # Push ionosphere delay value:
+          push(@iono_corr_by_sat, $sat_iono_corr);
+
+        } # end for $sat
+
+        # Set line items and write them in dumper:
+        my @line_items = (@epoch, $status, @iono_corr_by_sat);
+        say $fh join($delimiter, @line_items);
+
+      } # end for $i
+
+    # 5. Close file:
+      close($fh);
+  }
+
+  # Subroutine's answer is true
+  # if the data has been successfully dumped:
+  return TRUE;
+}
+
+
+sub DumpTropoCorrBySat {
+  my ($ref_gen_conf, $ref_obs_data, $output_path, $fh_log) = @_;
+
+  # Default input values if not defined:
+  $fh_log = *STDOUT unless $fh_log;
+
+  # ************************* #
+  # Input consistency cehcks: #
+  # ************************* #
+
+  # Output path must exist and have write permissions:
+  unless (-w $output_path) {
+   RaiseError($fh_log, ERR_WRITE_PERMISSION_DENIED,
+     "User '".$ENV{USER}."' does not have write permissions at $output_path");
+   return KILLED;
+  }
+
+  # General configuration must be hash type:
+  unless (ref($ref_gen_conf) eq 'HASH') {
+   RaiseError($fh_log, ERR_WRONG_HASH_REF,
+     "Input argument \'$ref_gen_conf\' is not HASH type");
+   return KILLED;
+  }
+
+  # Observation data must be hash type:
+  unless (ref($ref_obs_data) eq 'HASH') {
+   RaiseError($fh_log, ERR_WRONG_HASH_REF,
+     "Input argument \'$ref_obs_data\' is not HASH type");
+   return KILLED;
+  }
+
+  # ********************************* #
+  # Receiver Position dumper routine: #
+  # ********************************* #
+
+  # Retrieve dumper configuration:
+  my $delimiter    = $ref_gen_conf->{DATA_DUMPER}{ DELIMITER      };
+  my $epoch_format = $ref_gen_conf->{DATA_DUMPER}{ EPOCH_FORMAT   };
+
+  # Set epoch and angle subroutine references:
+  my $ref_epoch_sub = REF_EPOCH_SUB_CONF->{$epoch_format};
+
+  # Iterate over selected constellations:
+  for my $sat_sys (@{ $ref_gen_conf->{SELECTED_SAT_SYS} })
+  {
+    # 1. Open dumper file at output path:
+      my $file_path = join('/', ($output_path, "$sat_sys-sat-tropo-delay.out"));
+      my $fh; open($fh, '>', $file_path) or die "Could not create $!";
+
+    # 2. Write title line:
+      say $fh sprintf("# > Receiver-Satellite '$sat_sys' troposphere delay.\n".
+                      "# > Model for troposphere correction -> %s \n".
+                      "# > 'Status' refers to receiver position estimation\n".
+                      "# > Created : %s ",
+                      $ref_gen_conf->{TROPOSPHERE_MODEL},
+                      GetPrettyLocalDate());
+
+    # 3. Write header line:
+      # Retrieve all observed satellites:
+      my @all_obs_sat = GetAllObservedSats( $sat_sys, $ref_obs_data );
+
+      # Retrieve configured satellite mask:
+      my @header_items = ( SetEpochHeaderItems($epoch_format),
+                           'Status', @all_obs_sat);
+
+      say $fh "#".join($delimiter, @header_items);
+
+    # 4. Write data:
+      # Iterate over observation epoch:
+      for (my $i = 0; $i < scalar(@{ $ref_obs_data->{BODY} }); $i += 1) {
+
+        # Set references to receiver position and LineOfSight info:
+        my $ref_sat_los_data = $ref_obs_data->{BODY}[$i]{SAT_LOS};
+        my $ref_rec_position = $ref_obs_data->{BODY}[$i]{REC_POSITION};
+
+        # Get epoch:
+        my @epoch = &{$ref_epoch_sub}($ref_obs_data->{BODY}[$i]{EPOCH});
+
+        # Get receiver position estimation status:
+        my $status = $ref_rec_position->{STATUS};
+
+        # Init array to store troposphere correction per sat:
+        my @tropo_corr_by_sat;
+
+        # Iterate over available satellites:
+        for my $sat (@all_obs_sat) {
+
+          # Init troposphere delay value:
+          my $sat_tropo_corr;
+
+          # Check if sat is defined in LoS data:
+          if (defined $ref_sat_los_data->{$sat}) {
+            $sat_tropo_corr = $ref_sat_los_data->{$sat}{TROPO_CORR};
+          } else {
+            $sat_tropo_corr = NULL_DATA;
+          }
+
+          # Push troposphere delay value:
+          push(@tropo_corr_by_sat, $sat_tropo_corr);
+
+        } # end for $sat
+
+        # Set line items and write them in dumper:
+        my @line_items = (@epoch, $status, @tropo_corr_by_sat);
+        say $fh join($delimiter, @line_items);
+
+      } # end for $i
+
+    # 5. Close file:
+      close($fh);
+  }
+
+  # Subroutine's answer is true
+  # if the data has been successfully dumped:
+  return TRUE;
+}
+
+
+sub DumpResidualsBySat {
+  my ($ref_gen_conf, $ref_obs_data, $output_path, $fh_log) = @_;
+
+  # Default input values if not defined:
+  $fh_log = *STDOUT unless $fh_log;
+
+  # ************************* #
+  # Input consistency cehcks: #
+  # ************************* #
+
+  # Output path must exist and have write permissions:
+  unless (-w $output_path) {
+   RaiseError($fh_log, ERR_WRITE_PERMISSION_DENIED,
+     "User '".$ENV{USER}."' does not have write permissions at $output_path");
+   return KILLED;
+  }
+
+  # General configuration must be hash type:
+  unless (ref($ref_gen_conf) eq 'HASH') {
+   RaiseError($fh_log, ERR_WRONG_HASH_REF,
+     "Input argument \'$ref_gen_conf\' is not HASH type");
+   return KILLED;
+  }
+
+  # Observation data must be hash type:
+  unless (ref($ref_obs_data) eq 'HASH') {
+   RaiseError($fh_log, ERR_WRONG_HASH_REF,
+     "Input argument \'$ref_obs_data\' is not HASH type");
+   return KILLED;
+  }
+
+  # ********************************* #
+  # Receiver Position dumper routine: #
+  # ********************************* #
+
+  # Retrieve dumper configuration:
+  my $delimiter    = $ref_gen_conf->{DATA_DUMPER}{ DELIMITER      };
+  my $epoch_format = $ref_gen_conf->{DATA_DUMPER}{ EPOCH_FORMAT   };
+
+  # Set epoch and angle subroutine references:
+  my $ref_epoch_sub = REF_EPOCH_SUB_CONF->{$epoch_format};
+
+  # Iterate over selected constellations:
+  for my $sat_sys (@{ $ref_gen_conf->{SELECTED_SAT_SYS} })
+  {
+    # 1. Open dumper file at output path:
+      my $file_path = join('/', ($output_path, "$sat_sys-sat-residuals.out"));
+      my $fh; open($fh, '>', $file_path) or die "Could not create $!";
+
+    # 2. Write title line:
+      say $fh sprintf("# > Receiver-Satellite '$sat_sys' LSQ residuals.\n".
+                      "# > Selected observation for '$sat_sys' -> %s\n".
+                      "# > Configured mean_obs_err for '$sat_sys' -> %.3f\n".
+                      "# > 'Status' refers to receiver position estimation\n".
+                      "# > Resiudals are refered to last LSQ iteration\n".
+                      "# > Created : %s ",
+                      $ref_gen_conf->{ SELECTED_SIGNALS }{$sat_sys},
+                      $ref_gen_conf->{ OBS_MEAN_ERR     }{$sat_sys},
+                      GetPrettyLocalDate());
+
+    # 3. Write header line:
+      # Retrieve all observed satellites:
+      my @all_obs_sat = GetAllObservedSats( $sat_sys, $ref_obs_data );
+
+      # Retrieve configured satellite mask:
+      my @header_items = ( SetEpochHeaderItems($epoch_format),
+                           'Status', 'NumIterLSQ', @all_obs_sat);
+
+      say $fh "#".join($delimiter, @header_items);
+
+    # 4. Write data:
+      # Iterate over observation epoch:
+      for (my $i = 0; $i < scalar(@{ $ref_obs_data->{BODY} }); $i += 1) {
+
+        # Set references to receiver position and LSQ info (last iteration):
+        my $ref_lsq_last_iter = $ref_obs_data->{BODY}[$i]{LSQ_INFO}[-1];
+        my $ref_rec_position  = $ref_obs_data->{BODY}[$i]{REC_POSITION};
+
+        # Get epoch:
+        my @epoch = &{$ref_epoch_sub}($ref_obs_data->{BODY}[$i]{EPOCH});
+
+        # Get receiver position estimation status:
+        my $status = $ref_rec_position->{STATUS};
+
+        # Retrieve number of iterations pefromed by LSQ routine:
+        my $num_lsq_iter = scalar(@{ $ref_obs_data->{BODY}[$i]{LSQ_INFO} });
+
+        # Init array to store residuals per sat:
+        my @residuals_by_sat;
+
+        # Iterate over available satellites:
+        for my $sat (@all_obs_sat) {
+
+          # Init troposphere delay value:
+          my $sat_residual;
+
+          # Check if sat is defined in LSQ data:
+          if (defined $ref_lsq_last_iter->{SAT_RESIDUALS}{$sat}) {
+            $sat_residual = $ref_lsq_last_iter->{SAT_RESIDUALS}{$sat};
+          } else {
+            $sat_residual = NULL_DATA;
+          }
+
+          # Push residual value:
+          push(@residuals_by_sat, $sat_residual);
+
+        } # end for $sat
+
+        # Set line items and write them in dumper:
+        my @line_items = (@epoch, $status, $num_lsq_iter, @residuals_by_sat);
+        say $fh join($delimiter, @line_items);
+
+      } # end for $i
+
+    # 5. Close file:
+      close($fh);
+  }
+
+  # Subroutine's answer is true
+  # if the data has been successfully dumped:
+  return TRUE;
+}
 
 
 # Private Subrutines:
