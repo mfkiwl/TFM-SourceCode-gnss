@@ -265,7 +265,7 @@ sub ComputeRecPosition {
             # NOTE: (iteration - 1) since it has been already increased:
             FillLSQInfo( $ref_epoch_info, $iteration - 1,
                          $lsq_status, $convergence_flag,
-                         $num_obs, $num_parameter,
+                         \@sat_to_lsq, $num_obs, $num_parameter,
                          \@rec_apx_xyzdt, $pdl_parameter_vector,
                          $pdl_residual_vector, $pdl_variance_estimator );
 
@@ -283,7 +283,7 @@ sub ComputeRecPosition {
             # Fill LSQ information with NULL content:
             FillLSQInfo( $ref_epoch_info, $iteration,
                          $lsq_status, FALSE,
-                         $num_obs, $num_parameter,
+                         \@sat_to_lsq, $num_obs, $num_parameter,
                          \@rec_apx_xyzdt, $pdl_parameter_vector,
                          $pdl_residual_vector, $pdl_variance_estimator );
 
@@ -776,7 +776,7 @@ sub BuildLSQMatrixSystem {
 sub FillLSQInfo {
   my ( $ref_epoch_info, $iter,
        $lsq_status, $conv_flag,
-       $num_obs, $num_parameter,
+       $ref_sat_to_lsq, $num_obs, $num_parameter,
        $ref_apx_prm, $pdl_parameter_vector,
        $pdl_residual_vector, $pdl_var_estimator ) = @_;
 
@@ -791,6 +791,7 @@ sub FillLSQInfo {
   # Fill hash with retrieved data:
   $ref_epoch_info->{LSQ_INFO}[$iter]{ STATUS             } = $lsq_status;
   $ref_epoch_info->{LSQ_INFO}[$iter]{ CONVERGENCE        } = $conv_flag;
+  $ref_epoch_info->{LSQ_INFO}[$iter]{ SAT_TO_LSQ         } = $ref_sat_to_lsq;
   $ref_epoch_info->{LSQ_INFO}[$iter]{ NUM_PARAMETER      } = $num_parameter;
   $ref_epoch_info->{LSQ_INFO}[$iter]{ NUM_OBSERVATION    } = $num_obs;
   $ref_epoch_info->{LSQ_INFO}[$iter]{ DEGREES_OF_FREEDOM } = $deg_of_free;
@@ -798,6 +799,14 @@ sub FillLSQInfo {
   $ref_epoch_info->{LSQ_INFO}[$iter]{ PARAMETER_VECTOR   } = \@prm_vector;
   $ref_epoch_info->{LSQ_INFO}[$iter]{ RESIDUAL_VECTOR    } = \@res_vector;
   $ref_epoch_info->{LSQ_INFO}[$iter]{ VARIANCE_ESTIMATOR } = $var_estimator;
+
+  # Fill residuals per satellite:
+  for (my $j = 0; $j < scalar(@{ $ref_sat_to_lsq }); $j += 1) {
+    my $sat = $ref_sat_to_lsq->[$j];
+    $ref_epoch_info->{LSQ_INFO}[$iter]{SAT_RESIDUALS}{$sat} = $res_vector[$j];
+  }
+
+  return TRUE;
 }
 
 sub GetReceiverPositionSolution {
