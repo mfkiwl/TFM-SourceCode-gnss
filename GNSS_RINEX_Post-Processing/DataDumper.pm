@@ -1131,7 +1131,7 @@ sub DumpAzimutBySat {
           # Check if sat is defined in LoS data:
           # NOTE: if satellite has line of sight data,
           #       azimut angle is transformed according to configuration
-          if (defined $ref_sat_los_data->{$sat}) {
+          if (defined $ref_sat_los_data->{$sat}{AZIMUT}) {
             $sat_azimut =
               ( &{ $ref_angle_sub }($ref_sat_los_data->{$sat}{AZIMUT}) )[0];
           } else {
@@ -1256,7 +1256,7 @@ sub DumpElevationBySat {
           # Check if sat is defined in LoS data:
           # NOTE: if satellite has line of sight data,
           #       elevation angle is transformed according to configuration
-          if (defined $ref_sat_los_data->{$sat}) {
+          if (defined $ref_sat_los_data->{$sat}{ELEVATION}) {
             $sat_elevation =
               ( &{ $ref_angle_sub }($ref_sat_los_data->{$sat}{ELEVATION}) )[0];
           } else {
@@ -1374,7 +1374,7 @@ sub DumpIonoCorrBySat {
           my $sat_iono_corr;
 
           # Check if sat is defined in LoS data:
-          if (defined $ref_sat_los_data->{$sat}) {
+          if (defined $ref_sat_los_data->{$sat}{IONO_CORR}) {
             $sat_iono_corr = $ref_sat_los_data->{$sat}{IONO_CORR};
           } else {
             $sat_iono_corr = NULL_DATA;
@@ -1492,7 +1492,7 @@ sub DumpTropoCorrBySat {
           my $sat_tropo_corr;
 
           # Check if sat is defined in LoS data:
-          if (defined $ref_sat_los_data->{$sat}) {
+          if (defined $ref_sat_los_data->{$sat}{TROPO_CORR}) {
             $sat_tropo_corr = $ref_sat_los_data->{$sat}{TROPO_CORR};
           } else {
             $sat_tropo_corr = NULL_DATA;
