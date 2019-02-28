@@ -111,7 +111,7 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
                                                 $ref_gps_nav_rinex,
                                                 $FH_LOG );
 
-  # print Dumper $ref_obs_data->{BODY}[0]; exit 0;
+  # print Dumper $ref_obs_data->{BODY}[0]{NUM_SAT_INFO}{ALL}; exit 0;
 
   ReportElapsedTime([gettimeofday],
                     $ini_rec_position_time_stamp, "ComputeRecPosition()");
@@ -214,6 +214,15 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
   ReportElapsedTime([gettimeofday],
                     $ini_time_dump_data, "DumpNumValidSat()");
   $MEM_USAGE->record('-> DumpNumValidSat');
+
+  PrintTitle3($FH_LOG, "Dumping DOP information:");
+  DumpEpochDOP( $ref_gen_conf,
+                $ref_obs_data,
+                $ref_gen_conf->{OUTPUT_PATH}, $FH_LOG );
+
+  ReportElapsedTime([gettimeofday],
+                    $ini_time_dump_data, "DumpEpochDOP()");
+  $MEM_USAGE->record('-> DumpEpochDOP');
 
 # Terminal:
   # Close output log file:
