@@ -79,7 +79,8 @@ BEGIN {
                           &DumpRecSatLoSData
                           &DumpLSQReport
                           &DumpRecPosition
-                          &DumpNumValidSat );
+                          &DumpNumValidSat
+                          &DumpEpochDOP );
 
   # Merge constants and subroutines:
   our @EXPORT_OK = (@EXPORT_CONST, @EXPORT_SUB);
@@ -833,7 +834,6 @@ sub DumpNumValidSat {
   # Set epoch and angle subroutine references:
   my $ref_epoch_sub = REF_EPOCH_SUB_CONF->{$epoch_format};
 
-
   # Produce an output for each selected constellation and for the sum of
   # all of them:
   for my $sat_sys (@{ $ref_gen_conf->{SELECTED_SAT_SYS} }, 'ALL') {
@@ -843,15 +843,19 @@ sub DumpNumValidSat {
       my $fh; open($fh, '>', $file_path) or die "Could not create $!";
 
     # 2.a. Write title line:
+      # Retrieve selected observations for
+      # information purposes:
+      my $selected_obs_info =
+        WriteSelecetedObsInfo ( $sat_sys, $ref_gen_conf->{SELECTED_SIGNALS} );
+
       say $fh sprintf("# > Satellite system '$sat_sys' ".
                       "number of valid satellites.\n".
+                      $selected_obs_info.
                       "# > Created : %s ", GetPrettyLocalDate());
-
-    # TODO: include here the seleceted observations as a informantion
 
     # 3. Write header line:
       my @header_items = ( SetEpochHeaderItems( $epoch_format ),
-                           'ValidObs', 'ValidNav', 'ValidLSQ' );
+                           'AvailSat', 'ValidObs', 'ValidNav', 'ValidLSQ' );
       say $fh "#".join($delimiter, @header_items);
 
     # 4. Write Num satellites info:
@@ -864,6 +868,10 @@ sub DumpNumValidSat {
         # Get epoch:
         my @epoch =
           &{ $ref_epoch_sub }($ref_obs_data->{BODY}[$i]{EPOCH});
+
+        # Retrieve number of available satellites in epoch:
+        my $num_sat_avail_obs =
+           $ref_num_sat_info->{$sat_sys}{AVAIL_OBS}{NUM_SAT};
 
         # Retrieve number of satellites with no null observation:
         my $num_sat_valid_obs;
@@ -895,6 +903,7 @@ sub DumpNumValidSat {
 
         # Write data line:
         my @line_items = ( @epoch,
+                           $num_sat_avail_obs,
                            $num_sat_valid_obs,
                            $num_sat_valid_nav,
                            $num_sat_valid_lsq );
@@ -913,7 +922,126 @@ sub DumpNumValidSat {
   return TRUE;
 }
 
-sub DumpEpochDOP {}
+sub DumpEpochDOP {
+  my ( $ref_gen_conf, $ref_obs_data, $output_path, $fh_log ) = @_;
+
+  # Default input values if not defined:
+  $fh_log = *STDOUT unless $fh_log;
+
+  # ************************* #
+  # Input consistency cehcks: #
+  # ************************* #
+
+  # Output path must exist and have write permissions:
+  unless (-w $output_path) {
+   RaiseError($fh_log, ERR_WRITE_PERMISSION_DENIED,
+     "User '".$ENV{USER}."' does not have write permissions at $output_path");
+   return KILLED;
+  }
+
+  # General configuration must be hash type:
+  unless (ref($ref_gen_conf) eq 'HASH') {
+   RaiseError($fh_log, ERR_WRONG_HASH_REF,
+     "Input argument \'$ref_gen_conf\' is not HASH type");
+   return KILLED;
+  }
+
+  # Observation data must be hash type:
+  unless (ref($ref_obs_data) eq 'HASH') {
+   RaiseError($fh_log, ERR_WRONG_HASH_REF,
+     "Input argument \'$ref_obs_data\' is not HASH type");
+   return KILLED;
+  }
+
+  # ********************************* #
+  # Receiver Position dumper routine: #
+  # ********************************* #
+
+  # Retrieve dumper configuration:
+  my $delimiter    = $ref_gen_conf->{DATA_DUMPER}{ DELIMITER      };
+  my $epoch_format = $ref_gen_conf->{DATA_DUMPER}{ EPOCH_FORMAT   };
+
+  # Set epoch and angle subroutine references:
+  my $ref_epoch_sub = REF_EPOCH_SUB_CONF->{$epoch_format};
+
+  # 1. Open dumper file:
+    my $file_path = join('/', ($output_path, "DOP-info.out"));
+    my $fh; open($fh, '>', $file_path) or die "Could not create $!";
+
+  # 2. Write title line:
+    say $fh sprintf("# > Dilution of Precission report.\n".
+                    "# > Reference ECEF frame : %s\n".
+                    "# > Reference ENU  frame : Local receiver position\n".
+                    "# > Created : %s ",
+                    $ref_gen_conf->{ELIPSOID}, GetPrettyLocalDate());
+
+  # 3. Write header items:
+    my @header_items = ( SetEpochHeaderItems($epoch_format),
+                         'Status', 'GDOP', 'PDOP', 'TDOP', 'HDOP', 'VDOP' );
+
+    say $fh "#".join($delimiter, @header_items);
+
+  # 4. Write DOP data:
+    # Ierate over observation epochs:
+    for (my $i = 0; $i < scalar(@{ $ref_obs_data->{BODY} }); $i += 1) {
+
+      # Set reference to receiver position information:
+      my $ref_rec_position = $ref_obs_data->{BODY}[$i]{REC_POSITION};
+
+      print Dumper $ref_rec_position;
+
+      # Get epoch:
+      my @epoch = &{ $ref_epoch_sub }( $ref_obs_data->{BODY}[$i]{EPOCH} );
+
+      # Retrieve receiver position status:
+      my $status = $ref_rec_position->{STATUS};
+
+      # Init DOP items:
+      my ($gdop, $pdop, $tdop, $hdop, $vdop);
+
+      # DOP info is computed for those epochs where the receiever position
+      # estimation routine has been successfull:
+      if ($status) {
+
+        # Retrieve variances:
+        my ($sum_var_xyz, $sum_var_en) = (0, 0);
+        $sum_var_xyz += $_ for (@{ $ref_rec_position->{VAR_XYZ} });
+        $sum_var_en  += $_ for ( $ref_rec_position->{VAR_ENU}[0],
+                                 $ref_rec_position->{VAR_ENU}[1] );
+        my $var_clk   = $ref_rec_position->{VAR_CLK};
+        my $var_u     = $ref_rec_position->{VAR_ENU}[2];
+
+         ( $gdop,
+           $pdop,
+           $tdop,
+           $hdop,
+           $vdop ) = (( $sum_var_xyz + $var_clk )**0.5,  # GDOP
+                      ( $sum_var_xyz +        0 )**0.5,  # PDOP
+                      (            0 + $var_clk )**0.5,  # TDOP
+                      (  $sum_var_en +        0 )**0.5,  # HDOP
+                      (            0 +   $var_u )**0.5); # VDOP
+
+      } else {
+
+        # If receiver position status is not TRUE, set DOP info to 0:
+        ($gdop, $pdop, $tdop, $hdop, $vdop) = (0, 0, 0, 0, 0);
+
+      }
+
+      # Set data line items:
+      my @line_items = (@epoch, $status, $gdop, $pdop, $tdop, $hdop, $vdop);
+
+      say $fh join($delimiter, @line_items);
+
+    } # end for $i
+
+  # 5. Close dumper file:
+    close($fh);
+
+  # Subroutine's answer is true
+  # if the DOP data has been successfully dumped:
+  return TRUE;
+}
 
 sub DumpAzimutBySat {}
 
@@ -1009,6 +1137,25 @@ sub ComputeMeanRecPosition {
                      $sum_z/$count_epoch );
 
   return ($mean_x, $mean_y, $mean_z);
+}
+
+sub WriteSelecetedObsInfo {
+  my ($sat_sys, $ref_sel_obs) = @_;
+
+  # Init string to return:
+  my $selected_obs_info = '';
+
+  if ($sat_sys eq 'ALL') {
+    for (keys %{ $ref_sel_obs }) {
+      $selected_obs_info .=
+        "# > Selected observation for $_ -> ".$ref_sel_obs->{$_}."\n";
+    }
+  } else {
+    $selected_obs_info =
+      "# > Selected observation for $sat_sys -> ".$ref_sel_obs->{$sat_sys}."\n";
+  }
+
+  return $selected_obs_info;
 }
 
 TRUE;
