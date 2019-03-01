@@ -210,6 +210,7 @@
 
 %iteration_info = ( STATUS => $boolean_status,
                     CONVERGENCE   => $boolean_status,
+                    SAT_TO_LSQ    => \@sat_to_lsq_list,
                     NUM_PARAMETER      => $num_parameter,
                     NUM_OBSERVATION    => $num_obs,
                     DEGREES_OF_FREEDOM =>  $num_obs - $num_parameter,
@@ -222,6 +223,9 @@
 @residuals            = ( $res_sat_obs, '[...]' );
 @rec_parameters       = ( $x_ecef, $y_ecef, $z_ecef, $rec_clk_bias );
 @rec_delta_parameters = ( $d_x_ecef, $d_y_ecef, $d_z_ecef, $d_rec_clk_bias );
+
+%sat_residuals = ( $sat_id => $sat_residual,
+                   '[...]' ); # hash keys must be all @sat_to_lsq_list
 
 # Position solution parameters:
 %position_parameters = ( STATUS => $position_estimation_status,
