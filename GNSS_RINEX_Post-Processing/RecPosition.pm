@@ -129,7 +129,9 @@ sub ComputeRecPosition {
     # Troposphere model switch case:
     my $ref_sub_troposphere;
     given ( $ref_gen_conf->{TROPOSPHERE_MODEL} ) {
-      when ( /saastamoinen/i )
+      when ($_ eq &NONE_TROPO_MODEL )
+        { $ref_sub_troposphere = \&NullTropoDelay; }
+      when ( $_ eq &SAASTAMOINEN_TROPO_MODEL )
         { $ref_sub_troposphere = \&ComputeTropoSaastamoinenDelay; }
     }
 
@@ -347,17 +349,31 @@ sub ConfigureIonosphereInfo {
 
   # Init hashes references to save iono model subroutine and proper
   # coefficients:
-  my %sub_iono;   my $ref_sub_iono   = \%sub_iono;
-  my %iono_coeff; my $ref_iono_coeff = \%iono_coeff;
+  my $ref_sub_iono   = {};
+  my $ref_iono_coeff = {};
 
   # Iterate over each selected constellation:
   for my $sat_sys ( @{$ref_selected_sat_sys} ) { SAT_SYS_FOR:{
     given ( $ref_sat_sys_iono_model->{$sat_sys} ) { IONO_MODEL_SWITCH:{
 
+      # ********************* #
+      # None Ionosphere model #
+      # ********************* #
+      when ( $_ eq NONE_IONO_MODEL )
+      {
+        # Iono subroutine reference is set as the return zero array value.
+        # Zero array is dimensioned to 2 in accordance with ionosphere subs
+        # interfaces:
+        $ref_sub_iono->{$sat_sys} = \&NullIonoDelay;
+        # Ionosphere coefficients will be empty:
+        $ref_iono_coeff->{$sat_sys}{IONO_COEFF_1} = \@dummy_array;
+        $ref_iono_coeff->{$sat_sys}{IONO_COEFF_2} = \@dummy_array;
+      }
+
       # ************************ #
       # NeQuick Ionosphere model #
       # ************************ #
-      when ( /nequick/i )
+      when ( $_ eq NEQUICK_IONO_MODEL )
       {
         # Set subroutine reference for NeQuick model:
         $ref_sub_iono->{$sat_sys} = \&ComputeIonoNeQuickDelay;
@@ -420,7 +436,7 @@ sub ConfigureIonosphereInfo {
       # ************************** #
       # Klobuchar Ionosphere model #
       # ************************** #
-      when ( /klobuchar/i )
+      when ( $_ eq KLOBUCHAR_IONO_MODEL )
       {
         # Set subroutine reference for Klobuchar model:
         $ref_sub_iono->{$sat_sys} = \&ComputeIonoKlobucharDelay;
