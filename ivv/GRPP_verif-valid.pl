@@ -112,7 +112,7 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
                                                 $FH_LOG );
 
   # print Dumper $ref_obs_data->{BODY}[0]{NUM_SAT_INFO}{ALL}; exit 0;
-  # print Dumper $ref_obs_data->{BODY}[0]{LSQ_INFO}[-1]; exit 0;
+  # print Dumper $ref_obs_data->{BODY}[0]{LSQ_INFO}; exit 0;
 
   ReportElapsedTime([gettimeofday],
                     $ini_rec_position_time_stamp, "ComputeRecPosition()");
