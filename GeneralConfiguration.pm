@@ -61,6 +61,13 @@ BEGIN {
                           &GAL_E5b_FREQ
                           &SUPPORTED_SAT_SYS
                           &ACCEPTED_SAT_SYS
+                          &NONE_IONO_MODEL
+                          &NEQUICK_IONO_MODEL
+                          &KLOBUCHAR_IONO_MODEL
+                          &SUPPORTED_IONO_MODELS
+                          &NONE_TROPO_MODEL
+                          &SAASTAMOINEN_TROPO_MODEL
+                          &SUPPORTED_TROPO_MODELS
                           &GPS_EPOCH_FORMAT
                           &DATE_EPOCH_FORMAT
                           &GPS_WEEK_EPOCH_FORMAT
@@ -181,8 +188,23 @@ use constant SUPPORTED_GAL_SIGNALS => qw( C1C C1A C1B
 use constant SUPPORTED_TIME_FORMATS => qw( GPS GPS_WEEK DATE );
 
 # Supported atmospheric correction models:
-use constant SUPPORTED_IONO_MODELS  => qw(Klobuchar NeQuick);
-use constant SUPPORTED_TROPO_MODELS => qw(Saastamoinen);
+use constant {
+  NONE_IONO_MODEL      => qq(none),
+  NEQUICK_IONO_MODEL   => qq(nequick),
+  KLOBUCHAR_IONO_MODEL => qq(klobuchar),
+};
+
+use constant {
+  NONE_TROPO_MODEL         => qq(none),
+  SAASTAMOINEN_TROPO_MODEL => qq(saastamoinen),
+};
+
+use constant SUPPORTED_IONO_MODELS  => ( NONE_IONO_MODEL,
+                                         NEQUICK_IONO_MODEL,
+                                         KLOBUCHAR_IONO_MODEL );
+
+use constant SUPPORTED_TROPO_MODELS => ( NONE_TROPO_MODEL,
+                                         SAASTAMOINEN_TROPO_MODEL );
 
 # Supported elipsoids:
 use constant SUPPORTED_ELIPSOIDS => qw(WGS84 GRS80 HAYFORD);
@@ -504,7 +526,7 @@ sub LoadConfiguration {
     if ( grep(/^${\RINEX_GPS_ID}$/, @{$ref_config_hash->{SELECTED_SAT_SYS}}) ) {
       if ($config_content =~ /^GPS Satellites to Discard +: +(.+)$/gim) {
         my @sat_to_discard;
-        for my $sat (split(/[\s,;]/, $1)) {
+        for my $sat (split(/[\s,;]+/, $1)) {
           if (substr($sat, 0, 1) eq &RINEX_GPS_ID) {
             push(@sat_to_discard, $sat);
           } else {
@@ -518,9 +540,9 @@ sub LoadConfiguration {
     }
     # GALILEO satellites to discard:
     if ( grep(/^${\RINEX_GAL_ID}$/, @{$ref_config_hash->{SELECTED_SAT_SYS}}) ) {
-      if ($config_content =~ /^GAL Satellites to Discard +: +(.+)$/gim) {
+      if ($config_content =~ /^GAL Satellites to Discard +: +(.+)$/im) {
         my @sat_to_discard;
-        for my $sat (split(/[\s,;]/, $1)) {
+        for my $sat (split(/[\s,;]+/, $1)) {
           if (substr($sat, 0, 1) eq &RINEX_GAL_ID) {
             push(@sat_to_discard, $sat);
           } else {
