@@ -80,18 +80,18 @@ print "Plot 1.b Satellite observed elevation"
   set xlabel "Observation Epochs"
   set ylabel "Elevation [deg]"
 
+  # Elevation range:
+  set yrange[0:90]
+
   # Get data file stats for retrieving number of columns:
   stats sat_elevation using 8 nooutput
   print "Satellite elevation output number of columns = ", STATS_columns
-
-  # Elevation range:
-  set yrange[0:90]
 
   # Automatic set of SAT_ID to dataset title:
   set key autotitle columnheader
   # Plot iteration for all satellites:
   plot for [i=9:STATS_columns] sat_elevation using i with lines lw 1,\
-      sat_elevation using 8 title "Configured satellite mask" with lines lw 3
+       sat_elevation using 8 title "Configured satellite mask" with lines lw 3
 
 print ""
 
