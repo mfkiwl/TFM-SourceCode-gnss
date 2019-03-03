@@ -91,7 +91,7 @@ BEGIN {
 # Constants:
 # ---------------------------------------------------------------------------- #
 # NULL data constant:
-use constant NULL_DATA => 'NULL';
+use constant NULL_DATA => 'NaN';
 
 use constant {
   WARN_NO_SELECTED_OBS => 90101,
@@ -195,7 +195,7 @@ sub DumpSatObsData {
       push(@header_items, ($_, "$_-NumValidSat")) for (@sat_sys_obs);
 
       # Write header:
-      say $fh "#".join($delimiter, @header_items);
+      say $fh join($delimiter, @header_items);
 
     # 4. Dump satellite observations:
       for (my $i = 0; $i < scalar(@{$ref_obs_data->{BODY}}); $i += 1)
@@ -306,7 +306,7 @@ sub DumpSatPosition {
                                NavLat NavLon NavElipHeight
                                RecepLat RecepLon RecepElipHeight ) );
 
-      say $fh "#".join($delimiter, @header_items);
+      say $fh join($delimiter, @header_items);
 
     # 4. Write Line of Sight data:
       # Go through the observations epochs:
@@ -450,7 +450,7 @@ sub DumpRecSatLoSData {
                              ENU_IE ENU_IN ENU_IU
                              ECEF_IX ECEF_IY ECEF_IZ) );
 
-      say $fh "#".join($delimiter, @header_items);
+      say $fh join($delimiter, @header_items);
 
     # 4. Write Line of Sight data:
       # Go through the observations epochs:
@@ -568,7 +568,7 @@ sub DumpLSQReport {
     push(@header_items,
          "DeltaParameter[$_]") for (0..NUM_PARAMETERS_TO_ESTIMATE - 1);
 
-    say $fh "#".join($delimiter, @header_items);
+    say $fh join($delimiter, @header_items);
 
   # 4. Write Line of Sight data:
     # Go through the observations epochs:
@@ -720,7 +720,7 @@ sub DumpRecPosition {
       push( @header_items, $_ ) for qw(REF_IE REF_IN REF_IU);
     }
 
-    say $fh "#".join($delimiter, @header_items);
+    say $fh join($delimiter, @header_items);
 
   # 4. Write Receiver position data:
     for (my $i = 0; $i < scalar(@{ $ref_obs_data->{BODY} }); $i += 1)
@@ -860,7 +860,7 @@ sub DumpNumValidSat {
     # 3. Write header line:
       my @header_items = ( SetEpochHeaderItems( $epoch_format ),
                            'AvailSat', 'ValidObs', 'ValidNav', 'ValidLSQ' );
-      say $fh "#".join($delimiter, @header_items);
+      say $fh join($delimiter, @header_items);
 
     # 4. Write Num satellites info:
       # Iterate over observation epochs:
@@ -983,7 +983,7 @@ sub DumpEpochDOP {
     my @header_items = ( SetEpochHeaderItems($epoch_format),
                          'Status', 'GDOP', 'PDOP', 'TDOP', 'HDOP', 'VDOP' );
 
-    say $fh "#".join($delimiter, @header_items);
+    say $fh join($delimiter, @header_items);
 
   # 4. Write DOP data:
     # Ierate over observation epochs:
@@ -1110,7 +1110,7 @@ sub DumpAzimutBySat {
       my @header_items = ( SetEpochHeaderItems($epoch_format),
                            'Status', @all_obs_sat);
 
-      say $fh "#".join($delimiter, @header_items);
+      say $fh join($delimiter, @header_items);
 
     # 4. Write data:
       # Iterate over observation epoch:
@@ -1235,7 +1235,7 @@ sub DumpElevationBySat {
       my @header_items = ( SetEpochHeaderItems($epoch_format),
                            'Status', 'SatMask', @all_obs_sat);
 
-      say $fh "#".join($delimiter, @header_items);
+      say $fh join($delimiter, @header_items);
 
     # 4. Write data:
       # Iterate over observation epoch:
@@ -1355,7 +1355,7 @@ sub DumpIonoCorrBySat {
       my @header_items = ( SetEpochHeaderItems($epoch_format),
                            'Status', @all_obs_sat);
 
-      say $fh "#".join($delimiter, @header_items);
+      say $fh join($delimiter, @header_items);
 
     # 4. Write data:
       # Iterate over observation epoch:
@@ -1472,7 +1472,7 @@ sub DumpTropoCorrBySat {
       my @header_items = ( SetEpochHeaderItems($epoch_format),
                            'Status', @all_obs_sat);
 
-      say $fh "#".join($delimiter, @header_items);
+      say $fh join($delimiter, @header_items);
 
     # 4. Write data:
       # Iterate over observation epoch:
@@ -1592,7 +1592,7 @@ sub DumpResidualsBySat {
       my @header_items = ( SetEpochHeaderItems($epoch_format),
                            'Status', 'NumIterLSQ', @all_obs_sat);
 
-      say $fh "#".join($delimiter, @header_items);
+      say $fh join($delimiter, @header_items);
 
     # 4. Write data:
       # Iterate over observation epoch:
