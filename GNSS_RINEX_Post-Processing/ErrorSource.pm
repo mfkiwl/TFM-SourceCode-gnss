@@ -55,7 +55,9 @@ BEGIN {
   our @EXPORT_CONST = qw(  );
 
   # Define subroutines to export:
-  our @EXPORT_SUB   = qw( &ComputeTropoSaastamoinenDelay
+  our @EXPORT_SUB   = qw( &NullIonoDelay
+                          &NullTropoDelay
+                          &ComputeTropoSaastamoinenDelay
                           &ComputeIonoKlobucharDelay
                           &ComputeIonoNeQuickDelay );
 
@@ -91,6 +93,10 @@ use constant NEQUICK_SLANT_VERTICAL_THRESHOLD => 0.1e3; # [m]
 
 # Public Subroutines: #
 # ............................................................................ #
+sub NullTropoDelay { return 0;      }
+
+sub NullIonoDelay  { return (0, 0); }
+
 sub ComputeTropoSaastamoinenDelay {
   my ($zenital, $height) = @_; # [rad], [m]
 
