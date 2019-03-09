@@ -130,15 +130,14 @@ print "Plot 1.c: Sky Plot"
   unset xlabel; unset ylabel
 
   # Plot style:
-  unset xtics; unset ytics; 
+  unset xtics; unset ytics;
   unset xrange; unset yrange
 
   # Increase samples to plot:
   set samples 300
 
- 
   do for [i = 8:9] {
-    
+
     # Init arrays to hold variables:
     array dummy[num_epochs]
     array azimut[num_epochs]
@@ -162,19 +161,64 @@ print "Plot 1.c: Sky Plot"
     set trange[0:360]; set rrange[90:0]
 
     # Plot command:
-    plot dummy using (azimut[$1]):(elevation[$1]) title "Data ".i with lines lw 3
-  
+    plot dummy using (azimut[$1]):(elevation[$1]) \
+               title ("Data ".i) with lines lw 3
+
   }
-
-  exit 0; # breakpoint
-
 
 print ""
 
 
-
+# ---------------------------------------------------------------------------- #
 # 2. Receiver Position plots:
+# ---------------------------------------------------------------------------- #
+
+# *********************************************** #
 #    2.a Easting/Northing point densisty plot:
+# *********************************************** #
+print "Plot 2.a: Easting/Northing plot"
+
+  # Select target file:
+  rec_position = INP_PATH."/VILL-xyz.out"
+
+  # Retrieve stats:
+  unset polar;
+  stats rec_position using 7 prefix "REC" # using status column
+
+  num_epochs = REC_records
+  print "Number of epochs = ", num_epochs
+
+  # Set plot properties:
+  set terminal png; set output OUT_PATH."/VILL-EN-plot.png"
+
+  set polar; set border polar; set grid polar
+  set rrange[-5:5]; set trange[-5:5]
+  set rtics 2; set ttics add ("N" 0, "E" 90, "S" 180, "W" 270) font ":Bold"
+  unset polar;
+
+  # Plot style:
+  # NOTE: I think is better if we set normal plot instead of polat and we draw
+  #       in parametric form the circles:
+  # NOTE: Another alternative is to transform EN in polar coordinates (ro and
+  #       theta)
+  #       ro = sqrt(e²+n²)
+  #       theta = atan2(n,e)
+
+  # Plot circles:
+  # do for [i=1:5] {
+  #   # plot sqrt(i*i-x*x), -1*sqrt(i*i-x*x)
+  # }
+
+  set title "Positioning Results: Easting and Northing Against Reference"
+
+  plot for[i=1:5] sqrt(i) with circles
+
+  # Plot data:
+  plot rec_position using 23:24 title "Receiver position" with points
+
+print ""
+
+
 #    2.b Upping plot:
 #    2.c Easting/Northing/Upping point density 3D plot:
 
