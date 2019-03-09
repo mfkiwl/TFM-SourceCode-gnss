@@ -13,6 +13,7 @@ use Enviroments qq(:CONSTANTS);
 # ---------------------------------------------------------------------------- #
 use Carp;            # enhanced user warning and error messages...
 use strict;          # enables strict syntax...
+use Storable;        # save raw hashes
 use Data::Dumper;    # hash pretty print...
 use feature qq(say); # print method adding carriage jump...
 
@@ -269,6 +270,10 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
   ReportElapsedTime([gettimeofday],
                     $ini_time_dump_data, "DumpResidualsBySat()");
   $MEM_USAGE->record('-> DumpResidualsBySat');
+
+# Save raw data hash:
+  store($ref_gen_conf, $ref_gen_conf->{OUTPUT_PATH}."/ref_gen_conf.hash");
+  store($ref_obs_data, $ref_gen_conf->{OUTPUT_PATH}."/ref_obs_data.hash");
 
 # Terminal:
   # Close output log file:
