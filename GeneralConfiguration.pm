@@ -71,6 +71,7 @@ BEGIN {
                           &GPS_EPOCH_FORMAT
                           &DATE_EPOCH_FORMAT
                           &GPS_WEEK_EPOCH_FORMAT
+                          &DATE_STRING_EPOCH_FORMAT
                           &REF_EPOCH_SUB_CONF
                           &REF_ANGLE_SUB_CONF
                           &IGS_STATIC_MODE
@@ -184,9 +185,6 @@ use constant SUPPORTED_GAL_SIGNALS => qw( C1C C1A C1B
                                           C7I C7Q C7X
                                           C8I C8Q C8X );
 
-# Supported time formats:
-use constant SUPPORTED_TIME_FORMATS => qw( GPS GPS_WEEK DATE );
-
 # Supported atmospheric correction models:
 use constant {
   NONE_IONO_MODEL      => qq(none),
@@ -226,18 +224,22 @@ use constant REF_IGS_REFERENCE_STATIONS => LoadIGSReferenceStations();
 
 # Supported epoch formats:
 use constant {
-  GPS_EPOCH_FORMAT      => qq(gps),
-  DATE_EPOCH_FORMAT     => qq(date),
-  GPS_WEEK_EPOCH_FORMAT => qq(gps_week),
+  GPS_EPOCH_FORMAT         => qq(gps),
+  DATE_EPOCH_FORMAT        => qq(date),
+  GPS_WEEK_EPOCH_FORMAT    => qq(gps_week),
+  DATE_STRING_EPOCH_FORMAT => qq(date_string),
 };
 
 use constant SUPPORTED_EPOCH_FORMATS => ( GPS_EPOCH_FORMAT,
                                           DATE_EPOCH_FORMAT,
-                                          GPS_WEEK_EPOCH_FORMAT );
+                                          GPS_WEEK_EPOCH_FORMAT,
+                                          DATE_STRING_EPOCH_FORMAT );
 
-use constant REF_EPOCH_SUB_CONF => { &GPS_EPOCH_FORMAT      => \&DummySub,
-                                     &DATE_EPOCH_FORMAT     => \&GPS2Date,
-                                     &GPS_WEEK_EPOCH_FORMAT => \&GPS2ToW };
+use constant
+  REF_EPOCH_SUB_CONF => { &GPS_EPOCH_FORMAT         => \&DummySub,
+                          &DATE_EPOCH_FORMAT        => \&GPS2Date,
+                          &GPS_WEEK_EPOCH_FORMAT    => \&GPS2ToW,
+                          &DATE_STRING_EPOCH_FORMAT => \&GPS2DateString };
 
 # Supported angle formats:
 use constant {
