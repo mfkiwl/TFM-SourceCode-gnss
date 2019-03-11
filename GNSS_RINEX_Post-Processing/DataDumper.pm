@@ -1665,6 +1665,9 @@ sub SetEpochHeaderItems {
     when ($_ eq &GPS_WEEK_EPOCH_FORMAT) {
       @head_items = qw(WeekNum DayNum TimeOfWeek);
     }
+    when ($_ eq &DATE_STRING_EPOCH_FORMAT) {
+      @head_items = qw(Date);
+    }
   }
 
   return @head_items;
