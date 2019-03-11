@@ -31,6 +31,7 @@ BEGIN {
   our @EXPORT_OK = qw( &BuildDateString
                        &Date2GPS
                        &GPS2Date
+                       &GPS2DateString
                        &GPS2ToW
                        &Date2UniversalTime
                        &UniversalTime2LocalTime
@@ -113,6 +114,11 @@ sub GPS2Date {
   # 'gmtime' method returns the year offset since 1900 and the months numerated
   # from 0 to 11:
   return ($year + 1900, $mon + 1, $day, $hour, $min, $sec);
+}
+
+sub GPS2DateString {
+  my ($gps_time) = @_;
+  return BuildDateString(GPS2Date($gps_time));
 }
 
 sub GPS2ToW {
