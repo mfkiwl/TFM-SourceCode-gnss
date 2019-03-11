@@ -46,21 +46,29 @@ print "Plot 1.a : Constellation availability"
   set xlabel "Observation Epochs"
   set ylabel "Number of Satellites"
 
+
   # Set axis ranges by extracting the data stats:
   # Maximum number of satellites wiil always be in "available sat" column:
-  stats num_sat_info using 7 name "NUM_SAT" nooutput
-  set yrange[5:NUM_SAT_max+2]
-  set xrange[0:NUM_SAT_records]
+  stats num_sat_info using 1 name "EPOCH" nooutput
+  stats num_sat_info using 2 name "NUM_SAT" nooutput
 
-  # TODO: set X axis time format!
+  set timefmt "%s"
+  set xdata time
+  set xrange [EPOCH_min:EPOCH_max]
+  set yrange[5:NUM_SAT_max+2]
+  set format x "%H:%M"
+
+  set xtics 900
 
   set style fill transparent solid 0.6
-  plot num_sat_info using  7 title "Available Satellites" with filledcurve y=0,\
-       num_sat_info using  8 title "Valid Obs Satellites" with filledcurve y=0,\
-       num_sat_info using  9 title "Valid Nav Satellites" with filledcurve y=0,\
-       num_sat_info using 10 title "Valid LSQ Satellites" with filledcurve y=0
+  plot num_sat_info using 1:2 title "Available Satellites" with filledcurve y=0,\
+       num_sat_info using 1:3 title "Valid Obs Satellites" with filledcurve y=0,\
+       num_sat_info using 1:4 title "Valid Nav Satellites" with filledcurve y=0,\
+       num_sat_info using 1:5 title "Valid LSQ Satellites" with filledcurve y=0
 
 print ""
+
+exit 0;
 
 # *************************************** #
 #    1.b Satellite observed elevation:    #
