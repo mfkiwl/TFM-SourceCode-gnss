@@ -226,7 +226,6 @@ sub Vxyz2Venu {
   return ($ie, $in, $iu);
 }
 
-
 sub Venu2Vxyz {
   my ($ie, $in, $iu, $lat, $lon) = @_;
 
@@ -258,6 +257,20 @@ sub Venu2AzZeDs {
 
   # Return parameters:
   return ($azimut, $zenital, $geom_dist);
+}
+
+sub AzZeDs2Venu {
+  my ($azimut, $zenital, $geom_dist) = @_;
+
+  # Ortonormal distance:
+  my $orto_dist = sin($zenital)*$geom_dist;
+
+  # ENU vector components:
+  my $ie = $orto_dist*sin($azimut);
+  my $in = $orto_dist*cos($azimut);
+  my $iu = $geom_dist*cos($zenital);
+
+  return ($ie, $in, $iu);
 }
 
 sub PrimeVerticalRadius {
