@@ -178,13 +178,21 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
   $ini_time_dump_data = [gettimeofday];
 
   PrintTitle3($FH_LOG, "Dumping Leas Squares report:");
-  DumpLSQReport( $ref_gen_conf,
-                 $ref_obs_data,
-                 $ref_gen_conf->{OUTPUT_PATH}, $FH_LOG );
+  DumpLSQReportByIter( $ref_gen_conf,
+                       $ref_obs_data,
+                       $ref_gen_conf->{OUTPUT_PATH}, $FH_LOG );
 
   ReportElapsedTime([gettimeofday],
-                    $ini_time_dump_data, "DumpLSQReport()");
-  $MEM_USAGE->record('-> DumpLSQReport');
+                    $ini_time_dump_data, "DumpLSQReportByIter()");
+  $MEM_USAGE->record('-> DumpLSQReportByIter');
+
+  DumpLSQReportByEpoch( $ref_gen_conf,
+                        $ref_obs_data,
+                        $ref_gen_conf->{OUTPUT_PATH}, $FH_LOG );
+
+  ReportElapsedTime([gettimeofday],
+                    $ini_time_dump_data, "DumpLSQReportByEpoch()");
+  $MEM_USAGE->record('-> DumpLSQReportByEpoch');
 
   $ini_time_dump_data = [gettimeofday];
 
