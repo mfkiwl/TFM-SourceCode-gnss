@@ -64,7 +64,8 @@ BEGIN {
   our @EXPORT_SUB   = qw( &DumpSatObsData
                           &DumpSatPosition
                           &DumpRecSatLoSData
-                          &DumpLSQReport
+                          &DumpLSQReportByIter
+                          &DumpLSQReportByEpoch
                           &DumpRecPosition
                           &DumpNumValidSat
                           &DumpEpochDOP
@@ -505,7 +506,7 @@ sub DumpRecSatLoSData {
   return TRUE;
 }
 
-sub DumpLSQReport {
+sub DumpLSQReportByIter {
   my ( $ref_gen_conf, $ref_obs_data, $output_path, $fh_log ) = @_;
 
   # Default input values if not defined:
@@ -547,11 +548,11 @@ sub DumpLSQReport {
   my $ref_epoch_sub = REF_EPOCH_SUB_CONF->{$epoch_format};
 
   # 1. Open dumper file at output path:
-    my $file_path = join('/', ($output_path, "LSQ-report-info.out"));
+    my $file_path = join('/', ($output_path, "LSQ-iter-report-info.out"));
     my $fh; open($fh, '>', $file_path) or die "Could not create $!";
 
   # 2. Write title line:
-    say $fh sprintf("# > Least Squares Report.\n".
+    say $fh sprintf("# > Least Squares Report by iteration.\n".
                     "# > Created : %s",
                     GetPrettyLocalDate());
 
@@ -597,6 +598,103 @@ sub DumpLSQReport {
         say $fh join($delimiter, @line_items);
 
       } # end for $iter
+    } # end for $i
+
+  # 5. Close dumper file:
+  close($fh);
+
+  # Sub's answer is TRUE if successfull:
+  return TRUE;
+}
+
+sub DumpLSQReportByEpoch {
+  my ( $ref_gen_conf, $ref_obs_data, $output_path, $fh_log ) = @_;
+
+  # Default input values if not defined:
+  $fh_log = *STDOUT unless $fh_log;
+
+  # ************************* #
+  # Input consistency cehcks: #
+  # ************************* #
+
+  # Output path must exist and have write permissions:
+  unless (-w $output_path) {
+    RaiseError($fh_log, ERR_WRITE_PERMISSION_DENIED,
+      "User '".$ENV{USER}."' does not have write permissions at $output_path");
+    return KILLED;
+  }
+
+  # General configuration must be hash type:
+  unless (ref($ref_gen_conf) eq 'HASH') {
+    RaiseError($fh_log, ERR_WRONG_HASH_REF,
+      "Input argument \'$ref_gen_conf\' is not HASH type");
+    return KILLED;
+  }
+
+  # Observation data must be hash type:
+  unless (ref($ref_obs_data) eq 'HASH') {
+    RaiseError($fh_log, ERR_WRONG_HASH_REF,
+      "Input argument \'$ref_obs_data\' is not HASH type");
+    return KILLED;
+  }
+
+  # ************************************** #
+  # Receiver-Satellite LoS dumper routine: #
+  # ************************************** #
+
+  # Save dumper useful configuration:
+  my $delimiter    = $ref_gen_conf->{DATA_DUMPER}{ DELIMITER    };
+  my $epoch_format = $ref_gen_conf->{DATA_DUMPER}{ EPOCH_FORMAT };
+
+  my $ref_epoch_sub = REF_EPOCH_SUB_CONF->{$epoch_format};
+
+  # 1. Open dumper file at output path:
+    my $file_path = join('/', ($output_path, "LSQ-epoch-report-info.out"));
+    my $fh; open($fh, '>', $file_path) or die "Could not create $!";
+
+  # 2. Write title line:
+    say $fh sprintf("# > Least Squares Report by observation epoch.\n".
+                    "# > Created : %s",
+                    GetPrettyLocalDate());
+
+  # 3. Write header line:
+    my @header_items =( SetEpochHeaderItems( $epoch_format ),
+                        qw(NumIter LSQ_Status ConvergenceFlag
+                           NumObs NumParameter DegOfFree StdDevEstimator) );
+
+    # Insert number of apx parameters:
+    push(@header_items, qw(ApxX ApxY ApxZ ApxDT));
+    push(@header_items, qw(dX dY dZ dDT));
+
+    say $fh join($delimiter, @header_items);
+
+  # 4. Write Line of Sight data:
+    # Go through the observations epochs:
+    for (my $i = 0; $i < scalar(@{ $ref_obs_data->{BODY} }); $i += 1)
+    {
+      # Epoch is transformed according to configuration:
+      my @epoch = &{ $ref_epoch_sub }( $ref_obs_data->{BODY}[$i]{EPOCH} );
+
+      # Retrieve number of iterations:
+      my $num_iter = scalar(@{ $ref_obs_data->{BODY}[$i]{LSQ_INFO} });
+      # Point to last iteration:
+      my $ref_iter_data = $ref_obs_data->{BODY}[$i]{LSQ_INFO}[$num_iter - 1];
+
+      # Save line items to print:
+      # NOTE: dumping std deviation estimator
+      my @line_items = ( @epoch, $num_iter,
+                         $ref_iter_data->{STATUS},
+                         $ref_iter_data->{CONVERGENCE},
+                         $ref_iter_data->{NUM_OBSERVATION},
+                         $ref_iter_data->{NUM_PARAMETER},
+                         $ref_iter_data->{DEGREES_OF_FREEDOM},
+                         $ref_iter_data->{VARIANCE_ESTIMATOR}**(0.5),
+                         @{ $ref_iter_data->{APX_PARAMETER} },
+                         @{ $ref_iter_data->{PARAMETER_VECTOR} } );
+
+      # Write LSQ line data:
+      say $fh join($delimiter, @line_items);
+
     } # end for $i
 
   # 5. Close dumper file:
