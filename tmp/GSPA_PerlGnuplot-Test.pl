@@ -57,16 +57,27 @@ my $ref_obs_data = retrieve("$inp_path/ref_obs_data.hash");
 # ************************************** #
 #    1.a Constellation availability:     #
 # ************************************** #
+  # TODO:
+  #   - Set transparent fills
   PlotConstellationAvailability($ref_gen_conf, $sat_sys, $inp_path, $out_path);
 
 # ****************************** #
 #    1.b Satellite elevation     #
 # ****************************** #
+  # TODO:
+  #   - Avoid same colors for two sats
+  #   - New style for mask dataset (dashed grey line with transparent fill)
   PlotSatelliteElevation($ref_gen_conf, $sat_sys, $inp_path, $out_path);
 
 # ******************* #
 #    1.c Sky plot:    #
 # ******************* #
+  # TODO:
+  #   - Palette epoch values (hours intead of GPS epochs)
+  #   - Offset in pallete
+  #   - Label satellites
+  #   - *change palette colors (more colors)
+  #   - Move title top left
   PlotSatelliteSkyPath($ref_gen_conf, $sat_sys, $inp_path, $out_path);
 
 # ---------------------------------------------------------------------------- #
@@ -74,17 +85,35 @@ my $ref_obs_data = retrieve("$inp_path/ref_obs_data.hash");
 # ---------------------------------------------------------------------------- #
 # ******************************************************** #
 #    2.a Easting/Northing point densisty plot:             #
+#    TODO:
+#       - Move title top left
+#       - Offset in palette
+#       - Change palette variable for U
+#       - Set transparent fill for points
 #    2.b Upping plot:                                      #
+#    TODO:
+#       - Move palette to bottom
+#       - Change palette variables for STD DEV of each ENU component
+#       - Add E and N
+#       - Set multiplot (3x1)
 #    2.c Easting/Northing/Upping point density 3D plot:    #
+#    TODO:
+#       - Delete plot? --> NOT YET
+#       - Move axis to 0,0,0
+#       - Try to use pallete to color points (use PDOP value)
 # ******************************************************** #
-  PlotReceiverPositions($ref_gen_conf, $ref_obs_data, $inp_path, $out_path);
+  PlotReceiverPosition($ref_gen_conf, $ref_obs_data, $inp_path, $out_path);
 
 # ---------------------------------------------------------------------------- #
 # 3. Ex-post Dilution of Precission:
 # ---------------------------------------------------------------------------- #
 # ************************ #
 #    3.a ECEF frame DOP:   #
+#    TODO:
+#       - Include 2.5 overbound (set fill transparent)
 #    3.b ENU frame DOP:    #
+#    TODO:
+#       - Include 2.5 overbound (set fill transparent)
 # ************************ #
   PlotDilutionOfPrecission($ref_gen_conf, $inp_path, $out_path);
 
@@ -92,14 +121,16 @@ my $ref_obs_data = retrieve("$inp_path/ref_obs_data.hash");
 # 4. Least Squeares Estimation plots:
 # ---------------------------------------------------------------------------- #
 # *********************************************** #
-#    4.a Number of iterations                     #
-#    4.b Ex-post Standard Deviation Estimator     #
-#    4.c Delta Parameter estimation               #
+#    4.a LSQ info (iter, convergence, ... )       #
+#    4.b Apx parameter + Delta parameter          #
 # *********************************************** #
   PlotLSQEpochEstimation($ref_gen_conf, $inp_path, $out_path);
 
 # ********************************* #
 #    4.d Residuals by satellite:    #
+#    TODO:
+#       - Move pelette to chart bottom
+#       - Set Satellite IDs in Y axis
 # ********************************* #
   PlotSatelliteResiduals($ref_gen_conf, $sat_sys, $inp_path, $out_path);
 
@@ -113,11 +144,17 @@ my $ref_obs_data = retrieve("$inp_path/ref_obs_data.hash");
 # ---------------------------------------------------------------------------- #
 # ************************************************* #
 #    5.a Ionosphere Computed Delay by satellite:    #
+#    TODO:
+#       - Move pelette to chart bottom
+#       - Set Satellite IDs in Y axis
 # ************************************************* #
   PlotSatelliteIonosphereDelay($ref_gen_conf, $sat_sys, $inp_path, $out_path);
 
 # ************************************************** #
 #    5.b Troposphere Computed delay by satellite:    #
+#    TODO:
+#       - Move pelette to chart bottom
+#       - Set Satellite IDs in Y axis
 # ************************************************** #
   PlotSatelliteTroposphereDelay($ref_gen_conf, $sat_sys, $inp_path, $out_path);
 
@@ -429,13 +466,13 @@ sub PlotSatelliteSkyPath {
   return TRUE;
 }
 
-sub PlotReceiverPositions {
+sub PlotReceiverPosition {
   my ($ref_gen_conf, $ref_obs_data, $inp_path, $out_path) = @_;
 
   # Select receiver position dumper file:
-  my $rec_marker_name = $ref_obs_data->{HEAD}{MARKER_NAME};
+  my $marker_name = $ref_obs_data->{HEAD}{MARKER_NAME};
   my $ref_file_layout =
-     GetFileLayout($inp_path."/$rec_marker_name-xyz.out", 8,
+     GetFileLayout($inp_path."/$marker_name-xyz.out", 8,
                    $ref_gen_conf->{DATA_DUMPER}{DELIMITER});
 
   my $pdl_rec_xyz = pdl( LoadFileByLayout($ref_file_layout) );
@@ -443,24 +480,41 @@ sub PlotReceiverPositions {
   # Observation epochs:
   my $pdl_epochs = $pdl_rec_xyz($ref_file_layout->{ITEMS}{Epoch}{INDEX});
 
+  # Get first and last observation epochs:
   my $ini_epoch = min($pdl_epochs);
   my $end_epoch = max($pdl_epochs);
 
   # Retrieve Easting and Northing values:
-  my $pdl_rec_easting  = $pdl_rec_xyz($ref_file_layout->{ITEMS}{REF_IE}{INDEX});
-  my $pdl_rec_northing = $pdl_rec_xyz($ref_file_layout->{ITEMS}{REF_IN}{INDEX});
-  my $pdl_rec_upping   = $pdl_rec_xyz($ref_file_layout->{ITEMS}{REF_IU}{INDEX});
+  my $pdl_rec_easting =
+     $pdl_rec_xyz($ref_file_layout->{ITEMS}{REF_IE}{INDEX});
+  my $pdl_rec_northing =
+     $pdl_rec_xyz($ref_file_layout->{ITEMS}{REF_IN}{INDEX});
+  my $pdl_rec_upping =
+     $pdl_rec_xyz($ref_file_layout->{ITEMS}{REF_IU}{INDEX});
 
-  # Build polar coordinates from easting and northing coordinate
-  # components:
+  # Retrieve standard deviations for ENU coordinates:
+  my $pdl_std_easting =
+     $pdl_rec_xyz($ref_file_layout->{ITEMS}{Sigma_E}{INDEX});
+  my $pdl_std_northing =
+     $pdl_rec_xyz($ref_file_layout->{ITEMS}{Sigma_N}{INDEX});
+  my $pdl_std_upping =
+     $pdl_rec_xyz($ref_file_layout->{ITEMS}{Sigma_U}{INDEX});
+
+  # Retrieve receiver clock bias estimation and associated error:
+  my $pdl_rec_clk_bias =
+     $pdl_rec_xyz($ref_file_layout->{ITEMS}{ClkBias}{INDEX});
+  my $pdl_std_clk_bias =
+     $pdl_rec_xyz($ref_file_layout->{ITEMS}{Sigma_ClkBias}{INDEX});
+
+  # Build polar coordinates from easting and northing components:
   my $pdl_rec_azimut = pi/2 - atan2($pdl_rec_northing, $pdl_rec_easting);
   my $pdl_rec_distance = ($pdl_rec_easting**2 + $pdl_rec_northing**2)**.5;
 
   # Create EN chart object:
-  my $chart_en =
+  my $chart_en_polar =
     Chart::Gnuplot->new(
-                          output => $out_path."/$rec_marker_name-EN-plot.png",
-                          title  => "Receiver '$rec_marker_name' EN",
+                          output => $out_path."/$marker_name-EN-plot.png",
+                          title  => "Receiver '$marker_name' EN",
                           border => undef,
                           xtics  => undef,
                           ytics  => undef,
@@ -469,31 +523,30 @@ sub PlotReceiverPositions {
                                           font => "Helvetica :Italic",
                                         },
                         );
-
   # Set chart polar properties:
-  $chart_en->set(
-                  size   => "square",
-                  polar  => "",
-                  grid   => "polar",
-                  angle  => "radians",
-                  theta  => "top clockwise",
-                  trange => "[0:2*pi]",
-                  rtics  => "0.5",
-                  ttics  => 'add ("N" 0, "E" 90, "S" 180, "W" 270) font ":Bold"',
-                  colorbox => "",
-                );
-
+    $chart_en_polar->set(
+                        size   => "square",
+                        polar  => "",
+                        grid   => "polar",
+                        angle  => "radians",
+                        theta  => "top clockwise",
+                        trange => "[0:2*pi]",
+                        rtics  => "0.5",
+                        ttics  => 'add ("N" 0, "E" 90, "S" 180, "W" 270) '.
+                                  'font ":Bold"',
+                        colorbox => "",
+                      );
   # Set point style properties:
-  $chart_en->set(
-                  style => "fill transparent solid 0.04 noborder",
-                  style => "circle radius 0.04",
-                );
+    $chart_en_polar->set(
+                        style => "fill transparent solid 0.04 noborder",
+                        style => "circle radius 0.04",
+                      );
 
-  # Create U chart object:
-  my $chart_u =
+  # Create ENU multiplot chart object:
+  my $chart_enu =
     Chart::Gnuplot->new(
-                          output => $out_path."/$rec_marker_name-U-plot.png",
-                          title  => "Receiver '$rec_marker_name' U",
+                          output => $out_path."/$marker_name-ENU-plot.png",
+                          title  => "Receiver '$marker_name' U",
                           grid   => "on",
                           xlabel => "Observation Epochs [HH::MM]",
                           ylabel => "Upping [m]",
@@ -505,12 +558,17 @@ sub PlotReceiverPositions {
                                           font => "Helvetica :Italic",
                                         },
                         );
+  # Set multiplot:
+    # $chart_enu->set(
+    #                   multiplot => 'layout 3, 1',
+    #                   tmargin   => "2",
+    #                );
 
-  # Create ENU chart object:
-  my $chart_enu =
+  # Create 3D ENU chart object:
+  my $chart_enu_3d =
     Chart::Gnuplot->new(
-                          output => $out_path."/$rec_marker_name-ENU-plot.png",
-                          title  => "Receiver '$rec_marker_name' ENU",
+                          output => $out_path."/$marker_name-ENU-3D-plot.png",
+                          title  => "Receiver '$marker_name' ENU",
                           grid   => "on",
                           xlabel => "Easting [m]",
                           ylabel => "Northing [m]",
@@ -521,14 +579,38 @@ sub PlotReceiverPositions {
                                         },
                         );
 
-  # Build receiver EN positions dataset:
-  my $rec_en_dataset =
+  # Build EN polar dataset:
+  my $rec_en_polar_dataset =
     Chart::Gnuplot::DataSet->new(
                                   xdata => unpdl($pdl_rec_azimut->flat),
                                   ydata => unpdl($pdl_rec_distance->flat),
-                                  zdata => unpdl($pdl_epochs->flat),
+                                  zdata => unpdl($pdl_rec_upping->flat),
                                   style => "circles linecolor pal z",
                                   fill => { density => 0.8 },
+                                );
+
+  # Build receiver E positions dataset:
+  my $rec_e_dataset =
+    Chart::Gnuplot::DataSet->new(
+                                  xdata => unpdl($pdl_epochs->flat),
+                                  ydata => unpdl($pdl_rec_easting->flat),
+                                  zdata => unpdl($pdl_std_easting->flat),
+                                  style => "lines linecolor pal z",
+                                  width => 3,
+                                  title => "Easting component",
+                                  timefmt => "%s",
+                                );
+
+  # Build receiver N positions dataset:
+  my $rec_n_dataset =
+    Chart::Gnuplot::DataSet->new(
+                                  xdata => unpdl($pdl_epochs->flat),
+                                  ydata => unpdl($pdl_rec_northing->flat),
+                                  zdata => unpdl($pdl_std_northing->flat),
+                                  style => "lines linecolor pal z",
+                                  width => 3,
+                                  title => "Northing component",
+                                  timefmt => "%s",
                                 );
 
   # Build receiver U positions dataset:
@@ -536,9 +618,22 @@ sub PlotReceiverPositions {
     Chart::Gnuplot::DataSet->new(
                                   xdata => unpdl($pdl_epochs->flat),
                                   ydata => unpdl($pdl_rec_upping->flat),
-                                  zdata => unpdl($pdl_epochs->flat),
+                                  zdata => unpdl($pdl_std_upping->flat),
                                   style => "lines linecolor pal z",
                                   width => 3,
+                                  title => "Upping component",
+                                  timefmt => "%s",
+                                );
+
+  # Build receiver clock bias dataset:
+  my $rec_clk_bias_dataset =
+    Chart::Gnuplot::DataSet->new(
+                                  xdata => unpdl($pdl_epochs->flat),
+                                  ydata => unpdl($pdl_rec_clk_bias->flat),
+                                  zdata => unpdl($pdl_std_clk_bias->flat),
+                                  style => "lines linecolor pal z",
+                                  width => 3,
+                                  title => "Receiver clock bias",
                                   timefmt => "%s",
                                 );
 
@@ -552,9 +647,15 @@ sub PlotReceiverPositions {
                                 );
 
   # Plot the datasets on their respectives graphs:
-  $chart_u   -> plot2d( $rec_u_dataset   );
-  $chart_en  -> plot2d( $rec_en_dataset  );
-  $chart_enu -> plot3d( $rec_enu_dataset );
+  $chart_enu->multiplot((
+                          $rec_e_dataset,
+                          $rec_n_dataset,
+                          $rec_u_dataset,
+                          $rec_clk_bias_dataset
+                        ));
+
+  $chart_enu_3d   -> plot3d( $rec_enu_dataset      );
+  $chart_en_polar -> plot2d( $rec_en_polar_dataset );
 
   return TRUE;
 }
