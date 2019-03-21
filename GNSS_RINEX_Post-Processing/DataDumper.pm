@@ -5,7 +5,7 @@ package DataDumper;
 
 
 # TODO: SCRIPT DESCRIPTION GOES HERE:
-# TODO: New dumper file with LSQ info per epoch!
+# TODO: Simple dumper subroutines for dumping raw hashes in binary format
 
 # Load bash enviroments:
 # ---------------------------------------------------------------------------- #
