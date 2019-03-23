@@ -58,7 +58,7 @@ my $ref_obs_data = retrieve("$inp_path/ref_obs_data.hash");
 #    1.a Constellation availability:     #
 # ************************************** #
   # TODO:
-  #   - Set transparent fills
+  #   - Set true transparent fills
   PlotConstellationAvailability($ref_gen_conf, $sat_sys, $inp_path, $out_path);
 
 # ****************************** #
@@ -88,18 +88,14 @@ my $ref_obs_data = retrieve("$inp_path/ref_obs_data.hash");
 #    TODO:
 #       - Move title top left
 #       - Offset in palette
-#       - Change palette variable for U
-#       - Set transparent fill for points
+#       - Set true transparent fill for points
 #    2.b Upping plot:                                      #
 #    TODO:
-#       - Change palette variables for STD DEV of each ENU component
-#       - Add E and N
-#       - Set multiplot (3x1)
 #       - Add dashed line indicating reference station position
 #    2.c Easting/Northing/Upping point density 3D plot:    #
 #    TODO:
 #       - Delete plot? --> NOT YET
-#       - Move axis to 0,0,0
+#       - Show main axis (0,0,0)
 #       - Try to use pallete to color points (use PDOP value)
 # ******************************************************** #
   PlotReceiverPosition($ref_gen_conf, $ref_obs_data, $inp_path, $out_path);
@@ -128,9 +124,6 @@ my $ref_obs_data = retrieve("$inp_path/ref_obs_data.hash");
 
 # ********************************* #
 #    4.d Residuals by satellite:    #
-#    TODO:
-#       - Move pelette to chart bottom
-#       - Set Satellite IDs in Y axis
 # ********************************* #
   PlotSatelliteResiduals($ref_gen_conf, $sat_sys, $inp_path, $out_path);
 
@@ -144,17 +137,11 @@ my $ref_obs_data = retrieve("$inp_path/ref_obs_data.hash");
 # ---------------------------------------------------------------------------- #
 # ************************************************* #
 #    5.a Ionosphere Computed Delay by satellite:    #
-#    TODO:
-#       - Move pelette to chart bottom
-#       - Set Satellite IDs in Y axis
 # ************************************************* #
   PlotSatelliteIonosphereDelay($ref_gen_conf, $sat_sys, $inp_path, $out_path);
 
 # ************************************************** #
 #    5.b Troposphere Computed delay by satellite:    #
-#    TODO:
-#       - Move pelette to chart bottom
-#       - Set Satellite IDs in Y axis
 # ************************************************** #
   PlotSatelliteTroposphereDelay($ref_gen_conf, $sat_sys, $inp_path, $out_path);
 
@@ -345,6 +332,7 @@ sub PlotSatelliteElevation {
                                     xdata => unpdl($pdl_epochs->flat),
                                     ydata => unpdl($pdl_elevation->flat),
                                     style => "lines",
+                                    width => 3,
                                     timefmt => "%s",
                                     title => "$sat"
                                   );
@@ -1508,8 +1496,8 @@ sub RetrieveSatYTicsCommand {
   }
 
   # Write command:
-  # example: 'add ("N" 0, "E" 90, "S" 180, "W" 270) font ":Bold"'
-  my $command = 'ytics add ("" 0,'.join(', ', @sat_values).') font ":Bold"';
+  # example: 'ytics add ("N" 0, "E" 90, "S" 180, "W" 270) font ":Bold"'
+  my $command = 'ytics add ("" 0,'.join(', ', @sat_values).')';
 
   # Return command:
   return $command;
