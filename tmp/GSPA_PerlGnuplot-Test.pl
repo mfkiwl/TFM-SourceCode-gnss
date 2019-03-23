@@ -881,6 +881,10 @@ sub PlotLSQEpochEstimation {
     my $pdl_est_z  = $pdl_apx_z  + $pdl_delta_z;
     my $pdl_est_dt = $pdl_apx_dt + $pdl_delta_dt;
 
+    # For DT, since its init to 0, the first records will be removed.
+    # Compute number of epochs minus 1 for slicing DT records:
+    my ($num_epochs, undef) = dims($pdl_epochs->flat);
+    my $t_1 = $num_epochs - 1;
 
   # Set chart objects:
     # LSQ report:
@@ -1124,8 +1128,10 @@ sub PlotLSQEpochEstimation {
     # Receiver clock (DT) parameter estimation:
     my $est_dt_parameter_dataset =
       Chart::Gnuplot::DataSet->new(
-                                    xdata => unpdl($pdl_epochs->flat),
-                                    ydata => unpdl($pdl_est_dt->flat),
+                                    xdata =>
+                                      unpdl($pdl_epochs->flat->slice("1:$t_1")),
+                                    ydata =>
+                                      unpdl($pdl_est_dt->flat->slice("1:$t_1")),
                                     style => "lines",
                                     width => 3,
                                     timefmt => "%s",
@@ -1133,8 +1139,10 @@ sub PlotLSQEpochEstimation {
                                  );
     my $apx_dt_parameter_dataset =
       Chart::Gnuplot::DataSet->new(
-                                    xdata => unpdl($pdl_epochs->flat),
-                                    ydata => unpdl($pdl_apx_dt->flat),
+                                    xdata =>
+                                      unpdl($pdl_epochs->flat->slice("1:$t_1")),
+                                    ydata =>
+                                      unpdl($pdl_apx_dt->flat->slice("1:$t_1")),
                                     style => "lines",
                                     width => 3,
                                     timefmt => "%s",
@@ -1142,9 +1150,12 @@ sub PlotLSQEpochEstimation {
                                  );
     my $delta_dt_parameter_dataset =
       Chart::Gnuplot::DataSet->new(
-                                    xdata => unpdl($pdl_epochs->flat),
-                                    ydata => unpdl($pdl_delta_dt->flat),
-                                    zdata => unpdl($pdl_std_dev_est->flat),
+                                    xdata =>
+                                      unpdl($pdl_epochs->flat->slice("1:$t_1")),
+                                    ydata =>
+                                      unpdl($pdl_delta_dt->flat->slice("1:$t_1")),
+                                    zdata =>
+                                      unpdl($pdl_std_dev_est->flat->slice("1:$t_1")),
                                     style => "lines pal z",
                                     width => 3,
                                     timefmt => "%s",
@@ -1213,6 +1224,8 @@ sub PlotSatelliteResiduals {
   # Retrieve observed satellites:
   my @avail_sats =
     sort( grep(/^$sat_sys\d{2}$/, (keys %{$ref_file_layout->{ITEMS}})) );
+  # Retrieve command for adding satellite ID tics on Y axis:
+  my $sat_id_ytics_cmm = RetrieveSatYTicsCommand(@avail_sats);
 
   # Set chart object:
   my $chart =
@@ -1223,8 +1236,10 @@ sub PlotSatelliteResiduals {
                           xlabel => "Observation Epochs [HH::MM]",
                           ylabel => "Satellite PRN",
                           xrange => [$ini_epoch, $end_epoch],
+                          yrange => [0, scalar(@avail_sats) + 1],
                           timeaxis => "x",
                           xtics => { labelfmt => "%H:%M" },
+                          $sat_id_ytics_cmm => "",
                           timestamp =>  {
                                           fmt  => '%d/%m/%y %H:%M',
                                           font => "Helvetica :Italic",
@@ -1286,6 +1301,8 @@ sub PlotSatelliteIonosphereDelay {
   # Retrieve observed satellites:
   my @avail_sats =
     sort( grep(/^$sat_sys\d{2}$/, (keys %{$ref_file_layout->{ITEMS}})) );
+  # Retrieve command for adding satellite ID tics on Y axis:
+  my $sat_id_ytics_cmm = RetrieveSatYTicsCommand(@avail_sats);
 
   # Set chart object:
   my $chart =
@@ -1296,8 +1313,10 @@ sub PlotSatelliteIonosphereDelay {
                           xlabel => "Observation Epochs [HH::MM]",
                           ylabel => "Satellite PRN",
                           xrange => [$ini_epoch, $end_epoch],
+                          yrange => [0, scalar(@avail_sats) + 1],
                           timeaxis => "x",
                           xtics => { labelfmt => "%H:%M" },
+                          $sat_id_ytics_cmm => "",
                           timestamp =>  {
                                           fmt  => '%d/%m/%y %H:%M',
                                           font => "Helvetica :Italic",
@@ -1359,6 +1378,8 @@ sub PlotSatelliteTroposphereDelay {
   # Retrieve observed satellites:
   my @avail_sats =
     sort( grep(/^$sat_sys\d{2}$/, (keys %{$ref_file_layout->{ITEMS}})) );
+  # Retrieve command for adding satellite ID tics on Y axis:
+  my $sat_id_ytics_cmm = RetrieveSatYTicsCommand(@avail_sats);
 
   # Set chart object:
   my $chart =
@@ -1369,8 +1390,10 @@ sub PlotSatelliteTroposphereDelay {
                           xlabel => "Observation Epochs [HH::MM]",
                           ylabel => "Satellite PRN",
                           xrange => [$ini_epoch, $end_epoch],
+                          yrange => [0, scalar(@avail_sats) + 1],
                           timeaxis => "x",
                           xtics => { labelfmt => "%H:%M" },
+                          $sat_id_ytics_cmm => "",
                           timestamp =>  {
                                           fmt  => '%d/%m/%y %H:%M',
                                           font => "Helvetica :Italic",
@@ -1469,4 +1492,25 @@ sub LoadFileByLayout {
   close($fh);
 
   return $ref_array;
+}
+
+sub RetrieveSatYTicsCommand {
+  my @sat_list = @_;
+
+  # Init array to store satellite ID and index pair:
+  my @sat_values;
+
+  # Build satellite ID and datellite index value pair:
+  for (my $i = 0; $i < scalar(@sat_list); $i += 1) {
+    my $sat = $sat_list[$i];
+    my $sat_index = $i + 1;
+    push(@sat_values, "\"$sat\" $sat_index");
+  }
+
+  # Write command:
+  # example: 'add ("N" 0, "E" 90, "S" 180, "W" 270) font ":Bold"'
+  my $command = 'ytics add ("" 0,'.join(', ', @sat_values).') font ":Bold"';
+
+  # Return command:
+  return $command;
 }
