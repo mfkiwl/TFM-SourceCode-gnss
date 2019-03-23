@@ -18,6 +18,9 @@ use Carp;         # enables advanced warning and failure raise...
 use strict;       # enables strict syntax and common mistakes advisory...
 use Data::Dumper; # enables nested struct pretty print...
 
+use PDL::Core;
+use PDL::Basic;
+
 use feature      qq(say);               # same as print.$text.'\n'...
 use feature      qq(switch);            # switch functionality...
 use Scalar::Util qq(looks_like_number); # scalar utility...
@@ -677,20 +680,28 @@ sub DumpLSQReportByEpoch {
 
       # Retrieve number of iterations:
       my $num_iter = scalar(@{ $ref_obs_data->{BODY}[$i]{LSQ_INFO} });
-      # Point to last iteration:
-      my $ref_iter_data = $ref_obs_data->{BODY}[$i]{LSQ_INFO}[$num_iter - 1];
+      # Pointer to first and last iteration:
+      my ( $ref_first_iter_data,
+           $ref_last_iter_data ) =
+         ( $ref_obs_data->{BODY}[$i]{LSQ_INFO}[0],
+           $ref_obs_data->{BODY}[$i]{LSQ_INFO}[$num_iter - 1] );
+
+      # Compute accumulated delta corrections:
+      my $ref_acc_delta_correction =
+         ComputeAccDeltaCorrections($num_iter,
+                                    $ref_obs_data->{BODY}[$i]{LSQ_INFO});
 
       # Save line items to print:
       # NOTE: dumping std deviation estimator
       my @line_items = ( @epoch, $num_iter,
-                         $ref_iter_data->{STATUS},
-                         $ref_iter_data->{CONVERGENCE},
-                         $ref_iter_data->{NUM_OBSERVATION},
-                         $ref_iter_data->{NUM_PARAMETER},
-                         $ref_iter_data->{DEGREES_OF_FREEDOM},
-                         $ref_iter_data->{VARIANCE_ESTIMATOR}**(0.5),
-                         @{ $ref_iter_data->{APX_PARAMETER} },
-                         @{ $ref_iter_data->{PARAMETER_VECTOR} } );
+                         $ref_last_iter_data->{STATUS},
+                         $ref_last_iter_data->{CONVERGENCE},
+                         $ref_last_iter_data->{NUM_OBSERVATION},
+                         $ref_last_iter_data->{NUM_PARAMETER},
+                         $ref_last_iter_data->{DEGREES_OF_FREEDOM},
+                         $ref_last_iter_data->{VARIANCE_ESTIMATOR}**(0.5),
+                         @{ $ref_first_iter_data->{APX_PARAMETER} },
+                         @{ $ref_acc_delta_correction } );
 
       # Write LSQ line data:
       say $fh join($delimiter, @line_items);
@@ -1852,6 +1863,21 @@ sub ComputeMeanRecPosition {
                      $sum_z/$count_epoch );
 
   return ($mean_x, $mean_y, $mean_z);
+}
+
+sub ComputeAccDeltaCorrections {
+  my ($num_iter, $ref_lsq_epoch_data) = @_;
+
+  # Init piddle:
+  my $pdl_acc_delta_corr = zeroes( NUM_PARAMETERS_TO_ESTIMATE );
+
+  # Accumulate delta parameter values trough LSQ iterations:
+  for (my $i = 0; $i < $num_iter; $i += 1) {
+    $pdl_acc_delta_corr += pdl( $ref_lsq_epoch_data->[$i]{PARAMETER_VECTOR} );
+  }
+
+  # Return array reference
+  return unpdl($pdl_acc_delta_corr);
 }
 
 sub WriteSelecetedObsInfo {
