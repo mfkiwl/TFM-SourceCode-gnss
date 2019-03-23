@@ -92,10 +92,10 @@ my $ref_obs_data = retrieve("$inp_path/ref_obs_data.hash");
 #       - Set transparent fill for points
 #    2.b Upping plot:                                      #
 #    TODO:
-#       - Move palette to bottom
 #       - Change palette variables for STD DEV of each ENU component
 #       - Add E and N
 #       - Set multiplot (3x1)
+#       - Add dashed line indicating reference station position
 #    2.c Easting/Northing/Upping point density 3D plot:    #
 #    TODO:
 #       - Delete plot? --> NOT YET
@@ -542,14 +542,51 @@ sub PlotReceiverPosition {
                         style => "circle radius 0.04",
                       );
 
-  # Create ENU multiplot chart object:
+  # Create parent object for ENU multiplot:
   my $chart_enu =
     Chart::Gnuplot->new(
                           output => $out_path."/$marker_name-ENU-plot.png",
-                          title  => "Receiver '$marker_name' U",
-                          grid   => "on",
+                          title  => "Receiver '$marker_name' ENU",
+                          timestamp =>  {
+                                          fmt  => '%d/%m/%y %H:%M',
+                                          font => "Helvetica :Italic",
+                                        },
+                        );
+  # ENU individual charts for multiplot:
+  my $chart_e =
+    Chart::Gnuplot->new(
+                          grid => "on",
+                          ylabel => "Easting [m]",
+                          xrange => [$ini_epoch, $end_epoch],
+                          timeaxis => "x",
+                          xtics => { labelfmt => "%H:%M" },
+                       );
+  my $chart_n =
+    Chart::Gnuplot->new(
+                          grid => "on",
+                          ylabel => "Northing [m]",
+                          xrange => [$ini_epoch, $end_epoch],
+                          timeaxis => "x",
+                          xtics => { labelfmt => "%H:%M" },
+                       );
+  my $chart_u =
+    Chart::Gnuplot->new(
+                          grid => "on",
                           xlabel => "Observation Epochs [HH::MM]",
                           ylabel => "Upping [m]",
+                          xrange => [$ini_epoch, $end_epoch],
+                          timeaxis => "x",
+                          xtics => { labelfmt => "%H:%M" },
+                       );
+
+  # Create chart object for receiver clock bias:
+  my $chart_clk_bias =
+    Chart::Gnuplot->new(
+                          grid => "on",
+                          output => $out_path."/$marker_name-clk-bias-plot.png",
+                          title  => "Receiver '$marker_name' Clock Bias",
+                          xlabel => "Observation Epochs [HH::MM]",
+                          ylabel => "Clock Bias [m]",
                           xrange => [$ini_epoch, $end_epoch],
                           timeaxis => "x",
                           xtics => { labelfmt => "%H:%M" },
@@ -558,11 +595,6 @@ sub PlotReceiverPosition {
                                           font => "Helvetica :Italic",
                                         },
                         );
-  # Set multiplot:
-    # $chart_enu->set(
-    #                   multiplot => 'layout 3, 1',
-    #                   tmargin   => "2",
-    #                );
 
   # Create 3D ENU chart object:
   my $chart_enu_3d =
@@ -597,10 +629,8 @@ sub PlotReceiverPosition {
                                   zdata => unpdl($pdl_std_easting->flat),
                                   style => "lines linecolor pal z",
                                   width => 3,
-                                  title => "Easting component",
                                   timefmt => "%s",
                                 );
-
   # Build receiver N positions dataset:
   my $rec_n_dataset =
     Chart::Gnuplot::DataSet->new(
@@ -609,10 +639,8 @@ sub PlotReceiverPosition {
                                   zdata => unpdl($pdl_std_northing->flat),
                                   style => "lines linecolor pal z",
                                   width => 3,
-                                  title => "Northing component",
                                   timefmt => "%s",
                                 );
-
   # Build receiver U positions dataset:
   my $rec_u_dataset =
     Chart::Gnuplot::DataSet->new(
@@ -621,10 +649,8 @@ sub PlotReceiverPosition {
                                   zdata => unpdl($pdl_std_upping->flat),
                                   style => "lines linecolor pal z",
                                   width => 3,
-                                  title => "Upping component",
                                   timefmt => "%s",
                                 );
-
   # Build receiver clock bias dataset:
   my $rec_clk_bias_dataset =
     Chart::Gnuplot::DataSet->new(
@@ -633,7 +659,6 @@ sub PlotReceiverPosition {
                                   zdata => unpdl($pdl_std_clk_bias->flat),
                                   style => "lines linecolor pal z",
                                   width => 3,
-                                  title => "Receiver clock bias",
                                   timefmt => "%s",
                                 );
 
@@ -647,15 +672,28 @@ sub PlotReceiverPosition {
                                 );
 
   # Plot the datasets on their respectives graphs:
-  $chart_enu->multiplot((
-                          $rec_e_dataset,
-                          $rec_n_dataset,
-                          $rec_u_dataset,
-                          $rec_clk_bias_dataset
-                        ));
 
-  $chart_enu_3d   -> plot3d( $rec_enu_dataset      );
-  $chart_en_polar -> plot2d( $rec_en_polar_dataset );
+  # ENU multiplot:
+    # Add datasets to their respective charts:
+    $chart_e->add2d( $rec_e_dataset );
+    $chart_n->add2d( $rec_n_dataset );
+    $chart_u->add2d( $rec_u_dataset );
+
+    # And set plot matrix in parent chart object:
+    $chart_enu->multiplot([ [$chart_e],
+                            [$chart_n],
+                            [$chart_u] ]);
+
+  # Receiver clock bias plot:
+  $chart_clk_bias->plot2d((
+                            $rec_clk_bias_dataset
+                         ));
+
+  # ENU 3D plot:
+  $chart_enu_3d->plot3d( $rec_enu_dataset      );
+
+  # EN 2D polar plot:
+  $chart_en_polar->plot2d( $rec_en_polar_dataset );
 
   return TRUE;
 }
@@ -778,7 +816,383 @@ sub PlotDilutionOfPrecission {
   return TRUE;
 }
 
-sub PlotLSQEpochEstimation {}
+sub PlotLSQEpochEstimation {
+  my ($ref_gen_conf, $inp_path, $out_path) = @_;
+
+  # Load dumper file:
+  my $ref_file_layout =
+    GetFileLayout( join('/', ($inp_path, "LSQ-epoch-report-info.out")),
+                   3, $ref_gen_conf->{DATA_DUMPER}{DELIMITER} );
+
+  my $pdl_lsq_info = pdl( LoadFileByLayout($ref_file_layout) );
+
+  # Load epochs:
+  my $pdl_epochs = $pdl_lsq_info($ref_file_layout->{ITEMS}{EpochGPS}{INDEX});
+
+  # First and last observation epochs:
+  my $ini_epoch = min($pdl_epochs);
+  my $end_epoch = max($pdl_epochs);
+
+  # Retrieve the following from LSQ info:
+    # Number of iterations:
+    my $pdl_num_iter = $pdl_lsq_info($ref_file_layout->{ITEMS}{NumIter}{INDEX});
+
+    # LSQ and Convergence status:
+    my $pdl_lsq_st =
+       $pdl_lsq_info($ref_file_layout->{ITEMS}{LSQ_Status}{INDEX});
+    my $pdl_convergence_st =
+       $pdl_lsq_info($ref_file_layout->{ITEMS}{ConvergenceFlag}{INDEX});
+
+    # Number of observations, parameters and degrees of freedom:
+    my $pdl_num_obs =
+       $pdl_lsq_info($ref_file_layout->{ITEMS}{NumObs}{INDEX});
+    my $pdl_num_parameter =
+       $pdl_lsq_info($ref_file_layout->{ITEMS}{NumParameter}{INDEX});
+    my $pdl_deg_of_freedom =
+       $pdl_lsq_info($ref_file_layout->{ITEMS}{DegOfFree}{INDEX});
+
+    # Ex-post standard deviation estimator:
+    my $pdl_std_dev_est =
+       $pdl_lsq_info($ref_file_layout->{ITEMS}{StdDevEstimator}{INDEX});
+
+    # Approximate XYZ and DT:
+    my $pdl_apx_x =
+       $pdl_lsq_info($ref_file_layout->{ITEMS}{ApxX}{INDEX});
+    my $pdl_apx_y =
+       $pdl_lsq_info($ref_file_layout->{ITEMS}{ApxY}{INDEX});
+    my $pdl_apx_z =
+       $pdl_lsq_info($ref_file_layout->{ITEMS}{ApxZ}{INDEX});
+    my $pdl_apx_dt =
+       $pdl_lsq_info($ref_file_layout->{ITEMS}{ApxDT}{INDEX});
+
+    # Delta XYZ and DT:
+    my $pdl_delta_x =
+       $pdl_lsq_info($ref_file_layout->{ITEMS}{dX}{INDEX});
+    my $pdl_delta_y =
+       $pdl_lsq_info($ref_file_layout->{ITEMS}{dY}{INDEX});
+    my $pdl_delta_z =
+       $pdl_lsq_info($ref_file_layout->{ITEMS}{dZ}{INDEX});
+    my $pdl_delta_dt =
+       $pdl_lsq_info($ref_file_layout->{ITEMS}{dDT}{INDEX});
+
+    # Compute estimated parameter piddles:
+    my $pdl_est_x  = $pdl_apx_x  + $pdl_delta_x;
+    my $pdl_est_y  = $pdl_apx_y  + $pdl_delta_y;
+    my $pdl_est_z  = $pdl_apx_z  + $pdl_delta_z;
+    my $pdl_est_dt = $pdl_apx_dt + $pdl_delta_dt;
+
+
+  # Set chart objects:
+    # LSQ report:
+    my $chart_lsq_rpt =
+      Chart::Gnuplot->new(
+                            output => $out_path."/LSQ-report.png",
+                            title  => "LSQ estimation report",
+                            grid   => "on",
+                            xlabel => "Observation Epochs [HH::MM]",
+                            xrange => [$ini_epoch, $end_epoch],
+                            timeaxis => "x",
+                            xtics => { labelfmt => "%H:%M" },
+                            timestamp =>  {
+                                            fmt  => '%d/%m/%y %H:%M',
+                                            font => "Helvetica :Italic",
+                                          },
+                         );
+
+    # Approximate parameter report (multiplot):
+    # Parent charts. One per parameter:
+    my $chart_parameter_x =
+      Chart::Gnuplot->new(
+                            output => $out_path."/LSQ-X-parameter-report.png",
+                            title  => "LSQ X parameter estimation report",
+                            timestamp =>  {
+                                            fmt  => '%d/%m/%y %H:%M',
+                                            font => "Helvetica :Italic",
+                                          },
+                         );
+    my $chart_parameter_y =
+      Chart::Gnuplot->new(
+                            output => $out_path."/LSQ-Y-parameter-report.png",
+                            title  => "LSQ Y parameter estimation report",
+                            timestamp =>  {
+                                            fmt  => '%d/%m/%y %H:%M',
+                                            font => "Helvetica :Italic",
+                                          },
+                         );
+    my $chart_parameter_z =
+      Chart::Gnuplot->new(
+                            output => $out_path."/LSQ-Z-parameter-report.png",
+                            title  => "LSQ Z parameter estimation report",
+                            timestamp =>  {
+                                            fmt  => '%d/%m/%y %H:%M',
+                                            font => "Helvetica :Italic",
+                                          },
+                         );
+    my $chart_parameter_dt =
+      Chart::Gnuplot->new(
+                            output => $out_path."/LSQ-DT-parameter-report.png",
+                            title  => "LSQ DT parameter estimation report",
+                            timestamp =>  {
+                                            fmt  => '%d/%m/%y %H:%M',
+                                            font => "Helvetica :Italic",
+                                          },
+                         );
+
+    # Child charts. Two per parameter:
+      my $chart_x_parameter =
+        Chart::Gnuplot->new(
+                              grid => "on",
+                              xlabel => "Observation Epochs [HH::MM]",
+                              ylabel => "Parameter value [m]",
+                              xrange => [$ini_epoch, $end_epoch],
+                              timeaxis => "x",
+                              xtics => { labelfmt => "%H:%M" },
+                           );
+      my $chart_delta_x_parameter =
+        Chart::Gnuplot->new(
+                              grid => "on",
+                              xlabel => "Observation Epochs [HH::MM]",
+                              ylabel => "Delta correction [m]",
+                              xrange => [$ini_epoch, $end_epoch],
+                              timeaxis => "x",
+                              xtics => { labelfmt => "%H:%M" },
+                           );
+      my $chart_y_parameter        = $chart_x_parameter       -> copy;
+      my $chart_delta_y_parameter  = $chart_delta_x_parameter -> copy;
+      my $chart_z_parameter        = $chart_x_parameter       -> copy;
+      my $chart_delta_z_parameter  = $chart_delta_x_parameter -> copy;
+      my $chart_dt_parameter       = $chart_x_parameter       -> copy;
+      my $chart_delta_dt_parameter = $chart_delta_x_parameter -> copy;
+
+
+  # Set dataset objects:
+    # LSQ status:
+    my $lsq_st_dataset =
+      Chart::Gnuplot::DataSet->new(
+                                    xdata => unpdl($pdl_epochs->flat),
+                                    ydata => unpdl($pdl_lsq_st->flat),
+                                    style => "filledcurve y=0",
+                                    timefmt => "%s",
+                                    fill => { density => 0.3 },
+                                    title => "LSQ Status",
+                                 );
+    # Convergence flag:
+    my $convergence_st_dataset =
+      Chart::Gnuplot::DataSet->new(
+                                    xdata => unpdl($pdl_epochs->flat),
+                                    ydata => unpdl($pdl_convergence_st->flat),
+                                    style => "filledcurve y=0",
+                                    timefmt => "%s",
+                                    fill => { density => 0.3 },
+                                    title => "Convergence Flag",
+                                 );
+    # Number of iterations:
+    my $num_iter_dataset =
+      Chart::Gnuplot::DataSet->new(
+                                    xdata => unpdl($pdl_epochs->flat),
+                                    ydata => unpdl($pdl_num_iter->flat),
+                                    style => "lines",
+                                    width => 3,
+                                    timefmt => "%s",
+                                    title => "Iterations",
+                                 );
+    # Number of observations:
+    my $num_obs_dataset =
+      Chart::Gnuplot::DataSet->new(
+                                    xdata => unpdl($pdl_epochs->flat),
+                                    ydata => unpdl($pdl_num_obs->flat),
+                                    style => "lines",
+                                    width => 3,
+                                    timefmt => "%s",
+                                    title => "Observations",
+                                 );
+    # Parameters to estimate:
+    my $num_parameter_dataset =
+      Chart::Gnuplot::DataSet->new(
+                                    xdata => unpdl($pdl_epochs->flat),
+                                    ydata => unpdl($pdl_num_parameter->flat),
+                                    style => "lines",
+                                    width => 3,
+                                    timefmt => "%s",
+                                    title => "Parameters to Estimate",
+                                 );
+    # Degrees of freedom:
+    my $deg_of_free_dataset =
+      Chart::Gnuplot::DataSet->new(
+                                    xdata => unpdl($pdl_epochs->flat),
+                                    ydata => unpdl($pdl_deg_of_freedom->flat),
+                                    style => "lines",
+                                    width => 3,
+                                    timefmt => "%s",
+                                    title => "Degrees of Freedom",
+                                 );
+    # Ex-post standard deviation estimator:
+    my $std_dev_est_dataset =
+      Chart::Gnuplot::DataSet->new(
+                                    xdata => unpdl($pdl_epochs->flat),
+                                    ydata => unpdl($pdl_std_dev_est->flat),
+                                    style => "lines",
+                                    width => 3,
+                                    timefmt => "%s",
+                                    title => "STD-DEV estimator",
+                                 );
+
+    # ECEF X parameter estimation:
+    my $est_x_parameter_dataset =
+      Chart::Gnuplot::DataSet->new(
+                                    xdata => unpdl($pdl_epochs->flat),
+                                    ydata => unpdl($pdl_est_x->flat),
+                                    style => "lines",
+                                    width => 3,
+                                    timefmt => "%s",
+                                    title => "Estimated X",
+                                 );
+    my $apx_x_parameter_dataset =
+      Chart::Gnuplot::DataSet->new(
+                                    xdata => unpdl($pdl_epochs->flat),
+                                    ydata => unpdl($pdl_apx_x->flat),
+                                    style => "lines",
+                                    width => 3,
+                                    timefmt => "%s",
+                                    title => "Approximate X",
+                                 );
+    my $delta_x_parameter_dataset =
+      Chart::Gnuplot::DataSet->new(
+                                    xdata => unpdl($pdl_epochs->flat),
+                                    ydata => unpdl($pdl_delta_x->flat),
+                                    zdata => unpdl($pdl_std_dev_est->flat),
+                                    style => "lines pal z",
+                                    width => 3,
+                                    timefmt => "%s",
+                                 );
+    # ECEF Y parameter estimation:
+    my $est_y_parameter_dataset =
+      Chart::Gnuplot::DataSet->new(
+                                    xdata => unpdl($pdl_epochs->flat),
+                                    ydata => unpdl($pdl_est_y->flat),
+                                    style => "lines",
+                                    width => 3,
+                                    timefmt => "%s",
+                                    title => "Estimated Y",
+                                 );
+    my $apx_y_parameter_dataset =
+      Chart::Gnuplot::DataSet->new(
+                                    xdata => unpdl($pdl_epochs->flat),
+                                    ydata => unpdl($pdl_apx_y->flat),
+                                    style => "lines",
+                                    width => 3,
+                                    timefmt => "%s",
+                                    title => "Approximate Y",
+                                 );
+    my $delta_y_parameter_dataset =
+      Chart::Gnuplot::DataSet->new(
+                                    xdata => unpdl($pdl_epochs->flat),
+                                    ydata => unpdl($pdl_delta_y->flat),
+                                    zdata => unpdl($pdl_std_dev_est->flat),
+                                    style => "lines pal z",
+                                    width => 3,
+                                    timefmt => "%s",
+                                 );
+    # ECEF Z parameter estimation:
+    my $est_z_parameter_dataset =
+      Chart::Gnuplot::DataSet->new(
+                                    xdata => unpdl($pdl_epochs->flat),
+                                    ydata => unpdl($pdl_est_z->flat),
+                                    style => "lines",
+                                    width => 3,
+                                    timefmt => "%s",
+                                    title => "Estimated Z",
+                                 );
+    my $apx_z_parameter_dataset =
+      Chart::Gnuplot::DataSet->new(
+                                    xdata => unpdl($pdl_epochs->flat),
+                                    ydata => unpdl($pdl_apx_z->flat),
+                                    style => "lines",
+                                    width => 3,
+                                    timefmt => "%s",
+                                    title => "Approximate Z",
+                                 );
+    my $delta_z_parameter_dataset =
+      Chart::Gnuplot::DataSet->new(
+                                    xdata => unpdl($pdl_epochs->flat),
+                                    ydata => unpdl($pdl_delta_z->flat),
+                                    zdata => unpdl($pdl_std_dev_est->flat),
+                                    style => "lines pal z",
+                                    width => 3,
+                                    timefmt => "%s",
+                                 );
+    # Receiver clock (DT) parameter estimation:
+    my $est_dt_parameter_dataset =
+      Chart::Gnuplot::DataSet->new(
+                                    xdata => unpdl($pdl_epochs->flat),
+                                    ydata => unpdl($pdl_est_dt->flat),
+                                    style => "lines",
+                                    width => 3,
+                                    timefmt => "%s",
+                                    title => "Estimated DT",
+                                 );
+    my $apx_dt_parameter_dataset =
+      Chart::Gnuplot::DataSet->new(
+                                    xdata => unpdl($pdl_epochs->flat),
+                                    ydata => unpdl($pdl_apx_dt->flat),
+                                    style => "lines",
+                                    width => 3,
+                                    timefmt => "%s",
+                                    title => "Approximate DT",
+                                 );
+    my $delta_dt_parameter_dataset =
+      Chart::Gnuplot::DataSet->new(
+                                    xdata => unpdl($pdl_epochs->flat),
+                                    ydata => unpdl($pdl_delta_dt->flat),
+                                    zdata => unpdl($pdl_std_dev_est->flat),
+                                    style => "lines pal z",
+                                    width => 3,
+                                    timefmt => "%s",
+                                 );
+
+  # Plot datsets in their respective charts:
+    # LSQ report plot:
+    $chart_lsq_rpt->plot2d((
+                              $lsq_st_dataset,
+                              $convergence_st_dataset,
+                              $num_iter_dataset,
+                              $num_obs_dataset,
+                              $num_parameter_dataset,
+                              $deg_of_free_dataset,
+                              $std_dev_est_dataset
+                           ));
+
+    # Parameter estaimtion report:
+      # Add plots to their respective sub-charts:
+      $chart_x_parameter       -> add2d( $apx_x_parameter_dataset   );
+      $chart_x_parameter       -> add2d( $est_x_parameter_dataset   );
+      $chart_delta_x_parameter -> add2d( $delta_x_parameter_dataset );
+
+      $chart_y_parameter       -> add2d( $apx_y_parameter_dataset   );
+      $chart_y_parameter       -> add2d( $est_y_parameter_dataset   );
+      $chart_delta_y_parameter -> add2d( $delta_y_parameter_dataset );
+
+      $chart_z_parameter       -> add2d( $apx_z_parameter_dataset   );
+      $chart_z_parameter       -> add2d( $est_z_parameter_dataset   );
+      $chart_delta_z_parameter -> add2d( $delta_z_parameter_dataset );
+
+      $chart_dt_parameter       -> add2d( $apx_dt_parameter_dataset   );
+      $chart_dt_parameter       -> add2d( $est_dt_parameter_dataset   );
+      $chart_delta_dt_parameter -> add2d( $delta_dt_parameter_dataset );
+
+      # Plot matrix:
+      $chart_parameter_x->multiplot([ [$chart_x_parameter],
+                                      [$chart_delta_x_parameter] ]);
+      $chart_parameter_y->multiplot([ [$chart_y_parameter],
+                                      [$chart_delta_y_parameter] ]);
+      $chart_parameter_z->multiplot([ [$chart_z_parameter],
+                                      [$chart_delta_z_parameter] ]);
+      $chart_parameter_dt->multiplot([ [$chart_dt_parameter],
+                                       [$chart_delta_dt_parameter] ]);
+
+
+  return TRUE;
+}
 
 sub PlotSatelliteResiduals {
   my ($ref_gen_conf, $sat_sys, $inp_path, $out_path) = @_;
