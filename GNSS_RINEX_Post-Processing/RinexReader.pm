@@ -65,6 +65,8 @@ BEGIN {
                           &ReadNavigationRinexHeader
                           &ReadObservationRinexV3
                           &ReadNavigationRinex
+                          &ReadPreciseOrbitIGS
+                          &ReadPreciseClockIGS
                           &CheckRinexHeaderMandatory
                           &CheckRinexHeaderOptional );
 
@@ -782,6 +784,74 @@ sub ReadNavigationRinex {
 
   # Subroutine returns the reference to the navigation hash:
   return \%nav_hash;
+}
+
+# TODO:
+sub ReadHeaderPreciseOrbitIGS {}
+
+sub ReadPreciseOrbitIGS {
+  my ($file_path, $fh_log) = @_;
+
+  # Init hash to store IGS product information:
+  my $ref_precise_orbit = {};
+
+  # Read Precise Orbir header:
+  $ref_precise_orbit->{HEAD} = ReadHeaderPreciseOrbitIGS($file_path, $fh_log);
+
+  # Open file:
+  my $fh; open($fh, '<', $file_path) or die "Could not open $!";
+
+  # Init line and epoch variables:
+  my ($line, $epoch);
+
+  # Read file:
+  until ( index($line, "EOF") == 0 ) {
+
+    # Read line:
+    $line = <$fh>;
+
+    if ( index($line, "*") == 0 ) {
+
+      # Read epoch:
+      $epoch = Date2GPS( unpack('x3A4x1A2x1A2x1A2x1A2x1A11', $line) );
+
+    } elsif ( index($line, "P") == 0 ) {
+
+      # Read satellite position parameters:
+      my ($sat,
+          $sat_x,
+          $sat_y,
+          $sat_z,
+          $sat_clk) = unpack('x1A3A14A14A14A14', $line);
+
+      # Push info into hash:
+      $ref_precise_orbit->{BODY}{$epoch}{$sat} = [ $sat_x*10e3,
+                                                   $sat_y*10e3,
+                                                   $sat_z*10e3,
+                                                   $sat_clk/10e6 ];
+
+    }
+
+  } # end until EOF
+
+  # Close file:
+  close($fh);
+
+  return $ref_precise_orbit;
+}
+
+# TODO:
+sub ReadheaderPreciseClockIGS {}
+
+# TODO:
+sub ReadPreciseClockIGS {
+  my ($file_path, $fh_log) = @_;
+
+  # Init hash to store IGS product information:
+  my $ref_precise_clock = {};
+
+
+  return $ref_precise_clock;
 }
 
 # TODO: review this sub!
