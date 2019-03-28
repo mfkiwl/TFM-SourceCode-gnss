@@ -203,6 +203,13 @@ use constant LINE_START             =>  0;
 use constant RINEX_LABEL_PLACEMENT  => 60;
 use constant MAX_OBS_IN_HEADER_LINE => 13;
 
+# IGS precise orbits properties:
+use constant {
+  IGS_SP3_EOF => qq(EOF),
+  IGS_SP3_EPOCH_RECORD_ID => qq(*),
+  IGS_SP3_SAT_POSITION_RECORD => qq(P),
+};
+
 # ERROR and WARNING codes:
 use constant {
   ERR_WRONG_RINEX_TYPE          => 30101,
@@ -802,20 +809,22 @@ sub ReadPreciseOrbitIGS {
   my $fh; open($fh, '<', $file_path) or die "Could not open $!";
 
   # Init line and epoch variables:
-  my ($line, $epoch);
+  my ($line, $epoch) = ('', '');
 
   # Read file:
-  until ( index($line, "EOF") == 0 ) {
+  until ( index($line, IGS_SP3_EOF) == LINE_START ) {
 
-    # Read line:
+    # Read new line:
     $line = <$fh>;
 
-    if ( index($line, "*") == 0 ) {
+    # Identify epoch header record:
+    if ( index($line, IGS_SP3_EPOCH_RECORD_ID) == LINE_START ) {
 
       # Read epoch:
       $epoch = Date2GPS( unpack('x3A4x1A2x1A2x1A2x1A2x1A11', $line) );
 
-    } elsif ( index($line, "P") == 0 ) {
+    # Identify satellite position record:
+    } elsif ( index($line, IGS_SP3_SAT_POSITION_RECORD) == LINE_START ) {
 
       # Read satellite position parameters:
       my ($sat,
@@ -825,10 +834,13 @@ sub ReadPreciseOrbitIGS {
           $sat_clk) = unpack('x1A3A14A14A14A14', $line);
 
       # Push info into hash:
-      $ref_precise_orbit->{BODY}{$epoch}{$sat} = [ $sat_x*10e3,
-                                                   $sat_y*10e3,
-                                                   $sat_z*10e3,
-                                                   $sat_clk/10e6 ];
+      # NOTE: Last read epoch is used as key
+      #       ECEF XYZ coordinates are given in km
+      #       Clock bias is given in micro-seconds
+      $ref_precise_orbit->{BODY}{$epoch}{$sat}{P} = [ $sat_x*1e3,
+                                                      $sat_y*1e3,
+                                                      $sat_z*1e3,
+                                                      $sat_clk/1e6 ];
 
     }
 
@@ -837,11 +849,12 @@ sub ReadPreciseOrbitIGS {
   # Close file:
   close($fh);
 
+  # Return filled hash:
   return $ref_precise_orbit;
 }
 
 # TODO:
-sub ReadheaderPreciseClockIGS {}
+sub ReadHeaderPreciseClockIGS {}
 
 # TODO:
 sub ReadPreciseClockIGS {
