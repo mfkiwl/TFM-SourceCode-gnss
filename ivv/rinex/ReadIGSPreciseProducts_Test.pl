@@ -1,4 +1,4 @@
-#!/usr/bin/perl -X
+#!/usr/bin/perl -w
 
 use Carp;
 use strict;
@@ -33,14 +33,7 @@ my $igs_sp3_file = qq(COD0MGXFIN_20183350000_01D_05M_ORB.SP3);
 my $ref_precise_orbit =
   ReadPreciseOrbitIGS( join('/', ($igs_dat_path, $igs_sp3_file)), *STDOUT );
 
-print Dumper $ref_precise_orbit;
-
-
-
-
-
-
-
+# print Dumper $ref_precise_orbit;
 
 
 # end of script
