@@ -76,7 +76,8 @@ BEGIN {
                           &DumpElevationBySat
                           &DumpIonoCorrBySat
                           &DumpTropoCorrBySat
-                          &DumpResidualsBySat );
+                          &DumpResidualsBySat
+                          &DumpPreciseSatellitePosition );
 
   # Merge constants and subroutines:
   our @EXPORT_OK = (@EXPORT_CONST, @EXPORT_SUB);
@@ -1662,9 +1663,9 @@ sub DumpResidualsBySat {
    return KILLED;
   }
 
-  # ********************************* #
-  # Receiver Position dumper routine: #
-  # ********************************* #
+  # *************** #
+  # Dumper routine: #
+  # *************** #
 
   # Retrieve dumper configuration:
   my $delimiter    = $ref_gen_conf->{DATA_DUMPER}{ DELIMITER      };
@@ -1754,6 +1755,117 @@ sub DumpResidualsBySat {
   return TRUE;
 }
 
+sub DumpPreciseSatellitePosition {
+  my ($ref_gen_conf,
+      $ref_obs_data, $ref_precise_orbit, $output_path, $fh_log) = @_;
+
+  # Default input values if not defined:
+  $fh_log = *STDOUT unless $fh_log;
+
+  # ************************* #
+  # Input consistency cehcks: #
+  # ************************* #
+
+  # Output path must exist and have write permissions:
+  unless (-w $output_path) {
+   RaiseError($fh_log, ERR_WRITE_PERMISSION_DENIED,
+     "User '".$ENV{USER}."' does not have write permissions at $output_path");
+   return KILLED;
+  }
+
+  # General configuration must be hash type:
+  unless (ref($ref_gen_conf) eq 'HASH') {
+   RaiseError($fh_log, ERR_WRONG_HASH_REF,
+     "Input argument \'$ref_gen_conf\' is not HASH type");
+   return KILLED;
+  }
+
+  # Observation data must be hash type:
+  unless (ref($ref_obs_data) eq 'HASH') {
+   RaiseError($fh_log, ERR_WRONG_HASH_REF,
+     "Input argument \'$ref_obs_data\' is not HASH type");
+   return KILLED;
+  }
+
+  # Precise orbit data must be hash type:
+  unless (ref($ref_precise_orbit) eq 'HASH') {
+   RaiseError($fh_log, ERR_WRONG_HASH_REF,
+     "Input argument \'$ref_precise_orbit\' is not HASH type");
+   return KILLED;
+  }
+
+  # *************** #
+  # Dumper routine: #
+  # *************** #
+
+  # Retrieve dumper configuration:
+  my $delimiter    = $ref_gen_conf->{DATA_DUMPER}{ DELIMITER      };
+  my $epoch_format = $ref_gen_conf->{DATA_DUMPER}{ EPOCH_FORMAT   };
+
+  # Set epoch subroutine reference:
+  my $ref_epoch_sub = REF_EPOCH_SUB_CONF->{$epoch_format};
+
+  # Iterate over selected constellations:
+  for my $sat_sys (@{ $ref_gen_conf->{SELECTED_SAT_SYS} })
+  {
+    # 1. Open dumper file at output path:
+      my $file_path =
+        join('/', ($output_path, "$sat_sys-sat-precise-orbit.out"));
+      my $fh; open($fh, '>', $file_path) or die "Could not open $!";
+
+    # 2. Write title line:
+      say $fh sprintf("# > Satellite '$sat_sys' Precise Orbit Information.\n".
+                      "# > Created : %s ", GetPrettyLocalDate());
+
+    # 3. Write header line:
+      # Retrieve configured satellite mask:
+      my @header_items = ( SetEpochHeaderItems($epoch_format),
+                           'SatID', 'ECEF_X', 'ECEF_Y', 'ECEF_Z', 'ClockBias');
+      say $fh join($delimiter, @header_items);
+
+    # 4. Write data:
+      # Iterate over observation epochs:
+      for (my $i = 0; $i < scalar(@{ $ref_obs_data->{BODY} }); $i += 1) {
+
+        # Point to current epoch:
+        my $ref_epoch_info = $ref_obs_data->{BODY}[$i];
+
+        # Retrieve observation epoch:
+        my $gps_epoch = $ref_epoch_info->{EPOCH};
+        my @epoch = &{$ref_epoch_sub}( $ref_epoch_info->{EPOCH} );
+
+        # Retrieve satellites with navigation from observation data:
+        my @nav_sat =
+          @{ $ref_epoch_info->{NUM_SAT_INFO}{$sat_sys}{AVAIL_OBS}{SAT_IDS} };
+
+        # Iterate over valid nvaigation satellites:
+        for my $sat (sort @nav_sat) {
+
+          # Init precise information:
+          my ($sat_x, $sat_y, $sat_z, $sat_clk) =
+             (NULL_DATA, NULL_DATA, NULL_DATA, NULL_DATA);
+
+          # Retrieve precise info if available:
+          if ( $ref_epoch_info->{SAT_POSITION}{$sat}{NAV}{STATUS} &&
+               exists $ref_precise_orbit->{BODY}{$gps_epoch}{$sat} ) {
+            ($sat_x, $sat_y, $sat_z, $sat_clk) =
+              @{ $ref_precise_orbit->{BODY}{$gps_epoch}{$sat}{P} };
+          }
+
+          # Write line items:
+          my @line_items = (@epoch, $sat, $sat_x, $sat_y, $sat_z, $sat_clk);
+          say $fh join($delimiter, @line_items);
+
+        } # end for $sat
+      } # end for $i (epoch)
+
+    # 5. Close file:
+      close($fh);
+
+  } # end for $sat_sys
+
+  return TRUE;
+}
 
 # Private Subrutines:
 # ............................................................................ #
