@@ -150,10 +150,8 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
 
     PrintTitle2($FH_LOG, "Reading Precise Orbit information:");
 
-    my $igs_dat_path = qq(/home/ppinto/WorkArea/dat/igs/);
-    my $igs_sp3_file = qq(COD0MGXFIN_20183350000_01D_05M_ORB.SP3);
     my $ref_precise_orbit =
-      ReadPreciseOrbitIGS( join('/', ($igs_dat_path, $igs_sp3_file)), $FH_LOG );
+      ReadPreciseOrbitIGS( $ref_gen_conf->{IGS_PRECISE}{ORBIT_PATH}, $FH_LOG );
 
     ReportElapsedTime([gettimeofday],
                       $ini_precise_orbit_time_stamp, "ReadPreciseOrbitIGS()");
@@ -170,7 +168,7 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
                   [
                    $ref_gen_conf->{SELECTED_SIGNALS}{E},
                    $ref_gen_conf->{SELECTED_SIGNALS}{G}
-                   ],
+                  ],
                   $ref_gen_conf->{OUTPUT_PATH}, $FH_LOG );
 
   ReportElapsedTime([gettimeofday],
