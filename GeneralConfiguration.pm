@@ -377,6 +377,26 @@ sub LoadConfiguration {
         return KILLED;
       }
     }
+    if ( $config_content =~ /^IGS Precise Orbit SP3 path +: +(.+)$/im ) {
+      my $igs_sp3_path = $1;
+      if (-r $igs_sp3_path) {
+        $ref_config_hash->{IGS_PRECISE}{ORBIT_PATH} = $igs_sp3_path;
+      } else {
+        RaiseError(*STDOUT, ERR_CANNOT_READ_FILE,
+        "File \'$igs_sp3_path\' either cannot be read or does not exist");
+        return KILLED;
+      }
+    }
+    if ( $config_content =~ /^IGS Precise Clock CLK path +: +(.+)$/im ) {
+      my $igs_clk_path = $1;
+      if (-r $igs_clk_path) {
+        $ref_config_hash->{IGS_PRECISE}{CLOCK_PATH} = $igs_clk_path;
+      } else {
+        RaiseError(*STDOUT, ERR_CANNOT_READ_FILE,
+        "File \'$igs_clk_path\' either cannot be read or does not exist");
+        return KILLED;
+      }
+    }
 
 
     # Output sub-section:
