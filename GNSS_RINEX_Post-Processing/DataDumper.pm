@@ -61,7 +61,7 @@ BEGIN {
   our @EXPORT = ();
 
   # Define constants to export:
-  our @EXPORT_CONST = qw(  );
+  our @EXPORT_CONST = qw( &NULL_DATA );
 
   # Define subroutines to export:
   our @EXPORT_SUB   = qw( &DumpSatObsData
