@@ -21,6 +21,10 @@ use Enviroments qq(:CONSTANTS);
 use lib SRC_ROOT_PATH;
 use GeneralConfiguration qq(:ALL);
 
+# Load GRPP constants:
+use lib GRPP_ROOT_PATH;
+use DataDumper qq(:CONSTANTS);
+
 # Load common modules:
 use lib LIB_ROOT_PATH;
 # Common tools:
@@ -96,6 +100,7 @@ PrintTitle2(*STDOUT, "PLotting Sky Plot");
                         $sat_sys, $inp_path, $out_path );
 PrintComment(*STDOUT, "Done!\n");
 
+
 # ---------------------------------------------------------------------------- #
 # 2. Receiver Position plots:
 # ---------------------------------------------------------------------------- #
@@ -115,8 +120,11 @@ PrintTitle1(*STDOUT, "Receiver Position Solutions");
 #       - Show main axis (0,0,0)
 #       - Try to use pallete to color points (use PDOP value)
 # ******************************************************** #
-  PlotReceiverPosition($ref_gen_conf, $ref_obs_data, $inp_path, $out_path);
+  PlotReceiverPosition($ref_gen_conf, $ref_obs_data,
+                       $inp_path, $out_path);
 PrintComment(*STDOUT, "Done!\n");
+
+exit 0;
 
 # ---------------------------------------------------------------------------- #
 # 3. Ex-post Dilution of Precission:
@@ -224,8 +232,9 @@ sub PlotConstellationAvailability {
   # Chart's title:
   my $marker_name = $ref_obs_data->{HEAD}{MARKER_NAME};
   my $date = ( split(' ', BuildDateString(GPS2Date($ini_epoch))) )[0];
-  my $chart_title = SAT_SYS_ID_TO_NAME->{$sat_sys}.
-                    " Satellite Availability from $marker_name on ".$date;
+  my $chart_title =
+    SAT_SYS_ID_TO_NAME->{$sat_sys}.
+    " Satellite Availability from $marker_name station on $date";
 
   # Chart's grid:
   my $set_grid_cmm = "grid front";
@@ -236,9 +245,9 @@ sub PlotConstellationAvailability {
                           terminal => 'pngcairo size 874,540',
                           output => $out_path."/$sat_sys-sat-availability.png",
                           title  => {
-                                      text => $chart_title,
-                                      font => ":Bold",
-                                    },
+                            text => $chart_title,
+                            # font => ":Bold",
+                          },
                           $set_grid_cmm  => "",
                           ylabel => "Number of satellites",
                           xrange => [$ini_epoch, $end_epoch],
@@ -246,9 +255,9 @@ sub PlotConstellationAvailability {
                           timeaxis => "x",
                           xtics => { labelfmt => "%H:%M" },
                           timestamp =>  {
-                                          fmt => 'Created on %d/%m/%y %H:%M:%S',
-                                          font => "Helvetica Italic, 10",
-                                        },
+                            fmt => 'Created on %d/%m/%y %H:%M:%S',
+                            font => "Helvetica Italic, 10",
+                          },
                         );
 
   # Configure datasets:
@@ -334,8 +343,9 @@ sub PlotSatelliteElevation {
   # Chart's title:
   my $marker_name = $ref_obs_data->{HEAD}{MARKER_NAME};
   my $date = ( split(' ', BuildDateString(GPS2Date($ini_epoch))) )[0];
-  my $chart_title = SAT_SYS_ID_TO_NAME->{$sat_sys}.
-                    " Satellite Observed Elevation from $marker_name on ".$date;
+  my $chart_title =
+    SAT_SYS_ID_TO_NAME->{$sat_sys}.
+    " Satellite Observed Elevation from $marker_name station on $date";
 
   # Create plot object:
   my $chart =
@@ -343,9 +353,9 @@ sub PlotSatelliteElevation {
                           terminal => 'pngcairo size 874,540',
                           output => $out_path."/$sat_sys-sat-elevation.png",
                           title  => {
-                                      text => $chart_title,
-                                      font => ':Bold',
-                                    },
+                            text => $chart_title,
+                            # font => ':Bold',
+                          },
                           grid   => "on",
                           ylabel => "Elevation [deg]",
                           xrange => [$ini_epoch, $end_epoch],
@@ -353,12 +363,12 @@ sub PlotSatelliteElevation {
                           timeaxis => "x",
                           xtics => { labelfmt => "%H:%M" },
                           legend => {
-                                      position => "outside top",
-                                    },
+                            position => "outside top",
+                          },
                           timestamp =>  {
-                                          fmt => 'Created on %d/%m/%y %H:%M:%S',
-                                          font => "Helvetica Italic, 10",
-                                        },
+                            fmt => 'Created on %d/%m/%y %H:%M:%S',
+                            font => "Helvetica Italic, 10",
+                          },
                         );
 
   # Satellite mask dataset:
@@ -430,9 +440,11 @@ sub PlotSatelliteSkyPath {
   my $ini_epoch = min($pdl_epochs);
   my $end_epoch = max($pdl_epochs);
 
+  my ($num_epoch_records, $num_epochs) = dims($pdl_epochs);
+
   # Retrieve days's 00:00:00 in GPS epoch format:
   my $ini_day_epoch = Date2GPS( (GPS2Date($ini_epoch))[0..2], 0, 0, 0 );
-  my $pdl_epoch_day_hour = ($pdl_epochs - $ini_day_epoch)/3600;
+  my $pdl_epoch_day_hour = ($pdl_epochs - $ini_day_epoch)/SECONDS_IN_HOUR;
 
   # Retrieve observed satellites from input file header:
   my @avail_sats =
@@ -441,12 +453,15 @@ sub PlotSatelliteSkyPath {
   # Chart's title:
   my $marker_name = $ref_obs_data->{HEAD}{MARKER_NAME};
   my $date = ( split(' ', BuildDateString(GPS2Date($ini_epoch))) )[0];
-  my $chart_title = SAT_SYS_ID_TO_NAME->{$sat_sys}.
-                    " Satellite Sky-Plot from $marker_name on ".$date;
+  my $chart_title =
+    SAT_SYS_ID_TO_NAME->{$sat_sys}.
+    " Satellite Sky-Plot from $marker_name station on $date";
 
   # Palette configuration:
-  my $palette_color_cmm = 'palette defined (0 0 0 0, 1 0 0 1, 3 0 1 0, 4 1 0 0, 6 1 1 1)';
-  my $palette_label_cmm = 'cblabel "Osbervation Epoch [h]"';
+  my $palette_color_cmm =
+    'palette defined (0 0 0 0, 1 0 0 1, 3 0 1 0, 4 1 0 0, 6 1 1 1)';
+  my $palette_label_cmm =
+    'cblabel "Osbervation Epoch [h]"';
 
   # Set chart object:
   my $chart =
@@ -455,7 +470,7 @@ sub PlotSatelliteSkyPath {
                           output => $out_path."/$sat_sys-sat-sky-plot.png",
                           title  => {
                             text => $chart_title,
-                            font => ':Bold',
+                            # font => ':Bold',
                           },
                           border => undef,
                           xtics  => undef,
@@ -508,7 +523,7 @@ sub PlotSatelliteSkyPath {
   # Init array to hold satellite sky path datasets:
   my @sat_datasets;
 
-  for my $sat (@avail_sats)
+  for my $sat (sort @avail_sats)
   {
     # Get satellite azmiut and elevation values:
     my $pdl_azimut =
@@ -525,7 +540,28 @@ sub PlotSatelliteSkyPath {
                                     width => 5,
                                   );
 
-    push(@sat_datasets, $dataset);
+    # Retrieve median azimut and elevation values:
+    my ( $med_azimut, $med_elevation ) =
+      RetrieveMedianValues( NULL_DATA,
+                            unpdl($pdl_azimut->flat),
+                            unpdl($pdl_elevation->flat) );
+
+    # Watch for undef values:
+    $med_azimut    = NULL_DATA unless (defined $med_azimut);
+    $med_elevation = NULL_DATA unless (defined $med_elevation);
+
+    # say sprintf("%s %.3f %.3f", $sat, $med_azimut, $med_elevation);
+
+    # Dataset for labelling the satellites:
+    my $label_dataset =
+      Chart::Gnuplot::DataSet->new(
+                                    xdata => [$med_azimut],
+                                    ydata => [$med_elevation],
+                                    zdata => [$sat],
+                                    style => "labels font \"Ubuntu,10\"",
+                                  );
+
+    push(@sat_datasets, $dataset, $label_dataset);
   }
 
   $chart->plot2d((
@@ -1602,4 +1638,32 @@ sub RetrieveSatYTicsCommand {
 
   # Return command:
   return $command;
+}
+
+sub RetrieveMedianValues {
+  my ($null_value, @array_ref_list) = @_;
+
+  # Init median values to return:
+  my @median_values_list;
+
+  # Iterate over the input array references:
+  for my $ref_array (@array_ref_list)
+  {
+    # De-reference array:
+    my @array = @{ $ref_array };
+
+    # Filter no-valid values:
+    @array = grep{ $_ ne $null_value } @array;
+
+    # Compute array size after filtering:
+    my $arr_size = scalar(@array);
+
+    # Median value corresponds to middle values in the array:
+    # NOTE: median index is "floored"
+    my $median_value = $array[ int($arr_size/2) ];
+
+    push(@median_values_list, $median_value);
+  }
+
+  return @median_values_list;
 }
