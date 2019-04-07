@@ -52,6 +52,7 @@ BEGIN {
   # Define constants to export:
   our @EXPORT_CONST = qw( &RINEX_GPS_ID
                           &RINEX_GAL_ID
+                          &SAT_SYS_ID_TO_NAME
                           &GPS_L1_FREQ
                           &GPS_L2_FREQ
                           &GPS_L5_FREQ
@@ -151,6 +152,15 @@ use constant {
   RINEX_QZSS_ID  => 'J',
   RINEX_IRNSS_ID => 'I',
 };
+
+# Satellite system ID to name hash:
+use constant
+  SAT_SYS_ID_TO_NAME => { G => 'GPS',
+                          E => 'GALILEO',
+                          R => 'GLONASS',
+                          C => 'BEIDOU',
+                          S => 'SBAS',
+                          J => 'QZSS' };
 
 # Satellite system signal frequencies:
 # GPS signal frequencies:
