@@ -145,17 +145,17 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
     say "[...]\n" if ($_ == 3);
   }
 
-# Read precise orbit file:
-    my $ini_precise_orbit_time_stamp = [gettimeofday];
-
-    PrintTitle2($FH_LOG, "Reading Precise Orbit information:");
-
-    my $ref_precise_orbit =
-      ReadPreciseOrbitIGS( $ref_gen_conf->{IGS_PRECISE}{ORBIT_PATH}, $FH_LOG );
-
-    ReportElapsedTime([gettimeofday],
-                      $ini_precise_orbit_time_stamp, "ReadPreciseOrbitIGS()");
-    $MEM_USAGE->record('-> ReadPreciseOrbitIGS');
+# # Read precise orbit file:
+#     my $ini_precise_orbit_time_stamp = [gettimeofday];
+#
+#     PrintTitle2($FH_LOG, "Reading Precise Orbit information:");
+#
+#     my $ref_precise_orbit =
+#       ReadPreciseOrbitIGS( $ref_gen_conf->{IGS_PRECISE}{ORBIT_PATH}, $FH_LOG );
+#
+#     ReportElapsedTime([gettimeofday],
+#                       $ini_precise_orbit_time_stamp, "ReadPreciseOrbitIGS()");
+#     $MEM_USAGE->record('-> ReadPreciseOrbitIGS');
 
 
 # Dump processed data:
@@ -290,11 +290,11 @@ PrintTitle1( *STDOUT, "Script $0 has started" );
                     $ini_time_dump_data, "DumpResidualsBySat()");
   $MEM_USAGE->record('-> DumpResidualsBySat');
 
-  PrintTitle3($FH_LOG, "Dumping precise orbit information:");
-  DumpPreciseSatellitePosition( $ref_gen_conf,
-                                $ref_obs_data,
-                                $ref_precise_orbit,
-                                $ref_gen_conf->{OUTPUT_PATH}, $FH_LOG );
+  # PrintTitle3($FH_LOG, "Dumping precise orbit information:");
+  # DumpPreciseSatellitePosition( $ref_gen_conf,
+  #                               $ref_obs_data,
+  #                               $ref_precise_orbit,
+  #                               $ref_gen_conf->{OUTPUT_PATH}, $FH_LOG );
 
   ReportElapsedTime([gettimeofday],
                     $ini_time_dump_data, "DumpPreciseSatellitePosition()");
