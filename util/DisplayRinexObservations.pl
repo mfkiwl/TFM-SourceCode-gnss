@@ -14,6 +14,9 @@ use feature qq(say);
 
 # Load custom modules:
 # ---------------------------------------------------------------------------- #
+use lib SRC_ROOT_PATH;
+use GeneralConfiguration qq(:ALL);
+
 use lib LIB_ROOT_PATH;
 use MyUtil  qq(:ALL);
 use MyPrint qq(:ALL);
@@ -21,14 +24,6 @@ use MyPrint qq(:ALL);
 use lib GRPP_ROOT_PATH;
 use RinexReader qq(:ALL);
 
-# Some constants:
-# ---------------------------------------------------------------------------- #
-use constant SAT_SYS_ID_TO_NAME => { G => 'GPS',
-                                     E => 'GALILEO',
-                                     R => 'GLONASS',
-                                     C => 'BEIDOU',
-                                     S => 'SBAS',
-                                     J => 'QZSS' };
 
 # Script arguments:
 # ---------------------------------------------------------------------------- #
