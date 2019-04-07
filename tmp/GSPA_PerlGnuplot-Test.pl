@@ -17,6 +17,10 @@ use Math::Trig qq(pi);
 use lib $ENV{ ENV_ROOT };
 use Enviroments qq(:CONSTANTS);
 
+# Load general configuration:
+use lib SRC_ROOT_PATH;
+use GeneralConfiguration qq(:ALL);
+
 # Load common modules:
 use lib LIB_ROOT_PATH;
 # Common tools:
@@ -29,6 +33,8 @@ use TimeGNSS qq(:ALL); # GNSS time transforming utilities..
 # ============================================================================ #
 # Main Routine:                                                                #
 # ============================================================================ #
+
+PrintTitle0(*STDOUT, "$0 has started");
 
 # Preliminary:
 #  - Identify script arguments:
@@ -54,35 +60,46 @@ my $ref_obs_data = retrieve("$inp_path/ref_obs_data.hash");
 # ---------------------------------------------------------------------------- #
 # 1. Satellite system plots:
 # ---------------------------------------------------------------------------- #
+PrintTitle1(*STDOUT, "Satellite System Plots");
 # ************************************** #
 #    1.a Constellation availability:     #
 # ************************************** #
+PrintTitle2(*STDOUT, "Ploting Constellation Availability");
   # TODO:
   #   - Set true transparent fills
-  PlotConstellationAvailability($ref_gen_conf, $sat_sys, $inp_path, $out_path);
+  PlotConstellationAvailability( $ref_gen_conf, $ref_obs_data,
+                                 $sat_sys, $inp_path, $out_path );
+PrintComment(*STDOUT, "Done!\n");
 
 # ****************************** #
 #    1.b Satellite elevation     #
 # ****************************** #
+PrintTitle2(*STDOUT, "Ploting Satellite Elevation");
   # TODO:
   #   - Avoid same colors for two sats
   #   - New style for mask dataset (dashed grey line with transparent fill)
-  PlotSatelliteElevation($ref_gen_conf, $sat_sys, $inp_path, $out_path);
+  PlotSatelliteElevation( $ref_gen_conf, $ref_obs_data,
+                          $sat_sys, $inp_path, $out_path );
+PrintComment(*STDOUT, "Done!\n");
 
 # ******************* #
 #    1.c Sky plot:    #
 # ******************* #
+PrintTitle2(*STDOUT, "PLotting Sky Plot");
   # TODO:
   #   - Palette epoch values (hours intead of GPS epochs)
   #   - Offset in pallete
   #   - Label satellites
   #   - *change palette colors (more colors)
   #   - Move title top left
-  PlotSatelliteSkyPath($ref_gen_conf, $sat_sys, $inp_path, $out_path);
+  PlotSatelliteSkyPath( $ref_gen_conf, $ref_obs_data,
+                        $sat_sys, $inp_path, $out_path );
+PrintComment(*STDOUT, "Done!\n");
 
 # ---------------------------------------------------------------------------- #
 # 2. Receiver Position plots:
 # ---------------------------------------------------------------------------- #
+PrintTitle1(*STDOUT, "Receiver Position Solutions");
 # ******************************************************** #
 #    2.a Easting/Northing point densisty plot:             #
 #    TODO:
@@ -99,10 +116,12 @@ my $ref_obs_data = retrieve("$inp_path/ref_obs_data.hash");
 #       - Try to use pallete to color points (use PDOP value)
 # ******************************************************** #
   PlotReceiverPosition($ref_gen_conf, $ref_obs_data, $inp_path, $out_path);
+PrintComment(*STDOUT, "Done!\n");
 
 # ---------------------------------------------------------------------------- #
 # 3. Ex-post Dilution of Precission:
 # ---------------------------------------------------------------------------- #
+PrintTitle1(*STDOUT, "Ex-post Dilution of Precission");
 # ************************ #
 #    3.a ECEF frame DOP:   #
 #    TODO:
@@ -112,20 +131,26 @@ my $ref_obs_data = retrieve("$inp_path/ref_obs_data.hash");
 #       - Include 2.5 overbound (set fill transparent)
 # ************************ #
   PlotDilutionOfPrecission($ref_gen_conf, $inp_path, $out_path);
+PrintComment(*STDOUT, "Done!\n");
 
 # ---------------------------------------------------------------------------- #
 # 4. Least Squeares Estimation plots:
 # ---------------------------------------------------------------------------- #
+PrintTitle1(*STDOUT, "Least Square Estimation Plots");
 # *********************************************** #
 #    4.a LSQ info (iter, convergence, ... )       #
 #    4.b Apx parameter + Delta parameter          #
 # *********************************************** #
+PrintTitle2(*STDOUT, "Plotting LSQ info + Apx Parameter estimation");
   PlotLSQEpochEstimation($ref_gen_conf, $inp_path, $out_path);
+PrintComment(*STDOUT, "Done!\n");
 
 # ********************************* #
 #    4.d Residuals by satellite:    #
 # ********************************* #
+PrintTitle2(*STDOUT, "Plotting Residuals by Satellite");
   PlotSatelliteResiduals($ref_gen_conf, $sat_sys, $inp_path, $out_path);
+PrintComment(*STDOUT, "Done!\n");
 
 # **************************************************** #
 #    4.e Elevation by satellite (same as 1.b plot):    #
@@ -135,26 +160,32 @@ my $ref_obs_data = retrieve("$inp_path/ref_obs_data.hash");
 # ---------------------------------------------------------------------------- #
 # 5. Ionosphere and Troposphere Delay Estimation plots:
 # ---------------------------------------------------------------------------- #
+PrintTitle1(*STDOUT, "Ionosphere and Troposphere Delays");
 # ************************************************* #
 #    5.a Ionosphere Computed Delay by satellite:    #
 # ************************************************* #
+PrintTitle2(*STDOUT, "Plotting Ionosphere Delay");
   PlotSatelliteIonosphereDelay($ref_gen_conf, $sat_sys, $inp_path, $out_path);
+PrintComment(*STDOUT, "Done!\n");
 
 # ************************************************** #
 #    5.b Troposphere Computed delay by satellite:    #
 # ************************************************** #
+PrintTitle2(*STDOUT, "Plotting Troposhpere Delay");
   PlotSatelliteTroposphereDelay($ref_gen_conf, $sat_sys, $inp_path, $out_path);
+PrintComment(*STDOUT, "Done!\n");
 
 # **************************************************** #
 #    5.c Elevation by satellite (same as 1.b plot):    #
 # **************************************************** #
 
+PrintTitle0(*STDOUT, "$0 has finished");
 
 # ============================================================================ #
 # First level subroutines:                                                     #
 # ============================================================================ #
 sub PlotConstellationAvailability {
-  my ($ref_gen_conf, $sat_sys, $inp_path, $out_path) = @_;
+  my ($ref_gen_conf, $ref_obs_data, $sat_sys, $inp_path, $out_path) = @_;
 
   # Select dumper file:
   my $ref_file_layout =
@@ -190,21 +221,33 @@ sub PlotConstellationAvailability {
   my $end_epoch   = max($pdl_epochs);
   my $max_num_sat = max($pdl_num_avail_sat);
 
+  # Chart's title:
+  my $marker_name = $ref_obs_data->{HEAD}{MARKER_NAME};
+  my $date = ( split(' ', BuildDateString(GPS2Date($ini_epoch))) )[0];
+  my $chart_title = SAT_SYS_ID_TO_NAME->{$sat_sys}.
+                    " Satellite Availability from $marker_name on ".$date;
+
+  # Chart's grid:
+  my $set_grid_cmm = "grid front";
+
   # Create chart object:
   my $chart =
     Chart::Gnuplot->new (
-                          output => $out_path."/$sat_sys-availability.png",
-                          title  => "Satellite System '$sat_sys' Availability",
-                          grid   => "on",
-                          xlabel => "Observation Epochs",
+                          terminal => 'pngcairo size 874,540',
+                          output => $out_path."/$sat_sys-sat-availability.png",
+                          title  => {
+                                      text => $chart_title,
+                                      font => ":Bold",
+                                    },
+                          $set_grid_cmm  => "",
                           ylabel => "Number of satellites",
                           xrange => [$ini_epoch, $end_epoch],
                           yrange => [5, $max_num_sat + 2],
                           timeaxis => "x",
                           xtics => { labelfmt => "%H:%M" },
                           timestamp =>  {
-                                          fmt  => '%d/%m/%y %H:%M',
-                                          font => "Helvetica :Italic",
+                                          fmt => 'Created on %d/%m/%y %H:%M:%S',
+                                          font => "Helvetica Italic, 10",
                                         },
                         );
 
@@ -214,8 +257,9 @@ sub PlotConstellationAvailability {
                                   xdata => unpdl($pdl_epochs->flat),
                                   ydata => unpdl($pdl_num_avail_sat->flat),
                                   style => "filledcurve y=0",
-                                  timefmt => "%s",
+                                  color => "#9400D3",
                                   fill => { density => 0.3 },
+                                  timefmt => "%s",
                                   title => "Available"
                                 );
 
@@ -224,8 +268,9 @@ sub PlotConstellationAvailability {
                                   xdata => unpdl($pdl_epochs->flat),
                                   ydata => unpdl($pdl_num_valid_obs_sat->flat),
                                   style => "filledcurve y=0",
-                                  timefmt => "%s",
+                                  color => "#009E73",
                                   fill => { density => 0.4 },
+                                  timefmt => "%s",
                                   title => "No-NULL Observation"
                                 );
 
@@ -234,8 +279,9 @@ sub PlotConstellationAvailability {
                                   xdata => unpdl($pdl_epochs->flat),
                                   ydata => unpdl($pdl_num_valid_nav_sat->flat),
                                   style => "filledcurve y=0",
-                                  timefmt => "%s",
+                                  color => "#56B4E9",
                                   fill => { density => 0.5 },
+                                  timefmt => "%s",
                                   title => "Valid Navigation"
                                 );
 
@@ -244,8 +290,9 @@ sub PlotConstellationAvailability {
                                   xdata => unpdl($pdl_epochs->flat),
                                   ydata => unpdl($pdl_num_valid_lsq_sat->flat),
                                   style => "filledcurve y=0",
-                                  timefmt => "%s",
+                                  color => "#E69F00",
                                   fill => { density => 0.6 },
+                                  timefmt => "%s",
                                   title => "Valid for LSQ routine"
                                 );
 
@@ -262,7 +309,7 @@ sub PlotConstellationAvailability {
 }
 
 sub PlotSatelliteElevation {
-  my ($ref_gen_conf, $sat_sys, $inp_path, $out_path) = @_;
+  my ($ref_gen_conf, $ref_obs_data, $sat_sys, $inp_path, $out_path) = @_;
 
   # Select dumper file:
   my $ref_file_layout =
@@ -284,21 +331,33 @@ sub PlotSatelliteElevation {
   my @avail_sats =
     grep( /^$sat_sys\d{2}$/, (keys %{ $ref_file_layout->{ITEMS} }) );
 
+  # Chart's title:
+  my $marker_name = $ref_obs_data->{HEAD}{MARKER_NAME};
+  my $date = ( split(' ', BuildDateString(GPS2Date($ini_epoch))) )[0];
+  my $chart_title = SAT_SYS_ID_TO_NAME->{$sat_sys}.
+                    " Satellite Observed Elevation from $marker_name on ".$date;
+
   # Create plot object:
   my $chart =
     Chart::Gnuplot->new (
-                          output => $out_path."/$sat_sys-elevation.png",
-                          title  => "Satellite System '$sat_sys' Elevation",
-                          xlabel => "Observation Epochs",
+                          terminal => 'pngcairo size 874,540',
+                          output => $out_path."/$sat_sys-sat-elevation.png",
+                          title  => {
+                                      text => $chart_title,
+                                      font => ':Bold',
+                                    },
+                          grid   => "on",
                           ylabel => "Elevation [deg]",
                           xrange => [$ini_epoch, $end_epoch],
                           yrange => [0, 90],
-                          grid   => "on",
                           timeaxis => "x",
                           xtics => { labelfmt => "%H:%M" },
+                          legend => {
+                                      position => "outside top",
+                                    },
                           timestamp =>  {
-                                          fmt  => '%d/%m/%y %H:%M',
-                                          font => "Helvetica :Italic",
+                                          fmt => 'Created on %d/%m/%y %H:%M:%S',
+                                          font => "Helvetica Italic, 10",
                                         },
                         );
 
@@ -310,18 +369,17 @@ sub PlotSatelliteElevation {
     Chart::Gnuplot::DataSet->new(
                                   xdata => unpdl($pdl_epochs->flat),
                                   ydata => unpdl($pdl_sat_mask->flat),
-                                  style => "lines",
+                                  style => "filledcurve y=0",
+                                  color => "#99555753",
                                   timefmt => "%s",
                                   title => "Mask",
-                                  width => 5,
-                                  linetype => 8
                                 );
 
-  # Init array to store elevation dataset objects:
+  # Init array to store dataset objects:
   my @elevation_datasets;
 
-  for my $sat (@avail_sats) {
-
+  for my $sat (sort @avail_sats)
+  {
     # Retrieve elevation values:
     my $pdl_elevation =
        $pdl_sat_elevation($ref_file_layout->{ITEMS}{$sat}{INDEX});
@@ -331,8 +389,9 @@ sub PlotSatelliteElevation {
       Chart::Gnuplot::DataSet->new(
                                     xdata => unpdl($pdl_epochs->flat),
                                     ydata => unpdl($pdl_elevation->flat),
-                                    style => "lines",
-                                    width => 3,
+                                    style => "linespoints pointinterval 50 ".
+                                             "pointsize 0.75",
+                                    width => 2,
                                     timefmt => "%s",
                                     title => "$sat"
                                   );
@@ -351,7 +410,7 @@ sub PlotSatelliteElevation {
 }
 
 sub PlotSatelliteSkyPath {
-  my ($ref_gen_conf, $sat_sys, $inp_path, $out_path) = @_;
+  my ($ref_gen_conf, $ref_obs_data, $sat_sys, $inp_path, $out_path) = @_;
 
   # Select dumper files:
   my $ref_azimut_file_layout =
@@ -371,34 +430,59 @@ sub PlotSatelliteSkyPath {
   my $ini_epoch = min($pdl_epochs);
   my $end_epoch = max($pdl_epochs);
 
+  # Retrieve days's 00:00:00 in GPS epoch format:
+  my $ini_day_epoch = Date2GPS( (GPS2Date($ini_epoch))[0..2], 0, 0, 0 );
+  my $pdl_epoch_day_hour = ($pdl_epochs - $ini_day_epoch)/3600;
+
   # Retrieve observed satellites from input file header:
   my @avail_sats =
     grep( /^$sat_sys\d{2}$/, (keys %{ $ref_azimut_file_layout->{ITEMS} }) );
 
+  # Chart's title:
+  my $marker_name = $ref_obs_data->{HEAD}{MARKER_NAME};
+  my $date = ( split(' ', BuildDateString(GPS2Date($ini_epoch))) )[0];
+  my $chart_title = SAT_SYS_ID_TO_NAME->{$sat_sys}.
+                    " Satellite Sky-Plot from $marker_name on ".$date;
+
+  # Palette configuration:
+  my $palette_color_cmm = 'palette defined (0 0 0 0, 1 0 0 1, 3 0 1 0, 4 1 0 0, 6 1 1 1)';
+  my $palette_label_cmm = 'cblabel "Osbervation Epoch [h]"';
+
   # Set chart object:
   my $chart =
     Chart::Gnuplot->new (
-                          output => $out_path."/$sat_sys-sky-plot.png",
-                          title  => "Satellite System '$sat_sys' Sky Plot",
+                          terminal => 'pngcairo size 874,874',
+                          output => $out_path."/$sat_sys-sat-sky-plot.png",
+                          title  => {
+                            text => $chart_title,
+                            font => ':Bold',
+                          },
                           border => undef,
                           xtics  => undef,
                           ytics  => undef,
+                          cbtics => 0.25,
+                          legend => {
+                            position => "top left",
+                          },
+                          $palette_color_cmm => "",
+                          $palette_label_cmm => "",
                           timestamp =>  {
-                                          fmt  => '%d/%m/%y %H:%M',
-                                          font => "Helvetica :Italic",
-                                        },
+                            fmt  => 'Created on %d/%m/%y %H:%M:%S',
+                            font => "Helvetica Italic, 10",
+                          },
                         );
 
   # Set polar options:
   $chart->set(
-                size   => "square",
+                size   => "0.9, 0.9",
+                origin => "0.07, 0.06",
                 polar  => "",
-                grid   => "polar",
+                grid   => "polar front",
                 angle  => "degrees",
                 theta  => "top clockwise",
                 trange => "[0:360]",
                 rrange => "[90:0]",
-                rtics  => "30",
+                rtics  => "15",
                 ttics  => 'add ("N" 0, "E" 90, "S" 180, "W" 270) font ":Bold"',
                 colorbox => "",
               );
@@ -416,10 +500,9 @@ sub PlotSatelliteSkyPath {
     Chart::Gnuplot::DataSet->new(
                                   xdata => \@azimut,
                                   ydata => \@mask,
-                                  style => "lines",
+                                  style => "filledcurve y=0",
                                   title => "Mask",
-                                  width => 5,
-                                  linetype => 8
+                                  color => "#99555753",
                                 );
 
   # Init array to hold satellite sky path datasets:
@@ -437,10 +520,9 @@ sub PlotSatelliteSkyPath {
       Chart::Gnuplot::DataSet->new(
                                     xdata => unpdl($pdl_azimut->flat),
                                     ydata => unpdl($pdl_elevation->flat),
-                                    zdata => unpdl($pdl_epochs->flat),
+                                    zdata => unpdl($pdl_epoch_day_hour->flat),
                                     style => "lines linecolor pal z",
-                                    # title => "$sat",
-                                    width => 3
+                                    width => 5,
                                   );
 
     push(@sat_datasets, $dataset);
@@ -1215,6 +1297,10 @@ sub PlotSatelliteResiduals {
   # Retrieve command for adding satellite ID tics on Y axis:
   my $sat_id_ytics_cmm = RetrieveSatYTicsCommand(@avail_sats);
 
+  # Set commands for color palette:
+  my $palette_color_cmm = 'palette rgb 33,13,10';
+  my $palette_label_cmm = 'cblabel "Residuals [m]"';
+
   # Set chart object:
   my $chart =
     Chart::Gnuplot->new(
@@ -1225,9 +1311,12 @@ sub PlotSatelliteResiduals {
                           ylabel => "Satellite PRN",
                           xrange => [$ini_epoch, $end_epoch],
                           yrange => [0, scalar(@avail_sats) + 1],
+                          zrange => [-6, 6],
                           timeaxis => "x",
                           xtics => { labelfmt => "%H:%M" },
                           $sat_id_ytics_cmm => "",
+                          $palette_label_cmm => "",
+                          $palette_color_cmm => "",
                           timestamp =>  {
                                           fmt  => '%d/%m/%y %H:%M',
                                           font => "Helvetica :Italic",
@@ -1292,6 +1381,10 @@ sub PlotSatelliteIonosphereDelay {
   # Retrieve command for adding satellite ID tics on Y axis:
   my $sat_id_ytics_cmm = RetrieveSatYTicsCommand(@avail_sats);
 
+  # Set commands for color palette:
+  my $palette_color_cmm = 'palette rgb 30,31,32';
+  my $palette_label_cmm = 'cblabel "Delay [m]"';
+
   # Set chart object:
   my $chart =
     Chart::Gnuplot->new(
@@ -1305,6 +1398,8 @@ sub PlotSatelliteIonosphereDelay {
                           timeaxis => "x",
                           xtics => { labelfmt => "%H:%M" },
                           $sat_id_ytics_cmm => "",
+                          $palette_color_cmm => "",
+                          $palette_label_cmm => "",
                           timestamp =>  {
                                           fmt  => '%d/%m/%y %H:%M',
                                           font => "Helvetica :Italic",
@@ -1369,6 +1464,10 @@ sub PlotSatelliteTroposphereDelay {
   # Retrieve command for adding satellite ID tics on Y axis:
   my $sat_id_ytics_cmm = RetrieveSatYTicsCommand(@avail_sats);
 
+  # Set commands for color palette:
+  my $palette_color_cmm = 'palette rgb 30,31,32';
+  my $palette_label_cmm = 'cblabel "Delay [m]"';
+
   # Set chart object:
   my $chart =
     Chart::Gnuplot->new(
@@ -1382,6 +1481,8 @@ sub PlotSatelliteTroposphereDelay {
                           timeaxis => "x",
                           xtics => { labelfmt => "%H:%M" },
                           $sat_id_ytics_cmm => "",
+                          $palette_color_cmm => "",
+                          $palette_label_cmm => "",
                           timestamp =>  {
                                           fmt  => '%d/%m/%y %H:%M',
                                           font => "Helvetica :Italic",
