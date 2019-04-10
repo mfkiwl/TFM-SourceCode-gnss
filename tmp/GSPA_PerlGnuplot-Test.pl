@@ -69,8 +69,6 @@ PrintTitle1(*STDOUT, "Satellite System Plots");
 #    1.a Constellation availability:     #
 # ************************************** #
 PrintTitle2(*STDOUT, "Ploting Constellation Availability");
-  # TODO:
-  #   - Set true transparent fills
   PlotConstellationAvailability( $ref_gen_conf, $ref_obs_data,
                                  $sat_sys, $inp_path, $out_path );
 PrintComment(*STDOUT, "Done!\n");
@@ -79,9 +77,6 @@ PrintComment(*STDOUT, "Done!\n");
 #    1.b Satellite elevation     #
 # ****************************** #
 PrintTitle2(*STDOUT, "Ploting Satellite Elevation");
-  # TODO:
-  #   - Avoid same colors for two sats
-  #   - New style for mask dataset (dashed grey line with transparent fill)
   PlotSatelliteElevation( $ref_gen_conf, $ref_obs_data,
                           $sat_sys, $inp_path, $out_path );
 PrintComment(*STDOUT, "Done!\n");
@@ -90,12 +85,6 @@ PrintComment(*STDOUT, "Done!\n");
 #    1.c Sky plot:    #
 # ******************* #
 PrintTitle2(*STDOUT, "PLotting Sky Plot");
-  # TODO:
-  #   - Palette epoch values (hours intead of GPS epochs)
-  #   - Offset in pallete
-  #   - Label satellites
-  #   - *change palette colors (more colors)
-  #   - Move title top left
   PlotSatelliteSkyPath( $ref_gen_conf, $ref_obs_data,
                         $sat_sys, $inp_path, $out_path );
 PrintComment(*STDOUT, "Done!\n");
@@ -106,25 +95,15 @@ PrintComment(*STDOUT, "Done!\n");
 # ---------------------------------------------------------------------------- #
 PrintTitle1(*STDOUT, "Receiver Position Solutions");
 # ******************************************************** #
-#    2.a Easting/Northing point densisty plot:             #
-#    TODO:
-#       - Move title top left
-#       - Offset in palette
-#       - Set true transparent fill for points
-#    2.b Upping plot:                                      #
-#    TODO:
-#       - Add dashed line indicating reference station position
-#    2.c Easting/Northing/Upping point density 3D plot:    #
-#    TODO:
-#       - Delete plot? --> NOT YET
-#       - Show main axis (0,0,0)
-#       - Try to use pallete to color points (use PDOP value)
+#    2.a EN + U    polar plot (U -> color):                #
+#    2.b EN + HDOP polar plot (HDOP -> color):             #
+#    2.c ENU lineal plot:                                  #
+#    2.d Receiver Clock Bias lineal plot:                  #
 # ******************************************************** #
   PlotReceiverPosition( $ref_gen_conf, $ref_obs_data,
                         $inp_path, $out_path );
 PrintComment(*STDOUT, "Done!\n");
 
-# exit 0;
 
 # ---------------------------------------------------------------------------- #
 # 3. Ex-post Dilution of Precission:
@@ -132,15 +111,12 @@ PrintComment(*STDOUT, "Done!\n");
 PrintTitle1(*STDOUT, "Ex-post Dilution of Precission");
 # ************************ #
 #    3.a ECEF frame DOP:   #
-#    TODO:
-#       - Include 2.5 overbound (set fill transparent)
 #    3.b ENU frame DOP:    #
-#    TODO:
-#       - Include 2.5 overbound (set fill transparent)
 # ************************ #
   PlotDilutionOfPrecission( $ref_gen_conf, $ref_obs_data,
                             $inp_path, $out_path );
 PrintComment(*STDOUT, "Done!\n");
+
 
 # ---------------------------------------------------------------------------- #
 # 4. Least Squeares Estimation plots:
@@ -154,6 +130,7 @@ PrintTitle2(*STDOUT, "Plotting LSQ info + Apx Parameter estimation");
   PlotLSQEpochEstimation( $ref_gen_conf, $ref_obs_data,
                           $inp_path, $out_path );
 PrintComment(*STDOUT, "Done!\n");
+
 
 # ********************************* #
 #    4.d Residuals by satellite:    #
@@ -251,7 +228,7 @@ sub PlotConstellationAvailability {
                           output => $out_path."/$sat_sys-sat-availability.png",
                           title  => {
                             text => $chart_title,
-                            # font => ":Bold",
+                            font => ":Bold",
                           },
                           $set_grid_cmm  => "",
                           ylabel => "Number of satellites",
@@ -359,7 +336,7 @@ sub PlotSatelliteElevation {
                           output => $out_path."/$sat_sys-sat-elevation.png",
                           title  => {
                             text => $chart_title,
-                            # font => ':Bold',
+                            font => ':Bold',
                           },
                           grid   => "on",
                           ylabel => "Elevation [deg]",
@@ -475,7 +452,7 @@ sub PlotSatelliteSkyPath {
                           output => $out_path."/$sat_sys-sat-sky-plot.png",
                           title  => {
                             text => $chart_title,
-                            # font => ':Bold',
+                            font => ':Bold',
                           },
                           border => undef,
                           xtics  => undef,
@@ -495,15 +472,16 @@ sub PlotSatelliteSkyPath {
   # Set polar options:
   $chart->set(
                 size   => "0.9, 0.9",
-                origin => "0.07, 0.06",
+                origin => "0.085, 0.06",
                 polar  => "",
                 grid   => "polar front",
+                'border polar' => '',
                 angle  => "degrees",
                 theta  => "top clockwise",
                 trange => "[0:360]",
                 rrange => "[90:0]",
                 rtics  => "15",
-                ttics  => 'add ("N" 0, "E" 90, "S" 180, "W" 270) font ":Bold"',
+                ttics  => 'add ("N" 0, "NE" 45, "E" 90, "ES" 135, "S" 180, "SW" 225, "W" 270, "NW" 315)',
                 colorbox => "",
               );
 
@@ -555,8 +533,6 @@ sub PlotSatelliteSkyPath {
     $med_azimut    = NULL_DATA unless (defined $med_azimut);
     $med_elevation = NULL_DATA unless (defined $med_elevation);
 
-    # say sprintf("%s %.3f %.3f", $sat, $med_azimut, $med_elevation);
-
     # Dataset for labelling the satellites:
     my $label_dataset =
       Chart::Gnuplot::DataSet->new(
@@ -603,6 +579,12 @@ sub PlotReceiverPosition {
   my $pdl_rec_upping =
      $pdl_rec_xyz($ref_file_layout->{ITEMS}{REF_IU}{INDEX});
 
+  # Get maximum upping absolute value:
+  my $max_upping = max($pdl_rec_upping);
+  my $min_upping = min($pdl_rec_upping);
+
+  my $max_abs_upping = max( pdl [abs($max_upping), abs($min_upping)] );
+
   # Retrieve standard deviations for ENU coordinates:
   my $pdl_std_easting =
      $pdl_rec_xyz($ref_file_layout->{ITEMS}{Sigma_E}{INDEX});
@@ -610,6 +592,9 @@ sub PlotReceiverPosition {
      $pdl_rec_xyz($ref_file_layout->{ITEMS}{Sigma_N}{INDEX});
   my $pdl_std_upping =
      $pdl_rec_xyz($ref_file_layout->{ITEMS}{Sigma_U}{INDEX});
+
+  # Compute HDOP:
+  my $pdl_std_en = ($pdl_std_easting**2 + $pdl_std_northing**2)**0.5;
 
   # Retrieve receiver clock bias estimation and associated error:
   my $pdl_rec_clk_bias =
@@ -621,21 +606,24 @@ sub PlotReceiverPosition {
   my $pdl_rec_azimut = pi/2 - atan2($pdl_rec_northing, $pdl_rec_easting);
   my $pdl_rec_distance = ($pdl_rec_easting**2 + $pdl_rec_northing**2)**.5;
 
+  # Compute max rec distance for polar plot:
+  my $max_rec_distance = int(max($pdl_rec_distance)) + 1;
+
   # Set EN polar title:
   my $date = ( split(' ', BuildDateString(GPS2Date($ini_epoch))) )[0];
-  my $chart_en_polar_title =
-    "Receiver Easting/Northing from $marker_name station reference on $date";
+  my $chart_en_polar_hdop_title =
+    "Receiver Easting, Northing and HDOP from $marker_name station on $date";
   # Set palette label:
-  my $palette_label_cmm = 'cblabel "Upping [m]"';
+  my $palette_label_cmm = 'cblabel "Horizontal DOP [m]"';
 
   # Create EN chart object:
-  my $chart_en_polar =
+  my $chart_en_polar_hdop =
     Chart::Gnuplot->new(
                           terminal => 'pngcairo size 874,874',
-                          output => $out_path."/$marker_name-rec-EN-polar-plot.png",
+                          output => $out_path."/$marker_name-rec-EN-HDOP-polar.png",
                           title  => {
-                            text => $chart_en_polar_title,
-                            # font => ':Bold',
+                            text => $chart_en_polar_hdop_title,
+                            font => ':Bold',
                           },
                           border => undef,
                           xtics  => undef,
@@ -647,41 +635,56 @@ sub PlotReceiverPosition {
                           },
                         );
   # Set chart polar properties:
-    $chart_en_polar->set(
+    $chart_en_polar_hdop->set(
                         size   => "0.9, 0.9",
-                        origin => "0.07, 0.06",
+                        origin => "0.085, 0.06",
                         polar  => "",
                         grid   => "polar front",
+                        'border polar' => '',
                         angle  => "radians",
                         theta  => "top clockwise",
                         trange => "[0:2*pi]",
-                        rrange => "[0:5]",
-                        rtics  => "0.5",
-                        ttics  => 'add ("N" 0, "E" 90, "S" 180, "W" 270) '.
-                                  'font ":Bold"',
+                        rrange => "[0:$max_rec_distance]",
+                        rtics  => "1",
+                        ttics  => 'add ("N" 0, "NE" 45, "E" 90, "ES" 135, "S" 180, "SW" 225, "W" 270, "NW" 315)',
                         colorbox => "",
                       );
   # Set point style properties:
-    $chart_en_polar->set(
+    $chart_en_polar_hdop->set(
                         style => "fill transparent solid 0.04 noborder",
                         style => "circle radius 0.05",
                       );
 
+  # Copy polar plot but plot Upping in the color domain:
+  my $chart_enu_polar = $chart_en_polar_hdop->copy();
+  my $chart_enu_polar_title =
+    "Receiver Easting, Northing and Upping from $marker_name station on $date";
+  my $palette_label_upping_cmm = 'cblabel "Upping [m]"';
+  my $palette_color_cmm = 'palette rgb 33,13,10;';
+  my $palette_range_cmm = "cbrange [-$max_abs_upping:$max_abs_upping]";
+  $chart_enu_polar->set(
+    output => $out_path."/$marker_name-rec-ENU-polar.png",
+    title => {
+      text => $chart_enu_polar_title,
+      font => ':Bold',
+    },
+    $palette_label_upping_cmm => "",
+    $palette_color_cmm => "",
+    $palette_range_cmm => "",
+  );
+
   # Set ENU multiplot chart title:
   my $chart_enu_title =
-    "Receiver Easting/Northing/Upping Evolution from $marker_name station on $date";
+    "Receiver Easting, Northing and Upping from $marker_name station on $date";
 
   # Create parent object for ENU multiplot:
   my $chart_enu =
     Chart::Gnuplot->new(
                           terminal => 'pngcairo size 874,540',
                           output => $out_path."/$marker_name-rec-ENU-plot.png",
-                          title  => $chart_enu_title,
+                          title => $chart_enu_title,
                           # NOTE: this does not works properly
-                          timestamp => {
-                            fmt  => 'Created on %d/%m/%y %H:%M:%S',
-                            font => "Helvetica Italic, 10",
-                          },
+                          timestamp => "on",
                         );
   # ENU individual charts for multiplot:
   my $chart_e =
@@ -714,9 +717,10 @@ sub PlotReceiverPosition {
                        );
 
   my $chart_clk_bias_title =
-    "Receiver Clock Bias Evolution from $marker_name station on $date";
+    "Receiver Clock Bias from $marker_name station on $date";
 
   # Create chart object for receiver clock bias:
+  my $palette_label_cmm = 'cblabel "STD (1 sigma) [m]"';
   my $chart_clk_bias =
     Chart::Gnuplot->new(
                           terminal => 'pngcairo size 874,540',
@@ -724,13 +728,14 @@ sub PlotReceiverPosition {
                           output => $out_path."/$marker_name-rec-clk-bias-plot.png",
                           title  => {
                             text => $chart_clk_bias_title,
-                            # font => ':Bold',
+                            font => ':Bold',
                           },
                           xlabel => "Observation Epochs [HH::MM]",
                           ylabel => "Clock Bias [m]",
                           xrange => [$ini_epoch, $end_epoch],
                           timeaxis => "x",
                           xtics => { labelfmt => "%H:%M" },
+                          $palette_label_cmm => "",
                           timestamp =>  {
                             fmt  => 'Created on %d/%m/%y %H:%M:%S',
                             font => "Helvetica Italic, 10",
@@ -753,7 +758,15 @@ sub PlotReceiverPosition {
                         );
 
   # Build EN polar dataset:
-  my $rec_en_polar_dataset =
+  my $rec_en_hdop_polar_dataset =
+    Chart::Gnuplot::DataSet->new(
+                                  xdata => unpdl($pdl_rec_azimut->flat),
+                                  ydata => unpdl($pdl_rec_distance->flat),
+                                  zdata => unpdl($pdl_std_en->flat),
+                                  style => "circles linecolor pal z",
+                                  fill => { density => 0.8 },
+                                );
+  my $rec_enu_polar_dataset =
     Chart::Gnuplot::DataSet->new(
                                   xdata => unpdl($pdl_rec_azimut->flat),
                                   ydata => unpdl($pdl_rec_distance->flat),
@@ -769,7 +782,7 @@ sub PlotReceiverPosition {
                                   ydata => unpdl($pdl_rec_easting->flat),
                                   zdata => unpdl($pdl_std_easting->flat),
                                   style => "lines linecolor pal z",
-                                  width => 3,
+                                  width => 2,
                                   timefmt => "%s",
                                 );
   # Build receiver N positions dataset:
@@ -779,7 +792,7 @@ sub PlotReceiverPosition {
                                   ydata => unpdl($pdl_rec_northing->flat),
                                   zdata => unpdl($pdl_std_northing->flat),
                                   style => "lines linecolor pal z",
-                                  width => 3,
+                                  width => 2,
                                   timefmt => "%s",
                                 );
   # Build receiver U positions dataset:
@@ -789,7 +802,7 @@ sub PlotReceiverPosition {
                                   ydata => unpdl($pdl_rec_upping->flat),
                                   zdata => unpdl($pdl_std_upping->flat),
                                   style => "lines linecolor pal z",
-                                  width => 3,
+                                  width => 2,
                                   timefmt => "%s",
                                 );
   # Build receiver clock bias dataset:
@@ -834,7 +847,8 @@ sub PlotReceiverPosition {
   # $chart_enu_3d->plot3d( $rec_enu_dataset      );
 
   # EN 2D polar plot:
-  $chart_en_polar->plot2d( $rec_en_polar_dataset );
+  $chart_en_polar_hdop->plot2d( $rec_en_hdop_polar_dataset );
+  $chart_enu_polar->plot2d( $rec_enu_polar_dataset );
 
   return TRUE;
 }
@@ -861,11 +875,24 @@ sub PlotDilutionOfPrecission {
   my $pdl_hdop = $pdl_dop_info( $ref_file_layout->{ITEMS}{HDOP}{INDEX} );
   my $pdl_vdop = $pdl_dop_info( $ref_file_layout->{ITEMS}{VDOP}{INDEX} );
 
+  # Set chart's titles:
+  my $marker_name = $ref_obs_data->{HEAD}{MARKER_NAME};
+  my $date = ( split(' ', BuildDateString(GPS2Date($ini_epoch))) )[0];
+  my $chart_ecef_title =
+    "ECEF Reference Frame Ex-post DOP from $marker_name station on $date";
+  my $chart_enu_title =
+    "ENU Reference Frame Ex-post DOP from $marker_name station on $date";
+
+
   # Create chart for ECEF frame DOP:
   my $chart_ecef =
     Chart::Gnuplot->new(
-                          output => $out_path."/DOP-ECEF.png",
-                          title  => "Ex-post DOP: ECEF Reference Frame",
+                          terminal => 'pngcairo size 874,540',
+                          output => $out_path."/DOP-ECEF-plot.png",
+                          title  => {
+                            text => $chart_ecef_title,
+                            font => ':Bold',
+                          },
                           grid   => "on",
                           xlabel => "Observation Epochs [HH::MM]",
                           ylabel => "DOP [m]",
@@ -873,16 +900,20 @@ sub PlotDilutionOfPrecission {
                           timeaxis => "x",
                           xtics => { labelfmt => "%H:%M" },
                           timestamp =>  {
-                                          fmt  => '%d/%m/%y %H:%M',
-                                          font => "Helvetica :Italic",
-                                        },
+                            fmt => 'Created on %d/%m/%y %H:%M:%S',
+                            font => "Helvetica Italic, 10",
+                          },
                        );
 
   # Create chart for ENU frame DOP:
   my $chart_enu =
     Chart::Gnuplot->new(
-                          output => $out_path."/DOP-ENU.png",
-                          title  => "Ex-post DOP: ENU Reference Frame",
+                          terminal => 'pngcairo size 874,540',
+                          output => $out_path."/DOP-ENU-plot.png",
+                          title  => {
+                            text => $chart_enu_title,
+                            font => ':Bold',
+                          },
                           grid   => "on",
                           xlabel => "Observation Epochs [HH::MM]",
                           ylabel => "DOP [m]",
@@ -890,9 +921,9 @@ sub PlotDilutionOfPrecission {
                           timeaxis => "x",
                           xtics => { labelfmt => "%H:%M" },
                           timestamp =>  {
-                                          fmt  => '%d/%m/%y %H:%M',
-                                          font => "Helvetica :Italic",
-                                        },
+                            fmt => 'Created on %d/%m/%y %H:%M:%S',
+                            font => "Helvetica Italic, 10",
+                          },
                        );
 
   # Create DOP datasets:
@@ -900,46 +931,46 @@ sub PlotDilutionOfPrecission {
     Chart::Gnuplot::DataSet->new(
                                   xdata => unpdl($pdl_epochs->flat),
                                   ydata => unpdl($pdl_gdop->flat),
-                                  style => "lines",
+                                  style => "points pointtype 7 ps 0.3",
                                   width => 3,
                                   timefmt => "%s",
-                                  title => "GDOP",
+                                  title => "Geometric DOP",
                                 );
   my $pdop_dataset =
     Chart::Gnuplot::DataSet->new(
                                   xdata => unpdl($pdl_epochs->flat),
                                   ydata => unpdl($pdl_pdop->flat),
-                                  style => "lines",
+                                  style => "points pointtype 7 ps 0.3",
                                   width => 3,
                                   timefmt => "%s",
-                                  title => "PDOP",
+                                  title => "Position DOP",
                                 );
   my $tdop_dataset =
     Chart::Gnuplot::DataSet->new(
                                   xdata => unpdl($pdl_epochs->flat),
                                   ydata => unpdl($pdl_tdop->flat),
-                                  style => "lines",
+                                  style => "points pointtype 7 ps 0.3",
                                   width => 3,
                                   timefmt => "%s",
-                                  title => "TDOP",
+                                  title => "Time DOP",
                                 );
   my $hdop_dataset =
     Chart::Gnuplot::DataSet->new(
                                   xdata => unpdl($pdl_epochs->flat),
                                   ydata => unpdl($pdl_hdop->flat),
-                                  style => "lines",
+                                  style => "points pointtype 7 ps 0.3",
                                   width => 3,
                                   timefmt => "%s",
-                                  title => "HDOP",
+                                  title => "Horizontal DOP",
                                 );
   my $vdop_dataset =
     Chart::Gnuplot::DataSet->new(
                                   xdata => unpdl($pdl_epochs->flat),
                                   ydata => unpdl($pdl_vdop->flat),
-                                  style => "lines",
+                                  style => "points pointtype 7 ps 0.3",
                                   width => 3,
                                   timefmt => "%s",
-                                  title => "VDOP",
+                                  title => "Vertical DOP",
                                 );
 
   # Plot datasets on their respective chart:
@@ -992,6 +1023,9 @@ sub PlotLSQEpochEstimation {
     my $pdl_deg_of_freedom =
        $pdl_lsq_info($ref_file_layout->{ITEMS}{DegOfFree}{INDEX});
 
+    # Retrieve max number of observations:
+    my $max_deg_of_free = max($pdl_deg_of_freedom);
+
     # Ex-post standard deviation estimator:
     my $pdl_std_dev_est =
        $pdl_lsq_info($ref_file_layout->{ITEMS}{StdDevEstimator}{INDEX});
@@ -1027,60 +1061,87 @@ sub PlotLSQEpochEstimation {
     my ($num_epochs, undef) = dims($pdl_epochs->flat);
     my $t_1 = $num_epochs - 1;
 
+  # Set's chart titles:
+  my $marker_name = $ref_obs_data->{HEAD}{MARKER_NAME};
+  my $date = ( split(' ', BuildDateString(GPS2Date($ini_epoch))) )[0];
+  my $chart_lsq_rpt_title =
+    "LSQ routine report from $marker_name on $date";
+  my $chart_x_title = "LSQ ECEF X parameter report from $marker_name on $date";
+  my $chart_y_title = "LSQ ECEF Y parameter report from $marker_name on $date";
+  my $chart_z_title = "LSQ ECEF Z parameter report from $marker_name on $date";
+  my $chart_dt_title = "LSQ DT parameter report from $marker_name on $date";
+
   # Set chart objects:
     # LSQ report:
     my $chart_lsq_rpt =
       Chart::Gnuplot->new(
+                            terminal => 'pngcairo size 874,540',
                             output => $out_path."/LSQ-report.png",
-                            title  => "LSQ estimation report",
+                            title  => {
+                              text => $chart_lsq_rpt_title,
+                              font => ':Bold',
+                            },
                             grid   => "on",
                             xlabel => "Observation Epochs [HH::MM]",
                             xrange => [$ini_epoch, $end_epoch],
                             timeaxis => "x",
                             xtics => { labelfmt => "%H:%M" },
+                            yrange => [0, $max_deg_of_free + 1],
+                            legend => {
+                              position => "inside top",
+                              order => "horizontal",
+                              align => "center",
+                              sample   => {
+                                   length => 2,
+                               },
+                            },
                             timestamp =>  {
-                                            fmt  => '%d/%m/%y %H:%M',
-                                            font => "Helvetica :Italic",
-                                          },
+                              fmt  => 'Created on %d/%m/%y %H:%M:%S',
+                              font => "Helvetica Italic, 10",
+                            },
                          );
 
     # Approximate parameter report (multiplot):
     # Parent charts. One per parameter:
     my $chart_parameter_x =
       Chart::Gnuplot->new(
+                            terminal => 'pngcairo size 874,540',
                             output => $out_path."/LSQ-X-parameter-report.png",
-                            title  => "LSQ X parameter estimation report",
+                            title  => $chart_x_title,
                             timestamp =>  {
-                                            fmt  => '%d/%m/%y %H:%M',
-                                            font => "Helvetica :Italic",
-                                          },
+                              fmt  => 'Created on %d/%m/%y %H:%M:%S',
+                              font => "Helvetica Italic, 10",
+                            },
                          );
     my $chart_parameter_y =
       Chart::Gnuplot->new(
+                            terminal => 'pngcairo size 874,540',
                             output => $out_path."/LSQ-Y-parameter-report.png",
-                            title  => "LSQ Y parameter estimation report",
+                            title  => $chart_y_title,
                             timestamp =>  {
-                                            fmt  => '%d/%m/%y %H:%M',
-                                            font => "Helvetica :Italic",
-                                          },
+                              fmt  => 'Created on %d/%m/%y %H:%M:%S',
+                              font => "Helvetica Italic, 10",
+                            },
                          );
     my $chart_parameter_z =
       Chart::Gnuplot->new(
+                            terminal => 'pngcairo size 874,540',
                             output => $out_path."/LSQ-Z-parameter-report.png",
-                            title  => "LSQ Z parameter estimation report",
+                            title  => $chart_z_title,
                             timestamp =>  {
-                                            fmt  => '%d/%m/%y %H:%M',
-                                            font => "Helvetica :Italic",
-                                          },
+                              fmt  => 'Created on %d/%m/%y %H:%M:%S',
+                              font => "Helvetica Italic, 10",
+                            },
                          );
     my $chart_parameter_dt =
       Chart::Gnuplot->new(
+                            terminal => 'pngcairo size 874,540',
                             output => $out_path."/LSQ-DT-parameter-report.png",
-                            title  => "LSQ DT parameter estimation report",
+                            title  => $chart_dt_title,
                             timestamp =>  {
-                                            fmt  => '%d/%m/%y %H:%M',
-                                            font => "Helvetica :Italic",
-                                          },
+                              fmt  => 'Created on %d/%m/%y %H:%M:%S',
+                              font => "Helvetica Italic, 10",
+                            },
                          );
 
     # Child charts. Two per parameter:
@@ -1117,8 +1178,8 @@ sub PlotLSQEpochEstimation {
                                     xdata => unpdl($pdl_epochs->flat),
                                     ydata => unpdl($pdl_lsq_st->flat),
                                     style => "filledcurve y=0",
+                                    color => "#22729FCF",
                                     timefmt => "%s",
-                                    fill => { density => 0.3 },
                                     title => "LSQ Status",
                                  );
     # Convergence flag:
@@ -1126,10 +1187,10 @@ sub PlotLSQEpochEstimation {
       Chart::Gnuplot::DataSet->new(
                                     xdata => unpdl($pdl_epochs->flat),
                                     ydata => unpdl($pdl_convergence_st->flat),
-                                    style => "filledcurve y=0",
+                                    style => "points pt 5 ps 0.5",
+                                    color => "#009E73",
                                     timefmt => "%s",
-                                    fill => { density => 0.3 },
-                                    title => "Convergence Flag",
+                                    title => "Convergence",
                                  );
     # Number of iterations:
     my $num_iter_dataset =
@@ -1149,7 +1210,7 @@ sub PlotLSQEpochEstimation {
                                     style => "lines",
                                     width => 3,
                                     timefmt => "%s",
-                                    title => "Observations",
+                                    title => "Num. of Obs.",
                                  );
     # Parameters to estimate:
     my $num_parameter_dataset =
@@ -1166,10 +1227,11 @@ sub PlotLSQEpochEstimation {
       Chart::Gnuplot::DataSet->new(
                                     xdata => unpdl($pdl_epochs->flat),
                                     ydata => unpdl($pdl_deg_of_freedom->flat),
-                                    style => "lines",
+                                    style => "filledcurve y=0",
+                                    color => "#99F0E442",
                                     width => 3,
                                     timefmt => "%s",
-                                    title => "Degrees of Freedom",
+                                    title => "Deg. of Free.",
                                  );
     # Ex-post standard deviation estimator:
     my $std_dev_est_dataset =
@@ -1177,9 +1239,10 @@ sub PlotLSQEpochEstimation {
                                     xdata => unpdl($pdl_epochs->flat),
                                     ydata => unpdl($pdl_std_dev_est->flat),
                                     style => "lines",
+                                    color => "#EF2929",
                                     width => 3,
                                     timefmt => "%s",
-                                    title => "STD-DEV estimator",
+                                    title => "Ex-Post STD",
                                  );
 
     # ECEF X parameter estimation:
@@ -1187,8 +1250,8 @@ sub PlotLSQEpochEstimation {
       Chart::Gnuplot::DataSet->new(
                                     xdata => unpdl($pdl_epochs->flat),
                                     ydata => unpdl($pdl_est_x->flat),
-                                    style => "lines",
-                                    width => 3,
+                                    style => "points pt 5 ps 0.2",
+                                    width => 2,
                                     timefmt => "%s",
                                     title => "Estimated X",
                                  );
@@ -1196,8 +1259,8 @@ sub PlotLSQEpochEstimation {
       Chart::Gnuplot::DataSet->new(
                                     xdata => unpdl($pdl_epochs->flat),
                                     ydata => unpdl($pdl_apx_x->flat),
-                                    style => "lines",
-                                    width => 3,
+                                    style => "points pt 7 ps 0.2",
+                                    width => 2,
                                     timefmt => "%s",
                                     title => "Approximate X",
                                  );
@@ -1207,7 +1270,7 @@ sub PlotLSQEpochEstimation {
                                     ydata => unpdl($pdl_delta_x->flat),
                                     zdata => unpdl($pdl_std_dev_est->flat),
                                     style => "lines pal z",
-                                    width => 3,
+                                    width => 2,
                                     timefmt => "%s",
                                  );
     # ECEF Y parameter estimation:
@@ -1215,8 +1278,8 @@ sub PlotLSQEpochEstimation {
       Chart::Gnuplot::DataSet->new(
                                     xdata => unpdl($pdl_epochs->flat),
                                     ydata => unpdl($pdl_est_y->flat),
-                                    style => "lines",
-                                    width => 3,
+                                    style => "points pt 5 ps 0.2",
+                                    width => 2,
                                     timefmt => "%s",
                                     title => "Estimated Y",
                                  );
@@ -1224,8 +1287,8 @@ sub PlotLSQEpochEstimation {
       Chart::Gnuplot::DataSet->new(
                                     xdata => unpdl($pdl_epochs->flat),
                                     ydata => unpdl($pdl_apx_y->flat),
-                                    style => "lines",
-                                    width => 3,
+                                    style => "points pt 7 ps 0.2",
+                                    width => 2,
                                     timefmt => "%s",
                                     title => "Approximate Y",
                                  );
@@ -1235,7 +1298,7 @@ sub PlotLSQEpochEstimation {
                                     ydata => unpdl($pdl_delta_y->flat),
                                     zdata => unpdl($pdl_std_dev_est->flat),
                                     style => "lines pal z",
-                                    width => 3,
+                                    width => 2,
                                     timefmt => "%s",
                                  );
     # ECEF Z parameter estimation:
@@ -1243,8 +1306,8 @@ sub PlotLSQEpochEstimation {
       Chart::Gnuplot::DataSet->new(
                                     xdata => unpdl($pdl_epochs->flat),
                                     ydata => unpdl($pdl_est_z->flat),
-                                    style => "lines",
-                                    width => 3,
+                                    style => "points pt 5 ps 0.2",
+                                    width => 2,
                                     timefmt => "%s",
                                     title => "Estimated Z",
                                  );
@@ -1252,8 +1315,8 @@ sub PlotLSQEpochEstimation {
       Chart::Gnuplot::DataSet->new(
                                     xdata => unpdl($pdl_epochs->flat),
                                     ydata => unpdl($pdl_apx_z->flat),
-                                    style => "lines",
-                                    width => 3,
+                                    style => "points pt 7 ps 0.2",
+                                    width => 2,
                                     timefmt => "%s",
                                     title => "Approximate Z",
                                  );
@@ -1263,7 +1326,7 @@ sub PlotLSQEpochEstimation {
                                     ydata => unpdl($pdl_delta_z->flat),
                                     zdata => unpdl($pdl_std_dev_est->flat),
                                     style => "lines pal z",
-                                    width => 3,
+                                    width => 2,
                                     timefmt => "%s",
                                  );
     # Receiver clock (DT) parameter estimation:
@@ -1273,8 +1336,8 @@ sub PlotLSQEpochEstimation {
                                       unpdl($pdl_epochs->flat->slice("1:$t_1")),
                                     ydata =>
                                       unpdl($pdl_est_dt->flat->slice("1:$t_1")),
-                                    style => "lines",
-                                    width => 3,
+                                    style => "points pt 5 ps 0.2",
+                                    width => 2,
                                     timefmt => "%s",
                                     title => "Estimated DT",
                                  );
@@ -1284,8 +1347,8 @@ sub PlotLSQEpochEstimation {
                                       unpdl($pdl_epochs->flat->slice("1:$t_1")),
                                     ydata =>
                                       unpdl($pdl_apx_dt->flat->slice("1:$t_1")),
-                                    style => "lines",
-                                    width => 3,
+                                    style => "points pt 7 ps 0.2",
+                                    width => 2,
                                     timefmt => "%s",
                                     title => "Approximate DT",
                                  );
@@ -1298,20 +1361,18 @@ sub PlotLSQEpochEstimation {
                                     zdata =>
                                       unpdl($pdl_std_dev_est->flat->slice("1:$t_1")),
                                     style => "lines pal z",
-                                    width => 3,
+                                    width => 2,
                                     timefmt => "%s",
                                  );
 
   # Plot datsets in their respective charts:
     # LSQ report plot:
     $chart_lsq_rpt->plot2d((
+                              $deg_of_free_dataset,
                               $lsq_st_dataset,
                               $convergence_st_dataset,
                               $num_iter_dataset,
-                              $num_obs_dataset,
-                              $num_parameter_dataset,
-                              $deg_of_free_dataset,
-                              $std_dev_est_dataset
+                              $std_dev_est_dataset,
                            ));
 
     # Parameter estaimtion report:
@@ -1356,6 +1417,12 @@ sub PlotSatelliteResiduals {
 
   my $pdl_residuals = pdl( LoadFileByLayout($ref_file_layout) );
 
+  # Retrieve maximum absolute residual value:
+  my $max_residual = max($pdl_residuals->slice("1:"));
+  my $min_residual = min($pdl_residuals->slice("1:"));
+
+  my $max_abs_residual = max( pdl [abs($max_residual), abs($min_residual)] );
+
   # Load epochs:
   my $pdl_epochs = $pdl_residuals($ref_file_layout->{ITEMS}{EpochGPS}{INDEX});
 
@@ -1368,30 +1435,42 @@ sub PlotSatelliteResiduals {
   # Retrieve command for adding satellite ID tics on Y axis:
   my $sat_id_ytics_cmm = RetrieveSatYTicsCommand(@avail_sats);
 
+  # Set chart's title:
+  my $marker_name = $ref_obs_data->{HEAD}{MARKER_NAME};
+  my $date = ( split(' ', BuildDateString(GPS2Date($ini_epoch))) )[0];
+  my $chart_title =
+    SAT_SYS_ID_TO_NAME->{$sat_sys}.
+    " Satellite Computed Residuals from $marker_name station on $date";
+
   # Set commands for color palette:
   my $palette_color_cmm = 'palette rgb 33,13,10';
-  my $palette_label_cmm = 'cblabel "Residuals [m]"';
+  my $palette_label_cmm = 'cblabel "Residual [m]"';
+  my $palette_range_cmm = "cbrange [-$max_abs_residual:$max_abs_residual]";
 
   # Set chart object:
   my $chart =
     Chart::Gnuplot->new(
-                          output => $out_path."/$sat_sys-residuals.png",
-                          title  => "Satellite '$sat_sys' Residuals",
+                          terminal => 'pngcairo size 874,540',
+                          output => $out_path."/$sat_sys-sat-residuals.png",
+                          title  => {
+                            text => $chart_title,
+                            font => ':Bold',
+                          },
                           grid   => "on",
                           xlabel => "Observation Epochs [HH::MM]",
                           ylabel => "Satellite PRN",
                           xrange => [$ini_epoch, $end_epoch],
                           yrange => [0, scalar(@avail_sats) + 1],
-                          zrange => [-6, 6],
                           timeaxis => "x",
                           xtics => { labelfmt => "%H:%M" },
                           $sat_id_ytics_cmm => "",
                           $palette_label_cmm => "",
                           $palette_color_cmm => "",
+                          # $palette_range_cmm => "",
                           timestamp =>  {
-                                          fmt  => '%d/%m/%y %H:%M',
-                                          font => "Helvetica :Italic",
-                                        },
+                            fmt => 'Created on %d/%m/%y %H:%M:%S',
+                            font => "Helvetica Italic, 10",
+                          },
                        );
 
   my @datasets;
@@ -1452,6 +1531,13 @@ sub PlotSatelliteIonosphereDelay {
   # Retrieve command for adding satellite ID tics on Y axis:
   my $sat_id_ytics_cmm = RetrieveSatYTicsCommand(@avail_sats);
 
+  # Set chart's title:
+  my $marker_name = $ref_obs_data->{HEAD}{MARKER_NAME};
+  my $date = ( split(' ', BuildDateString(GPS2Date($ini_epoch))) )[0];
+  my $chart_title =
+    SAT_SYS_ID_TO_NAME->{$sat_sys}.
+    " Satellite Computed Ionosphere Delay from $marker_name station on $date";
+
   # Set commands for color palette:
   my $palette_color_cmm = 'palette rgb 30,31,32';
   my $palette_label_cmm = 'cblabel "Delay [m]"';
@@ -1459,8 +1545,12 @@ sub PlotSatelliteIonosphereDelay {
   # Set chart object:
   my $chart =
     Chart::Gnuplot->new(
-                          output => $out_path."/$sat_sys-iono-delay.png",
-                          title  => "Satellite '$sat_sys' Ionospheric Correction",
+                          terminal => 'pngcairo size 874,540',
+                          output => $out_path."/$sat_sys-sat-iono-delay.png",
+                          title  => {
+                            text => $chart_title,
+                            font => ':Bold',
+                          },
                           grid   => "on",
                           xlabel => "Observation Epochs [HH::MM]",
                           ylabel => "Satellite PRN",
@@ -1472,9 +1562,9 @@ sub PlotSatelliteIonosphereDelay {
                           $palette_color_cmm => "",
                           $palette_label_cmm => "",
                           timestamp =>  {
-                                          fmt  => '%d/%m/%y %H:%M',
-                                          font => "Helvetica :Italic",
-                                        },
+                            fmt => 'Created on %d/%m/%y %H:%M:%S',
+                            font => "Helvetica Italic, 10",
+                          },
                        );
 
   my @datasets;
@@ -1539,11 +1629,22 @@ sub PlotSatelliteTroposphereDelay {
   my $palette_color_cmm = 'palette rgb 30,31,32';
   my $palette_label_cmm = 'cblabel "Delay [m]"';
 
+  # Set chart's title:
+  my $marker_name = $ref_obs_data->{HEAD}{MARKER_NAME};
+  my $date = ( split(' ', BuildDateString(GPS2Date($ini_epoch))) )[0];
+  my $chart_title =
+    SAT_SYS_ID_TO_NAME->{$sat_sys}.
+    " Satellite Computed Troposphere Delay from $marker_name station on $date";
+
   # Set chart object:
   my $chart =
     Chart::Gnuplot->new(
-                          output => $out_path."/$sat_sys-tropo-delay.png",
-                          title  => "Satellite '$sat_sys' Tropospheric Correction",
+                          terminal => 'pngcairo size 874,540',
+                          output => $out_path."/$sat_sys-sat-tropo-delay.png",
+                          title  => {
+                            text => $chart_title,
+                            font => ':Bold',
+                          },
                           grid   => "on",
                           xlabel => "Observation Epochs [HH::MM]",
                           ylabel => "Satellite PRN",
@@ -1555,9 +1656,9 @@ sub PlotSatelliteTroposphereDelay {
                           $palette_color_cmm => "",
                           $palette_label_cmm => "",
                           timestamp =>  {
-                                          fmt  => '%d/%m/%y %H:%M',
-                                          font => "Helvetica :Italic",
-                                        },
+                            fmt => 'Created on %d/%m/%y %H:%M:%S',
+                            font => "Helvetica Italic, 10",
+                          },
                        );
 
   my @datasets;
@@ -1660,6 +1761,10 @@ sub RetrieveSatYTicsCommand {
   # Init array to store satellite ID and index pair:
   my @sat_values;
 
+  # Write empty value at first record:
+  my $first_record_index = 0;
+  push(@sat_values, "\"\" $first_record_index");
+
   # Build satellite ID and datellite index value pair:
   for (my $i = 0; $i < scalar(@sat_list); $i += 1) {
     my $sat = $sat_list[$i];
@@ -1667,9 +1772,13 @@ sub RetrieveSatYTicsCommand {
     push(@sat_values, "\"$sat\" $sat_index");
   }
 
+  # Write empty value at last record:
+  my $last_record_index = scalar(@sat_list) + 1;
+  push(@sat_values, "\"\" $last_record_index");
+
   # Write command:
   # example: 'ytics add ("N" 0, "E" 90, "S" 180, "W" 270) font ":Bold"'
-  my $command = 'ytics add ("" 0,'.join(', ', @sat_values).')';
+  my $command = 'ytics add ('.join(', ', @sat_values).')';
 
   # Return command:
   return $command;
