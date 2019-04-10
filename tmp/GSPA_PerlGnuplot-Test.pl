@@ -120,11 +120,11 @@ PrintTitle1(*STDOUT, "Receiver Position Solutions");
 #       - Show main axis (0,0,0)
 #       - Try to use pallete to color points (use PDOP value)
 # ******************************************************** #
-  PlotReceiverPosition($ref_gen_conf, $ref_obs_data,
-                       $inp_path, $out_path);
+  PlotReceiverPosition( $ref_gen_conf, $ref_obs_data,
+                        $inp_path, $out_path );
 PrintComment(*STDOUT, "Done!\n");
 
-exit 0;
+# exit 0;
 
 # ---------------------------------------------------------------------------- #
 # 3. Ex-post Dilution of Precission:
@@ -138,7 +138,8 @@ PrintTitle1(*STDOUT, "Ex-post Dilution of Precission");
 #    TODO:
 #       - Include 2.5 overbound (set fill transparent)
 # ************************ #
-  PlotDilutionOfPrecission($ref_gen_conf, $inp_path, $out_path);
+  PlotDilutionOfPrecission( $ref_gen_conf, $ref_obs_data,
+                            $inp_path, $out_path );
 PrintComment(*STDOUT, "Done!\n");
 
 # ---------------------------------------------------------------------------- #
@@ -150,14 +151,16 @@ PrintTitle1(*STDOUT, "Least Square Estimation Plots");
 #    4.b Apx parameter + Delta parameter          #
 # *********************************************** #
 PrintTitle2(*STDOUT, "Plotting LSQ info + Apx Parameter estimation");
-  PlotLSQEpochEstimation($ref_gen_conf, $inp_path, $out_path);
+  PlotLSQEpochEstimation( $ref_gen_conf, $ref_obs_data,
+                          $inp_path, $out_path );
 PrintComment(*STDOUT, "Done!\n");
 
 # ********************************* #
 #    4.d Residuals by satellite:    #
 # ********************************* #
 PrintTitle2(*STDOUT, "Plotting Residuals by Satellite");
-  PlotSatelliteResiduals($ref_gen_conf, $sat_sys, $inp_path, $out_path);
+  PlotSatelliteResiduals( $ref_gen_conf, $ref_obs_data,
+                          $sat_sys, $inp_path, $out_path );
 PrintComment(*STDOUT, "Done!\n");
 
 # **************************************************** #
@@ -173,14 +176,16 @@ PrintTitle1(*STDOUT, "Ionosphere and Troposphere Delays");
 #    5.a Ionosphere Computed Delay by satellite:    #
 # ************************************************* #
 PrintTitle2(*STDOUT, "Plotting Ionosphere Delay");
-  PlotSatelliteIonosphereDelay($ref_gen_conf, $sat_sys, $inp_path, $out_path);
+  PlotSatelliteIonosphereDelay( $ref_gen_conf, $ref_obs_data,
+                                $sat_sys, $inp_path, $out_path );
 PrintComment(*STDOUT, "Done!\n");
 
 # ************************************************** #
 #    5.b Troposphere Computed delay by satellite:    #
 # ************************************************** #
 PrintTitle2(*STDOUT, "Plotting Troposhpere Delay");
-  PlotSatelliteTroposphereDelay($ref_gen_conf, $sat_sys, $inp_path, $out_path);
+  PlotSatelliteTroposphereDelay( $ref_gen_conf, $ref_obs_data,
+                                 $sat_sys, $inp_path, $out_path );
 PrintComment(*STDOUT, "Done!\n");
 
 # **************************************************** #
