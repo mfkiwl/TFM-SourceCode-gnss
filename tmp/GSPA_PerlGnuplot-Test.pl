@@ -621,27 +621,41 @@ sub PlotReceiverPosition {
   my $pdl_rec_azimut = pi/2 - atan2($pdl_rec_northing, $pdl_rec_easting);
   my $pdl_rec_distance = ($pdl_rec_easting**2 + $pdl_rec_northing**2)**.5;
 
+  # Set EN polar title:
+  my $date = ( split(' ', BuildDateString(GPS2Date($ini_epoch))) )[0];
+  my $chart_en_polar_title =
+    "Receiver Easting/Northing from $marker_name station reference on $date";
+  # Set palette label:
+  my $palette_label_cmm = 'cblabel "Upping [m]"';
+
   # Create EN chart object:
   my $chart_en_polar =
     Chart::Gnuplot->new(
-                          output => $out_path."/$marker_name-EN-plot.png",
-                          title  => "Receiver '$marker_name' EN",
+                          terminal => 'pngcairo size 874,874',
+                          output => $out_path."/$marker_name-rec-EN-polar-plot.png",
+                          title  => {
+                            text => $chart_en_polar_title,
+                            # font => ':Bold',
+                          },
                           border => undef,
                           xtics  => undef,
                           ytics  => undef,
+                          $palette_label_cmm => '',
                           timestamp =>  {
-                                          fmt  => '%d/%m/%y %H:%M',
-                                          font => "Helvetica :Italic",
-                                        },
+                            fmt  => 'Created on %d/%m/%y %H:%M:%S',
+                            font => "Helvetica Italic, 10",
+                          },
                         );
   # Set chart polar properties:
     $chart_en_polar->set(
-                        size   => "square",
+                        size   => "0.9, 0.9",
+                        origin => "0.07, 0.06",
                         polar  => "",
-                        grid   => "polar",
+                        grid   => "polar front",
                         angle  => "radians",
                         theta  => "top clockwise",
                         trange => "[0:2*pi]",
+                        rrange => "[0:5]",
                         rtics  => "0.5",
                         ttics  => 'add ("N" 0, "E" 90, "S" 180, "W" 270) '.
                                   'font ":Bold"',
@@ -650,18 +664,24 @@ sub PlotReceiverPosition {
   # Set point style properties:
     $chart_en_polar->set(
                         style => "fill transparent solid 0.04 noborder",
-                        style => "circle radius 0.04",
+                        style => "circle radius 0.05",
                       );
+
+  # Set ENU multiplot chart title:
+  my $chart_enu_title =
+    "Receiver Easting/Northing/Upping Evolution from $marker_name station on $date";
 
   # Create parent object for ENU multiplot:
   my $chart_enu =
     Chart::Gnuplot->new(
-                          output => $out_path."/$marker_name-ENU-plot.png",
-                          title  => "Receiver '$marker_name' ENU",
-                          timestamp =>  {
-                                          fmt  => '%d/%m/%y %H:%M',
-                                          font => "Helvetica :Italic",
-                                        },
+                          terminal => 'pngcairo size 874,540',
+                          output => $out_path."/$marker_name-rec-ENU-plot.png",
+                          title  => $chart_enu_title,
+                          # NOTE: this does not works properly
+                          timestamp => {
+                            fmt  => 'Created on %d/%m/%y %H:%M:%S',
+                            font => "Helvetica Italic, 10",
+                          },
                         );
   # ENU individual charts for multiplot:
   my $chart_e =
@@ -669,6 +689,7 @@ sub PlotReceiverPosition {
                           grid => "on",
                           ylabel => "Easting [m]",
                           xrange => [$ini_epoch, $end_epoch],
+                          cbtics => 1,
                           timeaxis => "x",
                           xtics => { labelfmt => "%H:%M" },
                        );
@@ -677,6 +698,7 @@ sub PlotReceiverPosition {
                           grid => "on",
                           ylabel => "Northing [m]",
                           xrange => [$ini_epoch, $end_epoch],
+                          cbtics => 1,
                           timeaxis => "x",
                           xtics => { labelfmt => "%H:%M" },
                        );
@@ -686,25 +708,33 @@ sub PlotReceiverPosition {
                           xlabel => "Observation Epochs [HH::MM]",
                           ylabel => "Upping [m]",
                           xrange => [$ini_epoch, $end_epoch],
+                          cbtics => 1,
                           timeaxis => "x",
                           xtics => { labelfmt => "%H:%M" },
                        );
 
+  my $chart_clk_bias_title =
+    "Receiver Clock Bias Evolution from $marker_name station on $date";
+
   # Create chart object for receiver clock bias:
   my $chart_clk_bias =
     Chart::Gnuplot->new(
+                          terminal => 'pngcairo size 874,540',
                           grid => "on",
-                          output => $out_path."/$marker_name-clk-bias-plot.png",
-                          title  => "Receiver '$marker_name' Clock Bias",
+                          output => $out_path."/$marker_name-rec-clk-bias-plot.png",
+                          title  => {
+                            text => $chart_clk_bias_title,
+                            # font => ':Bold',
+                          },
                           xlabel => "Observation Epochs [HH::MM]",
                           ylabel => "Clock Bias [m]",
                           xrange => [$ini_epoch, $end_epoch],
                           timeaxis => "x",
                           xtics => { labelfmt => "%H:%M" },
                           timestamp =>  {
-                                          fmt  => '%d/%m/%y %H:%M',
-                                          font => "Helvetica :Italic",
-                                        },
+                            fmt  => 'Created on %d/%m/%y %H:%M:%S',
+                            font => "Helvetica Italic, 10",
+                          },
                         );
 
   # Create 3D ENU chart object:
@@ -801,7 +831,7 @@ sub PlotReceiverPosition {
                          ));
 
   # ENU 3D plot:
-  $chart_enu_3d->plot3d( $rec_enu_dataset      );
+  # $chart_enu_3d->plot3d( $rec_enu_dataset      );
 
   # EN 2D polar plot:
   $chart_en_polar->plot2d( $rec_en_polar_dataset );
@@ -810,7 +840,7 @@ sub PlotReceiverPosition {
 }
 
 sub PlotDilutionOfPrecission {
-  my ($ref_gen_conf, $inp_path,$out_path) = @_;
+  my ($ref_gen_conf, $ref_obs_data, $inp_path,$out_path) = @_;
 
   # Load dumper file:
   my $ref_file_layout =
@@ -928,7 +958,7 @@ sub PlotDilutionOfPrecission {
 }
 
 sub PlotLSQEpochEstimation {
-  my ($ref_gen_conf, $inp_path, $out_path) = @_;
+  my ($ref_gen_conf, $ref_obs_data, $inp_path, $out_path) = @_;
 
   # Load dumper file:
   my $ref_file_layout =
@@ -1317,7 +1347,7 @@ sub PlotLSQEpochEstimation {
 }
 
 sub PlotSatelliteResiduals {
-  my ($ref_gen_conf, $sat_sys, $inp_path, $out_path) = @_;
+  my ($ref_gen_conf, $ref_obs_data, $sat_sys, $inp_path, $out_path) = @_;
 
   # Load dumper file:
   my $ref_file_layout =
@@ -1400,7 +1430,7 @@ sub PlotSatelliteResiduals {
 }
 
 sub PlotSatelliteIonosphereDelay {
-  my ($ref_gen_conf, $sat_sys, $inp_path, $out_path) = @_;
+  my ($ref_gen_conf, $ref_obs_data, $sat_sys, $inp_path, $out_path) = @_;
 
   # Load dumper file:
   my $ref_file_layout =
@@ -1483,7 +1513,7 @@ sub PlotSatelliteIonosphereDelay {
 }
 
 sub PlotSatelliteTroposphereDelay {
-  my ($ref_gen_conf, $sat_sys, $inp_path, $out_path) = @_;
+  my ($ref_gen_conf, $ref_obs_data, $sat_sys, $inp_path, $out_path) = @_;
 
   # Load dumper file:
   my $ref_file_layout =
@@ -1578,7 +1608,7 @@ sub GetFileLayout {
   $ref_file_layout->{FILE}{ HEAD      } = $head_line;
   $ref_file_layout->{FILE}{ DELIMITER } = $delimiter;
 
-  my $fh; open($fh, '<', $file_path) or die "Could not open $!";
+  my $fh; open($fh, '<', $file_path) or die "Could not open $file_path. $!";
 
   while (my $line = <$fh>) {
     if ($. == $head_line) {
