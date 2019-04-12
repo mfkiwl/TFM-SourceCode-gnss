@@ -100,6 +100,10 @@ sub NullIonoDelay  { return (0, 0); }
 sub ComputeTropoSaastamoinenDelay {
   my ($zenital, $height) = @_; # [rad], [m]
 
+  # Heiht consistency check: negative elipsoidal heights are considered 0
+  # NOTE: ABMF's patch for negative heights:
+  $height = 0 if $height < 0;
+
   # Computation sequence:
     # Temperature estimation [K]:
     my $temp = 291.15 - 0.0065*$height;
@@ -132,15 +136,6 @@ sub ComputeTropoSaastamoinenDelay {
     my $aux2 = (1255/$temp) + 0.05;
     # Computed delay:
     my $dtropo = $aux1*($press + $aux2*$pwv - $b_prm*(tan($zenital))**2);
-
-    # PrintTitle3(*STDOUT, "Troposphere Saastamoinen computed parameters:");
-    # PrintBulletedInfo(*STDOUT, "\t\t - ",
-    #   "Temperature = $temp",
-    #   "Pressure    = $press",
-    #   "Humidity    = $humd",
-    #   "Water vapor's pressure = $pwv",
-    #   "'B' Parameter interpolated = $b_prm",
-    #   "Tropo correction  = $dtropo");
 
   # Return tropospheric delay:
   # NOTE: apply piddle to scalar transformation
@@ -233,19 +228,6 @@ sub ComputeIonoKlobucharDelay {
     # Compute ionospheric time delay for configured frequency [m]:
     my $iono_delay_f2 =
       ( ($carrier_freq_f1/$carrier_freq_f2)**2 )*$iono_delay_f1;
-
-    # PrintTitle3(*STDOUT, "Ionosphere Klobuchar computed parameters:");
-    # PrintBulletedInfo(*STDOUT, "\t\t - ",
-    #   "Earth center angle = $earth_center_angle",
-    #   "IPP's lat    = $ipp_lat",
-    #   "IPP's lon    = $ipp_lon",
-    #   "IPP's GM lat = $geomag_lat_ipp",
-    #   "Iono delay amplitude = $iono_amplitude",
-    #   "Iono delay period    = $iono_period",
-    #   "Slant factor         = $slant_fact",
-    #   "Iono delay at L1     = $iono_delay_f1",
-    #   "Iono delay at L2     = $iono_delay_f2");
-
 
   # Return ionospheric delays for both frequencies:
   return ($iono_delay_f1, $iono_delay_f2)
