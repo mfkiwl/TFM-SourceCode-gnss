@@ -481,7 +481,7 @@ sub PlotSatelliteSkyPath {
                 trange => "[0:360]",
                 rrange => "[90:0]",
                 rtics  => "15",
-                ttics  => 'add ("N" 0, "NE" 45, "E" 90, "ES" 135, "S" 180, "SW" 225, "W" 270, "NW" 315)',
+                ttics  => 'add ("N" 0, "NE" 45, "E" 90, "SE" 135, "S" 180, "SW" 225, "W" 270, "NW" 315)',
                 colorbox => "",
               );
 
@@ -646,7 +646,7 @@ sub PlotReceiverPosition {
                         trange => "[0:2*pi]",
                         rrange => "[0:$max_rec_distance]",
                         rtics  => "1",
-                        ttics  => 'add ("N" 0, "NE" 45, "E" 90, "ES" 135, "S" 180, "SW" 225, "W" 270, "NW" 315)',
+                        ttics  => 'add ("N" 0, "NE" 45, "E" 90, "SE" 135, "S" 180, "SW" 225, "W" 270, "NW" 315)',
                         colorbox => "",
                       );
   # Set point style properties:
@@ -1423,6 +1423,11 @@ sub PlotSatelliteResiduals {
 
   my $max_abs_residual = max( pdl [abs($max_residual), abs($min_residual)] );
 
+  PrintComment(*STDOUT,
+    "Max res = $max_residual",
+    "Min res = $min_residual",
+    "Max abs res = $max_abs_residual");
+
   # Load epochs:
   my $pdl_epochs = $pdl_residuals($ref_file_layout->{ITEMS}{EpochGPS}{INDEX});
 
@@ -1446,6 +1451,8 @@ sub PlotSatelliteResiduals {
   my $palette_color_cmm = 'palette rgb 33,13,10';
   my $palette_label_cmm = 'cblabel "Residual [m]"';
   my $palette_range_cmm = "cbrange [-$max_abs_residual:$max_abs_residual]";
+
+  PrintComment(*STDOUT, $palette_range_cmm);
 
   # Set chart object:
   my $chart =
