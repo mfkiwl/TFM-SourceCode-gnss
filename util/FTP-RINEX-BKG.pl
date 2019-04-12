@@ -20,6 +20,9 @@ use Data::Dumper;
 
 my ($year, $doy_raw, $stations_file_path, $storage_path) = @ARGV;
 
+# Default value for storage path:
+$storage_path = "./" unless $storage_path;
+
 # ---------------------------------------------------------------------------- #
 
 # Main variables:
@@ -54,22 +57,26 @@ my @stations_list = split(/\s+|,\s*/,  $stations_content);
 
 # Download Observation RINEXs:
 # ---------------------------------------------------------------------------- #
-my %rinex_list;
+my $ref_rinex_list = {};
 
 foreach my $station (@stations_list) {
   # Get RINEX name:
-  my $rinex      = $station.'*'.$year.$doy.'*O.crx.gz';
+  my $rinex      = $station.'*'.$year.$doy.'*MO.crx.gz';
   my $rinex_url  = $ftp_rinex.$rinex;
 
   # Download RINEX using bash 'wget' command:
-  qx(wget $rinex_url);
-
-  # Fill file status hash:
-  $rinex_list{$station."-OBS"} =
-    (-e $rinex) ? qw(DOWNLOADED) : qw(NOT DOWNLOADED);
+  qx{wget $rinex_url};
+  my $rinex_name = qx{ls $rinex}; chomp $rinex_name;
 
   # Move the downloaded files to storage path if defined:
-  qx(mv $rinex $storage_path) if $storage_path;
+  qx{mv $rinex_name $storage_path};
+
+  # Fill file status hash:
+  my $rinex_path = join('/', ($storage_path, $rinex_name));
+
+  my $status =
+    (-e join('/', ($storage_path, $rinex_name))) ? "DOWNLOADED" : "NOT DOWNLOADED";
+  $ref_rinex_list->{join('-', ($station, "OBS"))} = $status;
 }
 
 
@@ -99,23 +106,30 @@ if ( $nav_file_input =~ /yes/i )
       my $rinex_url  = $ftp_rinex.$rinex;
 
       # Download RINEX using bash 'wget' command:
-      qx(wget $rinex_url);
+      qx{wget $rinex_url};
 
-      # Fill file status hash:
-      $rinex_list{join('-', ($station, $sat_sys, "NAV"))} =
-        (-e $rinex) ? qw(DOWNLOADED) : qw(NOT DOWNLOADED);
+      # Get navigation rinex file name:
+      my $rinex_name = qx{ls $rinex};
 
       # Move the downloaded files to storage path if defined:
-      qx(mv $rinex $storage_path) if $storage_path;
+      qx{mv $rinex $storage_path};
+
+      # Fill file status hash:
+      my $status =
+        (-e join('/', ($storage_path, $rinex_name))) ?
+          "DOWNLOADED" : "NOT DOWNLOADED";
+      $ref_rinex_list->{join('-', ($station, $sat_sys, "NAV"))} = $status;
     }
   }
 
 } else {
 
+  say "RINEX navigaton files will not be downlowaded";
+
 }
 
 # Print the status of the requested files:
-say ""; print Dumper \%rinex_list; say "";
+say ""; print Dumper $ref_rinex_list; say "";
 
 # Print the storage output if defined:
 say " > Downloaded RINEX are available in $storage_path \n" if $storage_path;
