@@ -1418,8 +1418,8 @@ sub PlotSatelliteResiduals {
   my $pdl_residuals = pdl( LoadFileByLayout($ref_file_layout) );
 
   # Retrieve maximum absolute residual value:
-  my $max_residual = max($pdl_residuals->slice("1:"));
-  my $min_residual = min($pdl_residuals->slice("1:"));
+  my $max_residual = max($pdl_residuals->slice("3:"));
+  my $min_residual = min($pdl_residuals->slice("3:"));
 
   my $max_abs_residual = max( pdl [abs($max_residual), abs($min_residual)] );
 
