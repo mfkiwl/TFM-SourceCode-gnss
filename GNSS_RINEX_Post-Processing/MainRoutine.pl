@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl -X
 
 # TODO: SCRIPT DESCRIPTION GOES HERE:
 
@@ -52,12 +52,18 @@ use constant WARN_MARKER_NAME_NOT_EQUAL => 90001;
 
 # ============================================================================ #
 
+# Init script clock:
+my $ini_script_time = [gettimeofday];
 
 # 1. Read tool configuration:
 # ---------------------------------------------------------------------------- #
+
   # Script arguments:
   #   1. Configuration file
   my ($cfg_file_path) = @ARGV;
+
+
+  PrintWelcomeMessage($cfg_file_path, *STDOUT);
 
   # Check if configuration file:
   my $cfg_file_status = CheckConfigurationFile( $cfg_file_path );
@@ -82,7 +88,7 @@ use constant WARN_MARKER_NAME_NOT_EQUAL => 90001;
   my $fh_log; open($fh_log, '>', $ref_gen_conf->{LOG_FILE_PATH}) or croak $!;
 
   # Welcome message on log file:
-  PrintWelcomeMessage($fh_log);
+  PrintWelcomeMessage($cfg_file_path, $fh_log);
 
   # Print basic configuration:
   PrintBasicConfiguration($ref_gen_conf, $fh_log);
@@ -110,7 +116,7 @@ use constant WARN_MARKER_NAME_NOT_EQUAL => 90001;
 
 # 4. Script termination:
 # ---------------------------------------------------------------------------- #
-  PrintGoodbyeMessage();
+  PrintGoodbyeMessage($ref_gen_conf, $fh_log, $ini_script_time, [gettimeofday]);
 
 
 # ============================================================================ #
@@ -223,23 +229,199 @@ sub DataProcessingRoutine {
   return ($status, $ref_obs_data, $ref_nav_data);
 }
 
-sub DataDumpingRoutine {}
+sub DataDumpingRoutine {
+  my ($ref_gen_conf, $ref_obs_data, $fh_log) = @_;
+
+  # Init sub status:
+  my $status = FALSE;
+
+  # Also, init undef the subroutine generic status:
+  my $sub_status;
+
+  # Gather selected observations in array reference:
+  my $ref_selected_obs = [];
+  for (@{ $ref_gen_conf->{SELECTED_SAT_SYS} }) {
+    push(@{ $ref_selected_obs }, $ref_gen_conf->{SELECTED_SIGNALS}{$_})
+  }
+
+  for (*STDOUT, $fh_log) {
+    print $_ "\n" x 2;
+    PrintTitle1($_, "Data Dumping routine has started");
+    PrintTitle3($_, "Dumping satellite observation data...");
+      PrintBulletedInfo($_, "\t- ",
+        "Gathered satellite observations",
+        "Number of valid satellites",
+        "Satellite navigation positions");
+  }
+
+  my $ini_sat_obs_data = [gettimeofday];
+
+    $sub_status = DumpSatObsData( $ref_gen_conf,
+                                  $ref_obs_data,
+                                  $ref_selected_obs,
+                                  $ref_gen_conf->{OUTPUT_PATH}, $fh_log );
+    # Update status:
+    $status += ($sub_status != KILLED) ? TRUE : FALSE;
+
+    $sub_status = DumpNumValidSat( $ref_gen_conf,
+                                   $ref_obs_data,
+                                   $ref_gen_conf->{OUTPUT_PATH}, $fh_log );
+    # Update status:
+    $status *= ($sub_status != KILLED) ? TRUE : FALSE;
+
+    $sub_status = DumpSatPosition( $ref_gen_conf,
+                                   $ref_obs_data,
+                                   $ref_gen_conf->{OUTPUT_PATH}, $fh_log );
+    # Update status:
+    $status *= ($sub_status != KILLED) ? TRUE : FALSE;
+
+  my $end_sat_obs_data = [gettimeofday];
+
+  for (*STDOUT, $fh_log) {
+    print $_ "\n" x 1;
+    PrintTitle3($_, "Dumping satellite line of sight related data...");
+    PrintBulletedInfo($_, "\t- ",
+      "Elevation by satellite",
+      "Azimut by satellite",
+      "Line of sight information");
+  }
+
+  my $ini_los_data = [gettimeofday];
+
+    $sub_status = DumpElevationBySat( $ref_gen_conf,
+                                      $ref_obs_data,
+                                      $ref_gen_conf->{OUTPUT_PATH}, $fh_log );
+    # Update status:
+    $status *= ($sub_status != KILLED) ? TRUE : FALSE;
+
+    $sub_status = DumpAzimutBySat( $ref_gen_conf,
+                                   $ref_obs_data,
+                                   $ref_gen_conf->{OUTPUT_PATH}, $fh_log );
+    # Update status:
+    $status *= ($sub_status != KILLED) ? TRUE : FALSE;
+
+    $sub_status = DumpRecSatLoSData( $ref_gen_conf,
+                                     $ref_obs_data,
+                                     $ref_gen_conf->{OUTPUT_PATH}, $fh_log );
+    # Update status:
+    $status *= ($sub_status != KILLED) ? TRUE : FALSE;
+
+  my $end_los_data = [gettimeofday];
+
+  for (*STDOUT, $fh_log) {
+    print $_ "\n" x 1;
+    PrintTitle3($_, "Dumping satellite error modelling related data...");
+      PrintBulletedInfo($_, "\t- ",
+        "Ionosphere delay by satellite",
+        "Troposphere delay by satellite",
+        "LSQ residuals by satellite");
+  }
+
+  my $ini_err_mod = [gettimeofday];
+
+  $sub_status = DumpIonoCorrBySat( $ref_gen_conf,
+                                     $ref_obs_data,
+                                     $ref_gen_conf->{OUTPUT_PATH}, $fh_log );
+    # Update status:
+    $status *= ($sub_status != KILLED) ? TRUE : FALSE;
+
+    $sub_status = DumpTropoCorrBySat( $ref_gen_conf,
+                                      $ref_obs_data,
+                                      $ref_gen_conf->{OUTPUT_PATH}, $fh_log );
+    # Update status:
+    $status *= ($sub_status != KILLED) ? TRUE : FALSE;
+
+    $sub_status = DumpResidualsBySat( $ref_gen_conf,
+                                      $ref_obs_data,
+                                      $ref_gen_conf->{OUTPUT_PATH}, $fh_log );
+    # Update status:
+    $status *= ($sub_status != KILLED) ? TRUE : FALSE;
+
+  my $end_err_mod = [gettimeofday];
+
+
+  for (*STDOUT, $fh_log) {
+    print $_ "\n" x 1;
+    PrintTitle3($_, "Dumping LSQ related data...");
+      PrintBulletedInfo($_, "\t- ",
+        "LSQ report by performed iteration per epoch",
+        "LSQ report per observation epoch (last performed iteration)");
+  }
+
+  my $ini_lsq_data = [gettimeofday];
+
+    $sub_status = DumpLSQReportByIter( $ref_gen_conf,
+                                       $ref_obs_data,
+                                       $ref_gen_conf->{OUTPUT_PATH}, $fh_log );
+    # Update status:
+    $status *= ($sub_status != KILLED) ? TRUE : FALSE;
+
+    $sub_status = DumpLSQReportByEpoch( $ref_gen_conf,
+                                        $ref_obs_data,
+                                        $ref_gen_conf->{OUTPUT_PATH}, $fh_log );
+    # Update status:
+    $status *= ($sub_status != KILLED) ? TRUE : FALSE;
+
+  my $end_lsq_data = [gettimeofday];
+
+  for (*STDOUT, $fh_log) {
+    print $_ "\n" x 1;
+    PrintTitle3($_, "Dumping receiver position related data...");
+    PrintBulletedInfo($_, "\t- ",
+      "Receiver position solutions in ECEF and ENU frames per epoch",
+      "Dilution Of Precision in ECEF and ENU frames per epoch");
+  }
+
+  my $ini_rec_data = [gettimeofday];
+
+    $sub_status = DumpRecPosition( $ref_gen_conf,
+                                   $ref_obs_data,
+                                   $ref_gen_conf->{OUTPUT_PATH}, $fh_log );
+    # Update status:
+    $status *= ($sub_status != KILLED) ? TRUE : FALSE;
+
+    $sub_status = DumpEpochDOP( $ref_gen_conf,
+                                $ref_obs_data,
+                                $ref_gen_conf->{OUTPUT_PATH}, $fh_log );
+    # Update status:
+    $status *= ($sub_status != KILLED) ? TRUE : FALSE;
+
+  my $end_rec_data = [gettimeofday];
+
+  # Report elapsed times:
+  for (*STDOUT, $fh_log) {
+    PrintTitle3($_, "Data dumping time lapses:");
+    ReportElapsedTime( $ini_sat_obs_data, $end_sat_obs_data,
+                       "dumping satellite observation data     = ", $_ );
+    ReportElapsedTime( $ini_los_data, $end_los_data,
+                       "dumping line of sight related data     = ", $_ );
+    ReportElapsedTime( $ini_err_mod, $end_err_mod,
+                       "dumping satellite error modeling data  = ", $_ );
+    ReportElapsedTime( $ini_lsq_data, $end_lsq_data,
+                       "dumping least squares related data     = ", $_ );
+    ReportElapsedTime( $ini_rec_data, $end_rec_data,
+                       "dumping receiver position related data = ", $_ );
+    print $_ "\n" x 1;
+  }
+
+  return $status;
+}
 
 # Print and Report subs:
 sub PrintWelcomeMessage {
-  my ($fh_log) = @_;
+  my ($cfg_file_path, @streams) = @_;
 
   my $msg1 = "Welcome to GNSS Rinex Post-Processing tool";
   my $msg2 = "Script was called from  : '".abs_path($0)."'";
   my $msg3 = "Configuration file used : '".abs_path($cfg_file_path)."'";
 
-  my @streams = ( $fh_log, *STDOUT );
-
   for (@streams) {
-    print $_ "\n" x 2;
+    print $_ "\n" x 1;
     PrintTitle0  ($_, $msg1);
     PrintComment ($_, $msg2);
     PrintComment ($_, $msg3);
+    print $_ "\n" x 1;
+
   }
 
   return TRUE;
@@ -408,7 +590,24 @@ sub PrintSolutionExtract {
   return TRUE;
 }
 
-sub PrintGoodbyeMessage {}
+sub PrintGoodbyeMessage {
+  my ($ref_gen_conf, $fh_log, $ini_time, $end_time) = @_;
+
+  for (*STDOUT, $fh_log) {
+    print $_ "\n" x 2;
+    PrintTitle1  ($_, "GNSS Rinex Post-Processing routine is over");
+    PrintComment ($_, "Results are available at : ".
+                  $ref_gen_conf->{OUTPUT_PATH});
+    PrintComment ($_, "Log file is available at : ".
+                  $ref_gen_conf->{LOG_FILE_PATH});
+    print $_ "\n" x 1;
+    ReportElapsedTime($ini_time, $end_time, "GRPP script", $_);
+    print $_ LEVEL_0_DELIMITER;
+    print $_ "\n" x 2;
+  }
+
+  return TRUE;
+}
 
 # Ancillary subs:
 sub CopyConfigurationFile {
