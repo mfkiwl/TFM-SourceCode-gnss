@@ -601,7 +601,7 @@ sub PrintGoodbyeMessage {
     PrintComment ($_, "Log file is available at : ".
                   $ref_gen_conf->{LOG_FILE_PATH});
     print $_ "\n" x 1;
-    ReportElapsedTime($ini_time, $end_time, "GRPP script", $_);
+    ReportElapsedTime($ini_time, $end_time, "GRPP script = ", $_);
     print $_ LEVEL_0_DELIMITER;
     print $_ "\n" x 2;
   }
