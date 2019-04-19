@@ -53,6 +53,7 @@ BEGIN {
   our @EXPORT_CONST = qw( &RINEX_GPS_ID
                           &RINEX_GAL_ID
                           &SAT_SYS_ID_TO_NAME
+                          &SAT_SYS_OBS_TO_NAME
                           &GPS_L1_FREQ
                           &GPS_L2_FREQ
                           &GPS_L5_FREQ
@@ -161,6 +162,21 @@ use constant
                           C => 'BEIDOU',
                           S => 'SBAS',
                           J => 'QZSS' };
+
+use constant
+  SAT_SYS_OBS_TO_NAME => {
+    G => {
+      C1 => 'C/A',
+      C2 => 'L2',
+      C5 => 'L5',
+    },
+    E => {
+      C1 => 'E1',
+      C5 => 'E5a',
+      C7 => 'E5b',
+      C8 => 'E5',
+    },
+  };
 
 # Satellite system signal frequencies:
 # GPS signal frequencies:
@@ -714,6 +730,7 @@ sub LoadConfiguration {
           # Read reference station:
           if ($config_content =~ /^IGS Reference Station +: +(.+)$/im) {
             my $selected_station = $1;
+            $ref_config_hash->{STATIC}{IGS_STATION} = $selected_station;
             if (defined REF_IGS_REFERENCE_STATIONS->{$selected_station}) {
               $ref_config_hash->{STATIC}{REFERENCE} =
                 REF_IGS_REFERENCE_STATIONS->{$selected_station}{ECEF};
