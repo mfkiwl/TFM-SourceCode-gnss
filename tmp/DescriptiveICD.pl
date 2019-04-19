@@ -74,6 +74,7 @@
                  # Flollowing parameters are only filled if static mode status
                  # is TRUE:
                  REFERENCE_MODE => $reference_mode,
+                 IGS_STATION => $igs_station_marker,
                  REFERENCE => \@reference_ecef_coordinates );
 
 @reference_ecef_coordinates = ($x_ecef, $y_ecef, $z_ecef);
