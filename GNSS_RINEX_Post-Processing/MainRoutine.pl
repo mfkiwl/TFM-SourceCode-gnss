@@ -47,7 +47,8 @@ use DataDumper  qq(:ALL);
 
 # Script constants:
 # ---------------------------------------------------------------------------- #
-use constant ERR_GRPP_READ_CONF => 000001;
+use constant ERR_GRPP_READ_CONF => 30000;
+use constant WARN_MARKER_NAME_NOT_EQUAL => 90001;
 
 # ============================================================================ #
 
@@ -67,46 +68,59 @@ use constant ERR_GRPP_READ_CONF => 000001;
   }
 
   # Read configuration:
-  my $ref_tool_cfg = LoadConfiguration( $cfg_file_path, *STDOUT );
+  my $ref_gen_conf = LoadConfiguration( $cfg_file_path, *STDOUT );
 
   # Exit if configuration was not loaded properly:
-  if ($ref_tool_cfg == KILLED) {
+  if ($ref_gen_conf == KILLED) {
     croak "Configuration file loading error";
   }
 
   # Copy configuration file in output path:
-  CopyConfigurationFile($cfg_file_path, $ref_tool_cfg);
+  CopyConfigurationFile($cfg_file_path, $ref_gen_conf);
 
   # Open tool's log file:
-  my $fh_log; open($fh_log, '>', $ref_tool_cfg->{LOG_FILE_PATH}) or croak $!;
+  my $fh_log; open($fh_log, '>', $ref_gen_conf->{LOG_FILE_PATH}) or croak $!;
 
   # Welcome message on log file:
   PrintWelcomeMessage($fh_log);
 
   # Print basic configuration:
-  PrintBasicConfiguration($ref_tool_cfg, $fh_log);
+  PrintBasicConfiguration($ref_gen_conf, $fh_log);
 
 
 # 2. Rinex data processing routine:
 # ---------------------------------------------------------------------------- #
-  my ($proc_status) = RinexDataProcessing();
+  my ( $proc_status,
+       $ref_obs_data,
+       $ref_nav_data ) = DataProcessingRoutine($ref_gen_conf, $fh_log);
+
+  if ($proc_status == FALSE) {
+    croak "Data processing routine exited with error";
+  }
 
 
 # 3. Data dumping routine:
 # ---------------------------------------------------------------------------- #
-  my ($dump_status) = DataDumping();
+  my ($dump_status) = DataDumpingRoutine($ref_gen_conf, $ref_obs_data, $fh_log);
 
+  if ($proc_status == FALSE) {
+    croak "Data dumping routine exited with error";
+  }
+
+
+# 4. Script termination:
+# ---------------------------------------------------------------------------- #
+  PrintGoodbyeMessage();
 
 
 # ============================================================================ #
 
 # Script subroutines:
 # ---------------------------------------------------------------------------- #
+
+# Script management subs:
 sub CheckConfigurationFile {
   my ($cfg_file_path) = @_;
-
-  # Init subroutine status:
-  my $status = TRUE;
 
   # Check if configuration file:
   # a. Exists
@@ -115,7 +129,7 @@ sub CheckConfigurationFile {
                   ERR_GRPP_READ_CONF,
                   "Configuration file does not exists",
                   "Provided file: '$cfg_file_path'" );
-      $status = FALSE;
+      return FALSE;
     }
   # b. Is a plain text file
     unless (-f $cfg_file_path) {
@@ -123,7 +137,7 @@ sub CheckConfigurationFile {
                   ERR_GRPP_READ_CONF,
                   "Configuration file is not plain text",
                   "Provided file: '$cfg_file_path'" );
-      $status = FALSE;
+      return FALSE;
     }
   # c. Can be read by effective uid/gid
     unless (-r $cfg_file_path) {
@@ -132,21 +146,86 @@ sub CheckConfigurationFile {
                   "Configuration file could not be read by effective user: ".
                   $ENV{ USER },
                   "Provided file: '$cfg_file_path'" );
-      $status = FALSE;
+      return FALSE;
     }
-
-  return $status;
-}
-
-sub CopyConfigurationFile {
-  my ($cfg_file_path, $ref_tool_cfg) = @_;
-
-  my $destination = join('/', ($ref_tool_cfg->{OUTPUT_PATH}, "grpp_config.cfg"));
-  copy($cfg_file_path, $destination);
 
   return TRUE;
 }
 
+sub DataProcessingRoutine {
+  my ($ref_gen_conf, $fh_log) = @_;
+
+  # Init sub status:
+  my $status = FALSE;
+
+  for (*STDOUT, $fh_log) {
+    print $_ "\n" x 2;
+    PrintTitle1($_, "Data Processing routine has started");
+    PrintTitle3($_, "Reading Observation Rinex...");
+  }
+
+  # Read observation rinex:
+  my $ini_read_rinex = [gettimeofday];
+    my $ref_obs_data = ReadObservationRinexV3($ref_gen_conf, $fh_log);
+  my $end_read_rinex = [gettimeofday];
+
+  if ($ref_gen_conf->{STATIC}{STATUS} &&
+      $ref_gen_conf->{STATIC}{REFERENCE_MODE} eq &IGS_STATIC_MODE) {
+    CheckMarkerName($ref_gen_conf, $ref_obs_data, $fh_log);
+  }
+
+  # Update sub status:
+  $status += ($ref_obs_data != KILLED) ? TRUE : FALSE;
+
+  for (*STDOUT, $fh_log) {
+    print $_ "\n" x 1;
+    PrintTitle3($_, "Computing satellite positions...");
+  }
+
+  # Compute satellite positions:
+  my $ini_sat_position = [gettimeofday];
+    my $ref_nav_data =
+      ComputeSatPosition( $ref_gen_conf, $ref_obs_data, $fh_log );
+  my $end_sat_position = [gettimeofday];
+
+  # Update sub status:
+  $status *= ($ref_nav_data != KILLED) ? TRUE : FALSE;
+
+  for (*STDOUT, $fh_log) {
+    print $_ "\n" x 1;
+    PrintTitle3($_, "Computing receiver positions...");
+  }
+
+  # Compute receiver positons:
+  my $ini_rec_position = [gettimeofday];
+    my $rec_position_status =
+      ComputeRecPosition($ref_gen_conf, $ref_obs_data, $ref_nav_data, $fh_log);
+  my $end_rec_position = [gettimeofday];
+
+  # Update sub status:
+  $status *= ($rec_position_status != KILLED) ? TRUE : FALSE;
+
+  # Report solution extract:
+  PrintSolutionExtract($ref_obs_data, $fh_log);
+
+  # Report elapsed times:
+  for (*STDOUT, $fh_log) {
+    PrintTitle3($_, "Data processing time lapses:");
+    ReportElapsedTime( $ini_read_rinex, $end_read_rinex,
+                       "reading observation RINEX     = ", $_ );
+    ReportElapsedTime( $ini_sat_position, $end_sat_position,
+                       "computing satellite positions = ", $_ );
+    ReportElapsedTime( $ini_rec_position, $end_rec_position,
+                       "computing receiver positions  = ", $_ );
+    print $_ "\n" x 1;
+  }
+
+  return ($status, $ref_obs_data, $ref_nav_data);
+}
+
+sub DataDumpingRoutine {}
+
+# Print and Report subs:
 sub PrintWelcomeMessage {
   my ($fh_log) = @_;
 
@@ -167,11 +246,11 @@ sub PrintWelcomeMessage {
 }
 
 sub PrintBasicConfiguration {
-  my ($ref_tool_cfg, $fh_log) = @_;
+  my ($ref_gen_conf, $fh_log) = @_;
 
   # Retrieve configuration:
-  my @selected_sat_sys = @{ $ref_tool_cfg->{SELECTED_SAT_SYS} };
-  my $obs_rinex = ( split('/', $ref_tool_cfg->{RINEX_OBS_PATH}) )[-1];
+  my @selected_sat_sys = @{ $ref_gen_conf->{SELECTED_SAT_SYS} };
+  my $obs_rinex = ( split('/', $ref_gen_conf->{RINEX_OBS_PATH}) )[-1];
 
   # Contens:
   # Header:
@@ -182,7 +261,7 @@ sub PrintBasicConfiguration {
   my @sat_sys_info;
 
   for (@selected_sat_sys) {
-    my $obs = $ref_tool_cfg->{SELECTED_SIGNALS}{$_};
+    my $obs = $ref_gen_conf->{SELECTED_SIGNALS}{$_};
     my $msg = SAT_SYS_ID_TO_NAME->{$_}." ($_) -> ".
               SAT_SYS_OBS_TO_NAME->{$_}{substr($obs, 0, 2)}." ($obs)";
     push(@sat_sys_info, $msg);
@@ -193,7 +272,7 @@ sub PrintBasicConfiguration {
 
   my @rinex_info = ( "Observation Rinex : $obs_rinex" );
   for (@selected_sat_sys) {
-    my $nav_rinex = ( split('/', $ref_tool_cfg->{RINEX_NAV_PATH}{$_}) )[-1];
+    my $nav_rinex = ( split('/', $ref_gen_conf->{RINEX_NAV_PATH}{$_}) )[-1];
     my $msg = SAT_SYS_ID_TO_NAME->{$_}." Navigation Rinex : $nav_rinex";
     push(@rinex_info, $msg);
   }
@@ -203,9 +282,9 @@ sub PrintBasicConfiguration {
 
   my ( $ini_time,
        $end_time,
-       $interval ) = ( $ref_tool_cfg->{INI_EPOCH},
-                       $ref_tool_cfg->{END_EPOCH},
-                       $ref_tool_cfg->{INTERVAL} );
+       $interval ) = ( $ref_gen_conf->{INI_EPOCH},
+                       $ref_gen_conf->{END_EPOCH},
+                       $ref_gen_conf->{INTERVAL} );
 
   my @time_info =
     ( "Start time = ".BuildDateString(GPS2Date($ini_time)).
@@ -218,10 +297,10 @@ sub PrintBasicConfiguration {
   # Mask configuration info:
   my $s4 = "Satellite Mask configuration";
   my @mask_info = ( "Elevation threshold = ".
-                    $ref_tool_cfg->{SAT_MASK}*RADIANS_TO_DEGREE." [deg]" );
+                    $ref_gen_conf->{SAT_MASK}*RADIANS_TO_DEGREE." [deg]" );
 
   for (@selected_sat_sys) {
-    my $sat = join(', ', @{ $ref_tool_cfg->{SAT_TO_DISCARD}{$_} });
+    my $sat = join(', ', @{ $ref_gen_conf->{SAT_TO_DISCARD}{$_} });
        $sat = "None" unless $sat;
     my $msg = "Discarded ".SAT_SYS_ID_TO_NAME->{$_}." satellites : $sat";
     push(@mask_info, $msg);
@@ -230,11 +309,11 @@ sub PrintBasicConfiguration {
   # Error source models:
   my $s5 = "Error Source Models";
   my @error_info =
-    ("Troposphere model : ".ucfirst $ref_tool_cfg->{TROPOSPHERE_MODEL});
+    ("Troposphere model : ".ucfirst $ref_gen_conf->{TROPOSPHERE_MODEL});
 
   for (@selected_sat_sys) {
     my $msg = SAT_SYS_ID_TO_NAME->{$_}." Ionosphere model : ".
-              ucfirst $ref_tool_cfg->{IONOSPHERE_MODEL}{$_};
+              ucfirst $ref_gen_conf->{IONOSPHERE_MODEL}{$_};
     push(@error_info, $msg);
   }
 
@@ -242,21 +321,21 @@ sub PrintBasicConfiguration {
   # Static configuration:
   # NOTE: will only be reported if static mode is activated!
   my $s6; my @static_info;
-  if ($ref_tool_cfg->{STATIC}{STATUS}) {
+  if ($ref_gen_conf->{STATIC}{STATUS}) {
     $s6 = "Static Mode Configuration";
     push(@static_info,
-      "Static mode : ". uc $ref_tool_cfg->{STATIC}{REFERENCE_MODE});
+      "Static mode : ". uc $ref_gen_conf->{STATIC}{REFERENCE_MODE});
 
-    if ($ref_tool_cfg->{STATIC}{REFERENCE_MODE} eq &IGS_STATIC_MODE) {
-      push(@static_info, "IGS station : ".$ref_tool_cfg->{STATIC}{IGS_STATION});
+    if ($ref_gen_conf->{STATIC}{REFERENCE_MODE} eq &IGS_STATIC_MODE) {
+      push(@static_info, "IGS station : ".$ref_gen_conf->{STATIC}{IGS_STATION});
     }
 
-    my @ecef_xyz = @{ $ref_tool_cfg->{STATIC}{REFERENCE} };
+    my @ecef_xyz = @{ $ref_gen_conf->{STATIC}{REFERENCE} };
     push(@static_info,
          "Reference ECEF (X, Y, Z) = ".sprintf("%12.3f " x 3, @ecef_xyz));
 
     my ($lat, $lon, $helip) =
-      ECEF2Geodetic( @ecef_xyz, $ref_tool_cfg->{ELIPSOID} );
+      ECEF2Geodetic( @ecef_xyz, $ref_gen_conf->{ELIPSOID} );
 
     push(@static_info,
          "Reference Geodetic (lat, lon, h) = ".
@@ -271,34 +350,102 @@ sub PrintBasicConfiguration {
   for (@streams) {
     print $_ "\n" x 2;
     PrintTitle1  ($_, $head);
-    PrintTitle2  ($_, $s1);
-    PrintComment ($_, @sat_sys_info);
+    PrintTitle3  ($_, $s1);
+    PrintBulletedInfo ($_, "\t- ", @sat_sys_info);
     print $_ "\n" x 1;
-    PrintTitle1  ($_, $s4);
-    PrintComment ($_, @mask_info);
+    PrintTitle3  ($_, $s4);
+    PrintBulletedInfo ($_, "\t- ", @mask_info);
     print $_ "\n" x 1;
-    PrintTitle1  ($_, $s5);
-    PrintComment ($_, @error_info);
+    PrintTitle3  ($_, $s5);
+    PrintBulletedInfo ($_, "\t- ", @error_info);
     print $_ "\n" x 1;
-    PrintTitle1  ($_, $s2);
-    PrintComment ($_, @rinex_info);
+    PrintTitle3  ($_, $s2);
+    PrintBulletedInfo ($_, "\t- ", @rinex_info);
     print $_ "\n" x 1;
-    PrintTitle1  ($_, $s3);
-    PrintComment ($_, @time_info);
-    if ($ref_tool_cfg->{STATIC}{STATUS}) {
+    PrintTitle3  ($_, $s3);
+    PrintBulletedInfo ($_, "\t- ", @time_info);
+    if ($ref_gen_conf->{STATIC}{STATUS}) {
       print $_ "\n" x 1;
-      PrintTitle1  ($_, $s6);
-      PrintComment ($_, @static_info);
+      PrintTitle3  ($_, $s6);
+      PrintBulletedInfo ($_, "\t- ", @static_info);
     }
   }
 
   return TRUE;
 }
 
-sub RinexDataProcessing {}
+sub PrintSolutionExtract {
+  my ($ref_obs_data, $fh_log) = @_;
 
-sub DataDumping {}
+  for my $fh (*STDOUT, $fh_log)
+  {
+    print $fh "\n" x 1;
+    PrintTitle4($fh, "Receiver positions for first 4 and last epochs:");
+    for (0..3, -4..-1) {
+      PrintComment( $fh, "\tObservation epoch : ".
+        BuildDateString(GPS2Date($ref_obs_data->{BODY}[$_]{EPOCH})).
+        " -> Status = ".
+        ($ref_obs_data->{BODY}[$_]{REC_POSITION}{STATUS} ? "OK":"NOK") );
+      PrintBulletedInfo($fh, "\t",
+        "|  X |  Y |  Z =".
+          join(' | ',
+            sprintf( " %12.3f |" x 3,
+                     @{$ref_obs_data->
+                        {BODY}[$_]{REC_POSITION}{XYZ}} )
+          ),
+        "| sX | sY | sZ =".
+          join(' | ',
+            sprintf(" %12.3f |" x 3,
+                    map{$_**0.5} @{$ref_obs_data->
+                                    {BODY}[$_]{REC_POSITION}{VAR_XYZ}})
+          )
+        );
 
+      PrintBulletedInfo($fh, "\t", "[...]") if ($_ == 3);
+    }
+  }
+
+  return TRUE;
+}
+
+sub PrintGoodbyeMessage {}
+
+# Ancillary subs:
+sub CopyConfigurationFile {
+  my ($cfg_file_path, $ref_gen_conf) = @_;
+
+  my $destination = join('/', ($ref_gen_conf->{OUTPUT_PATH}, "grpp_config.cfg"));
+  copy($cfg_file_path, $destination);
+
+  return TRUE;
+}
+
+sub CheckMarkerName {
+  my ($ref_gen_conf, $ref_obs_data, $fh_log) = @_;
+
+  my $static_marker_name = lc $ref_gen_conf->{STATIC}{IGS_STATION};
+  my $rinex_marker_name  = lc $ref_obs_data->{HEAD}{MARKER_NAME};
+
+  unless ($static_marker_name eq $rinex_marker_name) {
+    RaiseWarning($fh_log, WARN_MARKER_NAME_NOT_EQUAL,
+      "Station mismatch among static mode IGS station and observation ".
+      "RINEX marker name:",
+      "\tIGS station (static mode) : $static_marker_name",
+      "\tRINEX marker name         : $rinex_marker_name");
+  }
+
+  return TRUE;
+}
+
+sub ReportElapsedTime {
+  my ($ini_time, $end_time, $label, $fh) = @_;
+
+  PrintTitle4( $fh,
+               sprintf("Elapsed time for $label %.2f seconds",
+               tv_interval($ini_time, $end_time)) );
+
+  return TRUE;
+}
 
 # ============================================================================ #
 # END OF SCRIPT
