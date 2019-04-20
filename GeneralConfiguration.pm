@@ -83,7 +83,8 @@ BEGIN {
                           &WARN_NOT_SUPPORTED_SAT_SYS );
 
   # Define subroutines to export:
-  our @EXPORT_SUB   = qw( &LoadConfiguration );
+  our @EXPORT_SUB   = qw( &LoadConfiguration
+                          &CheckConfigurationFile );
 
   # Merge constants and subroutines:
   our @EXPORT_OK = (@EXPORT_CONST, @EXPORT_SUB);
@@ -297,6 +298,7 @@ use constant {
   ERR_OPTION_IS_NOT_BOOLEAN  => 30408,
   ERR_NO_SAT_SYS_CONFIGURED  => 30409,
   ERR_IGS_STATION_NOT_FOUND  => 30411,
+  ERR_NOT_VALID_CONF_FILE    => 30412,
   ERR_STATIC_MODE_NOT_SUPPORTED => 30410,
 };
 # Warnings:
@@ -940,6 +942,39 @@ sub LoadConfiguration {
 
 
   return $ref_config_hash;
+}
+
+sub CheckConfigurationFile {
+  my ($cfg_file_path) = @_;
+
+  # Check if configuration file:
+  # a. Exists
+    unless ( -e $cfg_file_path ) {
+      RaiseError( *STDOUT,
+                  ERR_NOT_VALID_CONF_FILE,
+                  "Configuration file does not exists",
+                  "Provided file: '$cfg_file_path'" );
+      return FALSE;
+    }
+  # b. Is a plain text file
+    unless (-f $cfg_file_path) {
+      RaiseError( *STDOUT,
+                  ERR_NOT_VALID_CONF_FILE,
+                  "Configuration file is not plain text",
+                  "Provided file: '$cfg_file_path'" );
+      return FALSE;
+    }
+  # c. Can be read by effective uid/gid
+    unless (-r $cfg_file_path) {
+      RaiseError( *STDOUT,
+                  ERR_NOT_VALID_CONF_FILE,
+                  "Configuration file could not be read by effective user: ".
+                  $ENV{ USER },
+                  "Provided file: '$cfg_file_path'" );
+      return FALSE;
+    }
+
+  return TRUE;
 }
 
 sub GetCarrierFrequency {
