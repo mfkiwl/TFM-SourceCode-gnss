@@ -61,7 +61,7 @@ BEGIN {
   our @EXPORT = ();
 
   # Define constants to export:
-  our @EXPORT_CONST = qw( &NULL_DATA );
+  our @EXPORT_CONST = qw(  );
 
   # Define subroutines to export:
   our @EXPORT_SUB   = qw( &DumpSatObsData
@@ -93,9 +93,6 @@ BEGIN {
 # ---------------------------------------------------------------------------- #
 # Constants:
 # ---------------------------------------------------------------------------- #
-# NULL data constant:
-use constant NULL_DATA => 'NaN';
-
 use constant {
   WARN_NO_SELECTED_OBS => 90101,
 };
