@@ -216,6 +216,7 @@ sub DataProcessingRoutine {
 
   # Report elapsed times:
   for (*STDOUT, $fh_log) {
+    print $_ "\n" x 1;
     PrintTitle3($_, "Data processing time lapses:");
     ReportElapsedTime( $ini_read_rinex, $end_read_rinex,
                        "reading observation RINEX     = ", $_ );
@@ -388,19 +389,48 @@ sub DataDumpingRoutine {
 
   my $end_rec_data = [gettimeofday];
 
+  for (*STDOUT, $fh_log) {
+    print $_ "\n" x 1;
+    PrintTitle3($_, "Dumping raw configuration and data hashes...");
+    PrintBulletedInfo($_, "\t- ",
+      'Raw general configuration perl hash : "$ref_gen_conf"',
+      'Raw observation data perl hash : "$ref_obs_data"');
+  }
+
+  my $ini_hash_data = [gettimeofday];
+
+    # General configuration hash:
+    $sub_status =
+      store($ref_gen_conf, $ref_gen_conf->{OUTPUT_PATH}."/ref_gen_conf.hash");
+
+    # Update status:
+    $status *= (undef $sub_status) ? FALSE : TRUE;
+
+    # Observation data:
+    $sub_status =
+      store($ref_obs_data, $ref_gen_conf->{OUTPUT_PATH}."/ref_obs_data.hash");
+
+    # Update status:
+    $status *= (undef $sub_status) ? FALSE : TRUE;
+
+  my $end_hash_data = [gettimeofday];
+
   # Report elapsed times:
   for (*STDOUT, $fh_log) {
+    print $_ "\n" x 1;
     PrintTitle3($_, "Data dumping time lapses:");
     ReportElapsedTime( $ini_sat_obs_data, $end_sat_obs_data,
-                       "dumping satellite observation data     = ", $_ );
+                       "dumping satellite observation data      = ", $_ );
     ReportElapsedTime( $ini_los_data, $end_los_data,
-                       "dumping line of sight related data     = ", $_ );
+                       "dumping line of sight related data      = ", $_ );
     ReportElapsedTime( $ini_err_mod, $end_err_mod,
-                       "dumping satellite error modeling data  = ", $_ );
+                       "dumping satellite error modeling data   = ", $_ );
     ReportElapsedTime( $ini_lsq_data, $end_lsq_data,
-                       "dumping least squares related data     = ", $_ );
+                       "dumping least squares related data      = ", $_ );
     ReportElapsedTime( $ini_rec_data, $end_rec_data,
-                       "dumping receiver position related data = ", $_ );
+                       "dumping receiver position related data  = ", $_ );
+    ReportElapsedTime( $ini_hash_data, $end_hash_data,
+                       "dumping raw configuration and data hash = ", $_ );
     print $_ "\n" x 1;
   }
 
