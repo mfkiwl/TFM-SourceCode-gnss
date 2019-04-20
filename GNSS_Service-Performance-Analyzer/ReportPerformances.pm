@@ -71,10 +71,6 @@ use Geodetic qq(:ALL); # dedicated geodesy utilities...
 use lib $ENV{ SRC_ROOT };
 use GeneralConfiguration qq(:ALL);
 
-# Also, load GRPP's DataDumper constants
-# (needed for NULL_DATA):
-use lib $ENV{ GRPP_ROOT };
-use DataDumper qq(:CONSTANTS);
 
 # ---------------------------------------------------------------------------- #
 # Constants:
