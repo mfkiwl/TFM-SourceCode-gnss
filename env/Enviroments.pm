@@ -54,6 +54,7 @@ use constant {
   DAT_ROOT_PATH  => $ENV{ DAT_ROOT  },
   UTIL_ROOT_PATH => $ENV{ UTIL_ROOT },
   GRPP_ROOT_PATH => $ENV{ GRPP_ROOT },
+  GSPA_ROOT_PATH => $ENV{ GSPA_ROOT },
 };
 
 use constant {
