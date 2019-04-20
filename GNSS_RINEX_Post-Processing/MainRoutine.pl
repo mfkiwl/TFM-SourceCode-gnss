@@ -47,7 +47,6 @@ use DataDumper  qq(:ALL);
 
 # Script constants:
 # ---------------------------------------------------------------------------- #
-use constant ERR_GRPP_READ_CONF => 30000;
 use constant WARN_MARKER_NAME_NOT_EQUAL => 90001;
 
 # ============================================================================ #
@@ -62,7 +61,7 @@ my $ini_script_time = [gettimeofday];
   #   1. Configuration file
   my ($cfg_file_path) = @ARGV;
 
-
+  # Welcome message on STDOUT:
   PrintWelcomeMessage($cfg_file_path, *STDOUT);
 
   # Check if configuration file:
@@ -125,39 +124,6 @@ my $ini_script_time = [gettimeofday];
 # ---------------------------------------------------------------------------- #
 
 # Script management subs:
-sub CheckConfigurationFile {
-  my ($cfg_file_path) = @_;
-
-  # Check if configuration file:
-  # a. Exists
-    unless ( -e $cfg_file_path ) {
-      RaiseError( *STDOUT,
-                  ERR_GRPP_READ_CONF,
-                  "Configuration file does not exists",
-                  "Provided file: '$cfg_file_path'" );
-      return FALSE;
-    }
-  # b. Is a plain text file
-    unless (-f $cfg_file_path) {
-      RaiseError( *STDOUT,
-                  ERR_GRPP_READ_CONF,
-                  "Configuration file is not plain text",
-                  "Provided file: '$cfg_file_path'" );
-      return FALSE;
-    }
-  # c. Can be read by effective uid/gid
-    unless (-r $cfg_file_path) {
-      RaiseError( *STDOUT,
-                  ERR_GRPP_READ_CONF,
-                  "Configuration file could not be read by effective user: ".
-                  $ENV{ USER },
-                  "Provided file: '$cfg_file_path'" );
-      return FALSE;
-    }
-
-  return TRUE;
-}
-
 sub DataProcessingRoutine {
   my ($ref_gen_conf, $fh_log) = @_;
 
