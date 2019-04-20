@@ -61,6 +61,7 @@ BEGIN {
                           &GAL_E5_FREQ
                           &GAL_E5a_FREQ
                           &GAL_E5b_FREQ
+                          &NULL_DATA
                           &SUPPORTED_SAT_SYS
                           &ACCEPTED_SAT_SYS
                           &NONE_IONO_MODEL
@@ -210,6 +211,9 @@ use constant SUPPORTED_GAL_SIGNALS => qw( C1C C1A C1B
                                           C5I C5Q C5X
                                           C7I C7Q C7X
                                           C8I C8Q C8X );
+
+# NULL data constant:
+use constant NULL_DATA => 'NaN';
 
 # Supported atmospheric correction models:
 use constant {
