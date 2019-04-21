@@ -1,10 +1,40 @@
 #!/usr/bin/perl -w
 
+# NOTE: SCRIPT DESCRIPTION GOES HERE:
+
 # Package declaration:
 package SatPosition;
 
+# Set package exportation properties:
+# ---------------------------------------------------------------------------- #
+BEGIN {
+  # Load export module:
+  require Exporter;
 
-# NOTE: SCRIPT DESCRIPTION GOES HERE:
+  # Set version check:
+  our $VERSION = 1.0;
+
+  # Inherit from Exporter to export subs and constants:
+  our @ISA = qq(Exporter);
+
+  # Default export:
+  our @EXPORT = ();
+
+  # Define constants to export:
+  our @EXPORT_CONST = qw();
+
+  # Define subroutines to export:
+  our @EXPORT_SUB   = qw( &ComputeSatPosition );
+
+  # Merge constants and subroutines:
+  our @EXPORT_OK = (@EXPORT_CONST, @EXPORT_SUB);
+
+  # Define export tags:
+  our %EXPORT_TAGS = ( ALL         => \@EXPORT_OK,
+                       DEFAULT     => \@EXPORT,
+                       CONSTANTS   => \@EXPORT_CONST,
+                       SUBROUTINES => \@EXPORT_SUB );
+}
 
 # Load bash enviroments:
 # ---------------------------------------------------------------------------- #
@@ -38,37 +68,6 @@ use lib GRPP_ROOT_PATH;
 use RinexReader qq(:ALL); # observation & navigation rinex parser...
 use ErrorSource qq(:ALL); # ionosphere & troposphere correction models...
 
-
-# Set package exportation properties:
-# ---------------------------------------------------------------------------- #
-BEGIN {
-  # Load export module:
-  require Exporter;
-
-  # Set version check:
-  our $VERSION = 1.0;
-
-  # Inherit from Exporter to export subs and constants:
-  our @ISA = qq(Exporter);
-
-  # Default export:
-  our @EXPORT = ();
-
-  # Define constants to export:
-  our @EXPORT_CONST = qw();
-
-  # Define subroutines to export:
-  our @EXPORT_SUB   = qw( &ComputeSatPosition );
-
-  # Merge constants and subroutines:
-  our @EXPORT_OK = (@EXPORT_CONST, @EXPORT_SUB);
-
-  # Define export tags:
-  our %EXPORT_TAGS = ( ALL         => \@EXPORT_OK,
-                       DEFAULT     => \@EXPORT,
-                       CONSTANTS   => \@EXPORT_CONST,
-                       SUBROUTINES => \@EXPORT_SUB );
-}
 
 
 # ---------------------------------------------------------------------------- #
