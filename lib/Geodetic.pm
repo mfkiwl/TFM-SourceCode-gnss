@@ -121,7 +121,7 @@ use constant GRAV_CONSTANT  => 6.674e-11;   # [N*m2/kg2]
 use constant EARTH_ANGULAR_SPEED => 7.2921151467e-5; # [rad/s]
 use constant EARTH_MEAN_RADIUS   => 6371200.0;       # [m]
 use constant EARTH_MASS          => 5.9736e24;       # [kg]
-use constant EARTH_GRAV_CONST    => 3.986005e+14;    # TODO:??
+use constant EARTH_GRAV_CONST    => 3.986004418e14;  # TODO:??
 use constant ELIPSOID_DATABASE   => LoadElipsoidEntries();
 
 
