@@ -100,9 +100,12 @@ sub NullIonoDelay  { return (0, 0); }
 sub ComputeTropoSaastamoinenDelay {
   my ($zenital, $height) = @_; # [rad], [m]
 
-  # Heiht consistency check: negative elipsoidal heights are considered 0
+  # Height consistency check:
   # NOTE: ABMF's patch for negative heights:
-  $height = 0 if $height < 0;
+  #  - Negative elipsoidal heights are considered 0
+  #  - Heights above B range are considered as maximum B value
+  $height = 0     if $height < 0;
+  $height = 5.0e3 if $height > 5.0e3;
 
   # Computation sequence:
     # Temperature estimation [K]:
