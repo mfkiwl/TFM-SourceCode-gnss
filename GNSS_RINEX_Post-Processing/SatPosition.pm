@@ -457,6 +457,94 @@ sub ComputeSatelliteCoordinates {
   return  ($status, $x_sat, $y_sat, $z_sat, $time_corr);
 }
 
-sub ComputeSatelliteCoordinatesTest {}
+sub ComputeSatelliteCoordinatesTest {
+  my ($epoch, undef, $sat, $ref_eph, undef, undef) = @_;
+
+  # NOTE: this sub does not need raw measurement and f1 and f2 carrier
+  #       frequencies...
+
+  # Init parameters to return:
+  my $status = FALSE;
+  my ($x_sat, $y_sat, $z_sat, $time_corr);
+
+  # NOTE: By the movement, time correction will be init but not computed...
+
+  # 1. Compute the time from the ephemrids reference epoch:
+    # a. Transform input gps epoch into gps format:
+    my ($week, $day, $tow) = GPS2ToW($epoch);
+
+    # b. Compute time difference:
+    my $t_ref = $tow - $ref_eph->{TOE};
+
+    # 3. Interpolation protection:
+    $t_ref -= 604800 if ($t_ref >  302400);
+    $t_ref += 604800 if ($t_ref < -302400);
+
+  # 2. Compute mean anomaly at $t_ref:
+    # a. Compute mean movement:
+    # NOTE: review
+    my $mean_mov = ( (EARTH_GRAV_CONST**0.5)/($ref_eph->{SQRT_A}**3) );
+
+    # b. Compute mean anomaly
+    my $mean_anomly =
+      ($ref_eph->{MO}) + ($mean_mov + $ref_eph->{DELTA_N})*$t_ref;
+
+  # 3. Solve iteratively eccentric anomaly:
+    my $ecc = $ref_eph->{ECCENTRICITY};
+    my $ecc_anomaly  = $ecc;
+       $ecc_anomaly -= $ecc*sin($ecc_anomaly) for (1..10);
+
+  # 4. Compute true anomaly:
+    my $true_anomaly =
+      atan(( (1 - $ecc)**0.5*sin($ecc_anomaly) )/( cos($ecc_anomaly) - $ecc ));
+
+  # 5. Compute latitude's argument:
+    # Retrieve omega --> perigee's argument
+    my $omega = $ref_eph->{OMEGA_2};
+
+    # Auxiliar
+    my $cos_2times_omega_plus_true_anomaly = cos( 2*($omega + $true_anomaly) );
+    my $sin_2times_omega_plus_true_anomaly = sin( 2*($omega + $true_anomaly) );
+
+    my $lat_argument =
+      ($omega) + ($true_anomaly) +
+      ( $ref_eph->{CUC}*$cos_2times_omega_plus_true_anomaly ) +
+      ( $ref_eph->{CUS}*$sin_2times_omega_plus_true_anomaly );
+
+  # 6. Compute radial distance:
+    my $radial_dist =
+      ( ($ref_eph->{SQRT_A}**2)*(1 - $ecc*cos($ecc_anomaly)) ) +
+      ( $ref_eph->{CRC}*$cos_2times_omega_plus_true_anomaly  ) +
+      ( $ref_eph->{CRS}*$sin_2times_omega_plus_true_anomaly  );
+
+  # 7. Compute plane's inclinitation:
+    my $plane_inclination =
+      ( $ref_eph->{IO} ) +
+      ( $ref_eph->{IDOT}*$t_ref ) +
+      ( $ref_eph->{CIC}*$cos_2times_omega_plus_true_anomaly ) +
+      ( $ref_eph->{CIS}*$sin_2times_omega_plus_true_anomaly );
+
+  # 8. Compute ascending node's longitude:
+    my $lon_ascending_node =
+      ( $ref_eph->{OMEGA_1} ) +
+      ( $ref_eph->{OMEGA_DOT} - EARTH_ANGULAR_SPEED  ) -
+      ( $t_ref - EARTH_ANGULAR_SPEED*$ref_eph->{TOE} );
+
+  # 9. Compute coordinates in ECEF frame:
+    # Auxiliar vars:
+    my $x1 = $radial_dist*cos($lat_argument);
+    my $y1 = $radial_dist*sin($lat_argument);
+
+    $x_sat = $x1*cos($lon_ascending_node) -
+             $y1*cos($plane_inclination)*sin($lon_ascending_node);
+    $y_sat = $x1*sin($lon_ascending_node) +
+             $y1*cos($plane_inclination)*cos($lon_ascending_node);
+    $z_sat = $y1*sin($plane_inclination);
+
+  # At this point, sat coordinates have been computed, update sub status:
+  $status = TRUE;
+
+  return  ($status, $x_sat, $y_sat, $z_sat, $time_corr);
+}
 
 TRUE;
