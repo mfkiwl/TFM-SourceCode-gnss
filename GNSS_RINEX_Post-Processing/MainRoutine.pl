@@ -155,7 +155,7 @@ sub DataProcessingRoutine {
   }
 
   # Set compute satellite coordinates code for algorithm selection:
-  my $compute_sat_coord_code = 2;
+  my $compute_sat_coord_code = 1;
 
   # Compute satellite positions:
   my $ini_sat_position = [gettimeofday];
