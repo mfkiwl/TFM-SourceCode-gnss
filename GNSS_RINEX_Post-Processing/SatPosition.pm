@@ -74,11 +74,19 @@ use ErrorSource qq(:ALL); # ionosphere & troposphere correction models...
 # GLobal contants:
 # ---------------------------------------------------------------------------- #
 
+# Hash involving relation among code and satellite position algorithm:
+use constant
+  SAT_POSITION_ALGORITHM => {
+    1 => \&ComputeSatelliteCoordinates,
+    2 => \&ComputeSatelliteCoordinatesTest,
+  };
+
 # Module specific warning codes:
 use constant {
   WARN_OBS_NOT_VALID     => 90301,
   WARN_NO_SAT_NAVIGATION => 90303,
   WARN_NO_SAT_EPH_FOUND  => 90304,
+  ERR_WRONG_SAT_POSITION_CODE => 30301,
 };
 
 
@@ -89,7 +97,10 @@ use constant {
 # Public Subroutines:                                                          #
 # ............................................................................ #
 sub ComputeSatPosition {
-  my ($ref_gen_conf, $ref_rinex_obs, $fh_log) = @_;
+  my ($ref_gen_conf, $ref_rinex_obs, $fh_log, $sat_algorithm_code) = @_;
+
+  # Default argument for $sat_algorithm_code:
+  $sat_algorithm_code = 1 unless $sat_algorithm_code;
 
   # ************************* #
   # Input consistency checks: #
@@ -109,6 +120,13 @@ sub ComputeSatPosition {
     return KILLED;
   }
 
+  # Check satellite algorithm code:
+  unless ( grep($sat_algorithm_code == $_, (1,2)) ) {
+    RaiseError( $fh_log, ERR_WRONG_SAT_POSITION_CODE,
+      "Satellite position '$sat_algorithm_code' code was not recognized",
+      "This value must be either 1 or 2");
+  }
+
 
   # ******************* #
   # Preliminary steps : #
@@ -125,6 +143,10 @@ sub ComputeSatPosition {
       ReadNavigationRinex( $ref_gen_conf->{RINEX_NAV_PATH}{$sat_sys},
                            $sat_sys, $fh_log );
   }
+
+  # Select compute satellite position algorithm based on input code:
+  my $ref_sat_position_sub =
+     SAT_POSITION_ALGORITHM->{$sat_algorithm_code};
 
 
   # ****************************** #
@@ -224,9 +246,9 @@ sub ComputeSatPosition {
 
               # Compute satellite coordinates for observation epoch:
               ($sat_status, @sat_coord) =
-                ComputeSatelliteCoordinates($obs_epoch,
-                                            $obs_meas, $sat, $ref_sat_eph,
-                                            $carrier_freq_f1, $carrier_freq_f2);
+                &{$ref_sat_position_sub}( $obs_epoch,
+                                          $obs_meas, $sat, $ref_sat_eph,
+                                          $carrier_freq_f1, $carrier_freq_f2 );
             } else {
               # Satellite coordintes cannot be computed:
               $sat_status = FALSE;
@@ -434,5 +456,7 @@ sub ComputeSatelliteCoordinates {
   # Return final satellite coordinates and time correction:
   return  ($status, $x_sat, $y_sat, $z_sat, $time_corr);
 }
+
+sub ComputeSatelliteCoordinatesTest {}
 
 TRUE;
