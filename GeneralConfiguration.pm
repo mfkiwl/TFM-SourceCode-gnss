@@ -774,6 +774,81 @@ sub LoadConfiguration {
 
     } # end if static mode activated
 
+  # Integrity mode section:
+  # Static mode activated?
+  if ($config_content =~ /^Integrity Mode +: +(.+)$/im) {
+    my $integrity_status = ReadBoolean($1);
+    if (defined $integrity_status) {
+      $ref_config_hash->{INTEGRITY}{STATUS} = $integrity_status;
+    } else {
+      RaiseError(*STDOUT, ERR_OPTION_IS_NOT_BOOLEAN,
+        "Unrecognized option for 'Integrity Mode' parameter",
+        "Please, indicate one of the following: \'TRUE\' or \'FALSE\'");
+      return KILLED;
+    }
+  }
+
+  # Only if integrity mode activated:
+  if ($ref_config_hash->{INTEGRITY}{STATUS}) {
+
+    # Vertical parameters:
+    # Vertical alert limit:
+    if ($config_content =~ /^Vertical Alert Limit +: +(.+)$/im) {
+      my $vertical_alert = $1;
+      if (looks_like_number($vertical_alert)) {
+        $ref_config_hash->
+          {INTEGRITY}{VERTICAL}{ALERT_LIMIT} = $vertical_alert*1;
+      } else {
+        RaiseError(*STDOUT, ERR_OPTION_IS_NOT_NUMERIC,
+          "Vertical Alert Limit parameter '$vertical_alert' ".
+          "is not numeric type!");
+        return KILLED;
+      }
+    }
+    # Vertical sigma scale factor:
+    if ($config_content =~ /^Vertical Sigma Scale Factor \(1D\) +: +(.+)$/im) {
+      my $vertical_sigma_factor = $1;
+      if (looks_like_number($vertical_sigma_factor)) {
+        $ref_config_hash->
+          {INTEGRITY}{VERTICAL}{SIGMA_FACTOR} = $vertical_sigma_factor*1;
+      } else {
+        RaiseError(*STDOUT, ERR_OPTION_IS_NOT_NUMERIC,
+          "Vertical Sigma Scale Factor parameter '$vertical_sigma_factor' ".
+          "is not numeric type!");
+        return KILLED;
+      }
+    }
+
+    # Horizontal parameters:
+    # Horizontal alert limit:
+    if ($config_content =~ /^Horizontal Alert Limit +: +(.+)$/im) {
+      my $horizontal_alert = $1;
+      if (looks_like_number($horizontal_alert)) {
+        $ref_config_hash->
+          {INTEGRITY}{HORIZONTAL}{ALERT_LIMIT} = $horizontal_alert*1;
+      } else {
+        RaiseError(*STDOUT, ERR_OPTION_IS_NOT_NUMERIC,
+          "Horizontal Alert Limit parameter '$horizontal_alert' ".
+          "is not numeric type!");
+        return KILLED;
+      }
+    }
+    # Horizontal sigma scale factor:
+    if ($config_content =~ /^Horizontal Sigma Scale Factor \(2D\) +: +(.+)$/im) {
+      my $horizontal_sigma_factor = $1;
+      if (looks_like_number($horizontal_sigma_factor)) {
+        $ref_config_hash->
+          {INTEGRITY}{HORIZONTAL}{SIGMA_FACTOR} = $horizontal_sigma_factor*1;
+      } else {
+        RaiseError(*STDOUT, ERR_OPTION_IS_NOT_NUMERIC,
+          "Horizontal Sigma Scale Factor parameter '$horizontal_sigma_factor' ".
+          "is not numeric type!");
+        return KILLED;
+      }
+    }
+
+  }
+
 
   # Plot diagrams section:
     # Satellite information sub-section:
