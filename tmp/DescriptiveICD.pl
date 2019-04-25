@@ -42,8 +42,11 @@
   # Satic mode configuration:
   STATIC => \%static_mode,
 
+  # Integrity parameters:
+  INTEGRITY => \%integrity_mode,
+
   # Plot configuration:
-  PLOT => \%plot_configuration,
+  PLOT => \%plot_configuration, # TODO: leave this here?
 
   # Dumper configuration:
   DATA_DUMPER => \%data_dumper_conf,
@@ -78,6 +81,18 @@
                  REFERENCE => \@reference_ecef_coordinates );
 
 @reference_ecef_coordinates = ($x_ecef, $y_ecef, $z_ecef);
+
+# Integrity configuration parameters:
+%integrity_mode = (
+  STATUS => $boolean_status,
+  HORIZONTAL => \%integrity_parameter,
+  VERTICAL   => \%integrity_parameter,
+);
+
+%integrity_parameter = (
+  ALERT_LIMIT => $alert_bound,
+  SIGMA_FACTOR => $gaussian_dist_critical_value,
+);
 
 # Plot configuration:
 %plot_configuration = 'TBD'; # TODO!
@@ -154,6 +169,7 @@
   LSQ_INFO => \@lsq_info,
   SAT_POSITION => \%sat_xyztc,
   REC_POSITION => \%position_parameters, # filled after ComputeRecPosition
+  INTEGRITY_INFO => \%integrity_info,
 );
 
 # Satellite's raw measurements:
@@ -239,6 +255,31 @@
 @enu_position  = ($easting, $northing, $uping);
 @ecef_position = ($x_ecef,  $y_ecef,  $z_ecef);
 @variance_ecef = ($x_var, $y_var, $z_var);
+
+# Integrity information per epoch:
+%integrity_info = (
+  HORIZONTAL => (
+    ERROR      => $positioning_error,
+    PRECISION  => $postioning_precision,
+    MI_FLAG    => $misleading_info_flag,
+    HMI_FLAG   => $hazardous_misleading_info_flag,
+    AVAIL_FLAG => $availability_boolean, 
+  ),
+  VERTICAL   => (
+    ERROR      => $positioning_error,
+    PRECISION  => $postioning_precision,
+    MI_FLAG    => $misleading_info_flag,
+    HMI_FLAG   => $hazardous_misleading_info_flag,
+    AVAIL_FLAG => $availability_boolean,
+  ),
+);
+
+# For horizontal component:
+# ERROR = ((Erec - Eref)**2 + (Nrec - Nref)**2)**0.5
+# PRECISION = HDOP * H_SIGMA_FACTOR;
+# MI_FLAG  = ( ERROR > PRECISION && ERROR <= H_ALERT_LIMIT ) ? 1 : 0;
+# HMI_FLAG = ( ERROR > PRECISION && ERROR  > H_ALERT_LIMIT ) ? 1 : 0;
+# AVAIL_FLAG = ( PRECISION > H_ALERT_LIMIT ) ? 1 : 0;
 
 
 # Navigation data:
