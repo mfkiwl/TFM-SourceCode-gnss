@@ -163,12 +163,13 @@ sub ComputeRecPosition {
       my $ref_epoch_info = $ref_rinex_obs->{BODY}[$i];
 
       # Init epoch hash for computed data:
-      InitEpochInfoHash($ref_epoch_info);
+      InitEpochInfoHash($ref_gen_conf, $ref_epoch_info);
 
       # Init references to hold estimated position and associated
       # variances:
       my ($ref_rec_est_xyz, $rec_est_clk,
-          $ref_rec_var_xyz, $rec_var_clk, $ref_rec_var_enu);
+          $ref_rec_var_xyz, $rec_var_clk,
+          $ref_rec_enu, $ref_rec_var_enu);
 
       # Save observation epoch:
       my $epoch = $ref_epoch_info->{EPOCH};
@@ -246,11 +247,12 @@ sub ComputeRecPosition {
 
             # Get estimated receiver position and solution variances:
             ( $ref_rec_est_xyz, $rec_est_clk,
-              $ref_rec_var_xyz, $rec_var_clk, $ref_rec_var_enu ) =
-                GetReceiverPositionSolution ( $pdl_rec_apx_xyzdt,
+              $ref_rec_var_xyz, $rec_var_clk,
+              $ref_rec_enu, $ref_rec_var_enu ) =
+                GetReceiverPositionSolution ( $ref_gen_conf,
+                                              $pdl_rec_apx_xyzdt,
                                               $pdl_parameter_vector,
-                                              $pdl_covariance_matrix,
-                                              $ref_gen_conf->{ELIPSOID} );
+                                              $pdl_covariance_matrix );
 
             # Save iteration solution:
             $iter_solution[$iteration] = [ @{$ref_rec_est_xyz}, $rec_est_clk ];
@@ -289,10 +291,6 @@ sub ComputeRecPosition {
                          \@rec_apx_xyzdt, $pdl_parameter_vector,
                          $pdl_residual_vector, $pdl_variance_estimator );
 
-            # Fill position solution hash with null info:
-            FillSolutionDataHash( $ref_epoch_info, $iter_status,
-                                  [0, 0, 0], 0, [0, 0, 0], 0, [0, 0, 0] );
-
             # Exit iteration loop:
             last;
 
@@ -316,7 +314,44 @@ sub ComputeRecPosition {
           FillSolutionDataHash( $ref_epoch_info, $iter_status,
                                 $ref_rec_est_xyz, $rec_est_clk,
                                 $ref_rec_var_xyz, $rec_var_clk,
-                                $ref_rec_var_enu );
+                                $ref_rec_enu, $ref_rec_var_enu );
+
+          # Compute and fill integrity info hash with null data:
+          # NOTE: integrity mode must be activated on configuration
+          if ( $ref_gen_conf->{INTEGRITY}{STATUS} ) {
+
+            my ( $h_error,
+                 $v_error,
+                 $h_precision,
+                 $v_precision,
+                 $ref_h_integ_flags,
+                 $ref_v_integ_flags ) = GetIntegrityInfo( $ref_gen_conf,
+                                                          $ref_rec_enu,
+                                                          $ref_rec_var_enu );
+
+            FillIntegrityInfoHash( $ref_epoch_info,
+                                   $h_error, $v_error,
+                                   $h_precision, $v_precision,
+                                   $ref_h_integ_flags, $ref_v_integ_flags );
+
+          }
+
+        } else {
+
+          # Fill position solution hash with null info:
+          FillSolutionDataHash( $ref_gen_conf, $ref_epoch_info, $iter_status,
+                                [NULL_DATA, NULL_DATA, NULL_DATA], NULL_DATA,
+                                [NULL_DATA, NULL_DATA, NULL_DATA], NULL_DATA,
+                                [NULL_DATA, NULL_DATA, NULL_DATA],
+                                [NULL_DATA, NULL_DATA, NULL_DATA] );
+
+          # Fill integrity info hash with null data:
+          # NOTE: integrity mode must be activated on configuration
+          if ( $ref_gen_conf->{INTEGRITY}{STATUS} ) {
+            FillIntegrityInfoHash( $ref_gen_conf,
+                                   [NULL_DATA, NULL_DATA, NULL_DATA],
+                                   [NULL_DATA, NULL_DATA, NULL_DATA] );
+          }
 
         } # end if $iter_status
 
@@ -340,10 +375,6 @@ sub ConfigureIonosphereInfo {
        $ref_selected_sat_sys,
        $ref_sat_sys_iono_model ) = @_;
 
-  # Init dummy array.
-  # This array is used for filling empty info in hashes:
-  my @dummy_array;
-
   # Init sub's status and warn mesage in case of error:
   my ($status, $warn_msg) = (TRUE, '');
 
@@ -366,8 +397,8 @@ sub ConfigureIonosphereInfo {
         # interfaces:
         $ref_sub_iono->{$sat_sys} = \&NullIonoDelay;
         # Ionosphere coefficients will be empty:
-        $ref_iono_coeff->{$sat_sys}{IONO_COEFF_1} = \@dummy_array;
-        $ref_iono_coeff->{$sat_sys}{IONO_COEFF_2} = \@dummy_array;
+        $ref_iono_coeff->{$sat_sys}{IONO_COEFF_1} = [];
+        $ref_iono_coeff->{$sat_sys}{IONO_COEFF_2} = [];
       }
 
       # ************************ #
@@ -414,8 +445,7 @@ sub ConfigureIonosphereInfo {
           when ( 3 ) {
             if ( defined $ref_nav_head->{ &ION_GAL_V3 } ) {
               ( $ref_coeff_1,
-                $ref_coeff_2 ) = ( $ref_nav_head->{ &ION_GAL_V3 },
-                                   \@dummy_array );
+                $ref_coeff_2 ) = ( $ref_nav_head->{ &ION_GAL_V3 }, [] );
             } else {
               $warn_msg =
               FillIonoCoefficientWarning($sat_sys,
@@ -513,18 +543,30 @@ sub ConfigureIonosphereInfo {
 }
 
 sub InitEpochInfoHash {
-  my ($ref_epoch_info) = @_;
-
-  my @array_dummy;
+  my ($ref_gen_conf, $ref_epoch_info) = @_;
 
   $ref_epoch_info->{ SAT_LOS  } = undef;
-  $ref_epoch_info->{ LSQ_INFO } = \@array_dummy;
+  $ref_epoch_info->{ LSQ_INFO } = [];
   $ref_epoch_info->{ REC_POSITION }{ STATUS  } = FALSE;
   $ref_epoch_info->{ REC_POSITION }{ XYZ     } = undef;
   $ref_epoch_info->{ REC_POSITION }{ CLK     } = undef;
+  $ref_epoch_info->{ REC_POSITION }{ ENU     } = undef;
   $ref_epoch_info->{ REC_POSITION }{ VAR_XYZ } = undef;
   $ref_epoch_info->{ REC_POSITION }{ VAR_CLK } = undef;
   $ref_epoch_info->{ REC_POSITION }{ VAR_ENU } = undef;
+
+  # Init integrity info integrity mode is activated:
+  if ( $ref_gen_conf->{INTEGRITY}{STATUS} ) {
+
+    # Iterate over integrity
+    # compenents and predefined items:
+    for my $comp (qw(VERTICAL HORIZONTAL)) {
+      for my $item (qw(ERROR PRECISION MI_FLAG HMI_FLAG AVAIL_FLAG)) {
+        $ref_epoch_info->{INTEGRITY_INFO}{$comp}{$item} = undef;
+      }
+    }
+
+  } # end if integrity mode
 
   return TRUE;
 }
@@ -826,9 +868,10 @@ sub FillLSQInfo {
 }
 
 sub GetReceiverPositionSolution {
-  my ($pdl_apx_parameters,
+  my ($ref_gen_conf,
+      $pdl_apx_parameters,
       $pdl_parameter_vector,
-      $pdl_covar_matrix, $elipsoid ) = @_;
+      $pdl_covar_matrix ) = @_;
 
   # Receiver estimated position --> X = aX + dX:
   my @rec_est_xyzdt =
@@ -845,6 +888,9 @@ sub GetReceiverPositionSolution {
   my $rec_var_clk =  sclr( $pdl_covar_matrix->slice('3,3') );
 
   # Compute local ENU variances:
+    # Retrieve elipsoid from configuration:
+    my $elipsoid = $ref_gen_conf->{ELIPSOID};
+
     # Get receiver geodetic coordinates:
     my ($lat, $lon, $helip) = ECEF2Geodetic( @rec_est_xyz, $elipsoid );
 
@@ -860,8 +906,101 @@ sub GetReceiverPositionSolution {
                         sclr($pdl_enu_covar_matrix->slice('1,1')) ,
                         sclr($pdl_enu_covar_matrix->slice('2,2'))  );
 
+    # Init ENU coordinates:
+    my @rec_est_enu = [NULL_DATA, NULL_DATA, NULL_DATA];
+
+    # Compute ENU coordinates if staric mode is activated:
+    # NOTE: Mean static mode is not supported since it needs all the computed
+    #       positions prior to compute ENU coordinates
+    if ( $ref_gen_conf->{STATIC}{STATUS} &&
+        ($ref_gen_conf->{STATIC}{REFERENCE_MODE} eq IGS_STATIC_MODE ||
+         $ref_gen_conf->{STATIC}{REFERENCE_MODE} eq MANUAL_STATIC_MODE) ) {
+
+      # Retrieve receiver ECEF coordinates:
+      my ($rec_x, $rec_y, $rec_z) = @rec_est_xyz;
+
+      # Retrieve ECEF reference coordinates from configuration:
+      my ($ref_x, $ref_y, $ref_z) = @{ $ref_gen_conf->{STATIC}{REFERENCE} };
+
+      # Compute reference's geodetic coordinates:
+      my ($ref_lat, $ref_lon, $ref_helip) =
+        ECEF2Geodetic( $ref_x, $ref_y, $ref_z, $elipsoid );
+
+      # Compute ENU coordinates:
+      @rec_est_enu =
+        Vxyz2Venu( $rec_x - $ref_x,
+                   $rec_y - $ref_y,
+                   $rec_z - $ref_z, $ref_lat, $ref_lon );
+
+    } # end if statid mode
+
   return (\@rec_est_xyz, $rec_est_clk,
-          \@rec_var_xyz, $rec_var_clk, \@rec_var_enu);
+          \@rec_var_xyz, $rec_var_clk,
+          \@rec_est_enu, \@rec_var_enu );
+}
+
+sub GetIntegrityInfo {
+  my ($ref_gen_conf, $ref_rec_enu, $ref_rec_var_enu) = @_;
+
+  # De-refernece input arguments:
+  my ($east,  $north, $up   ) = @{ $ref_rec_enu     };
+  my ($var_e, $var_n, $var_u) = @{ $ref_rec_var_enu };
+
+  # Retrieve configured alert limits:
+  my $h_alert_limit = $ref_gen_conf->{INTEGRITY}{ HORIZONTAL  }{ALERT_LIMIT};
+  my $v_alert_limit = $ref_gen_conf->{INTEGRITY}{ VERTICAL    }{ALERT_LIMIT};
+
+  # Retrieve configured precision (sigma) scale factors:
+  my $h_scale_factor = $ref_gen_conf->{INTEGRITY}{ HORIZONTAL }{SIGMA_FACTOR};
+  my $v_scale_factor = $ref_gen_conf->{INTEGRITY}{ VERTICAL   }{SIGMA_FACTOR};
+
+
+  # For horizontal component:
+  my ($h_error, $h_precision);
+  my ($h_mi_flag, $h_hmi_flag, $h_avail_flag);
+
+  # NOTE: reference has 0 offset in east and north components
+  $h_error = ( ($east)**2 + ($north**2) )**0.5;
+
+  # NOTE: the sigma scale factor is applied to the standard precision
+  $h_precision = ( ($var_e + $var_n)**0.5 )*$h_scale_factor;
+
+  # Error is greater than the precision but, error falls inside the alert
+  # limit bounds:
+  $h_mi_flag  = ( ($h_error >  $h_precision) &&
+                  ($h_error <= $h_alert_limit) ) ? TRUE : FALSE;
+
+  # Error is greater than the precision and error falls outside the alert
+  # limit bounds:
+  $h_hmi_flag = ( ($h_error >  $h_precision) &&
+                  ($h_error >  $h_alert_limit) ) ? TRUE : FALSE;
+
+  # Precision is greater than the alert limit:
+  $h_avail_flag = ( $h_precision <= $h_alert_limit ) ? TRUE : FALSE;
+
+  # For vertical component:
+  my ($v_error, $v_precision);
+  my ($v_mi_flag, $v_hmi_flag, $v_avail_flag);
+
+  # NOTE: reference has 0 offset on upping component
+  $v_error = ($up**2)**0.5;
+
+  # NOTE: the sigma scale factor is applied to the standard precision
+  $v_precision = ( ($var_u)**0.5 )*$v_scale_factor;
+
+  $v_mi_flag  = ( ($v_error >  $v_precision) &&
+                  ($v_error <= $v_alert_limit) ) ? TRUE : FALSE;
+
+  $v_hmi_flag = ( ($v_error >  $v_precision) &&
+                  ($v_error >  $v_alert_limit) ) ? TRUE : FALSE;
+
+  $v_avail_flag = ( $v_precision <= $v_alert_limit ) ? TRUE : FALSE;
+
+  # Return integrity parameters:
+  return ( $h_error, $v_error,
+           $h_precision, $v_precision,
+           [$h_mi_flag, $h_hmi_flag, $h_avail_flag],
+           [$v_mi_flag, $v_hmi_flag, $v_avail_flag] );
 }
 
 sub CheckConvergenceCriteria {
@@ -893,15 +1032,44 @@ sub CheckConvergenceCriteria {
 sub FillSolutionDataHash {
   my ($ref_epoch_info, $status,
       $ref_rec_est_xyz, $rec_est_clk,
-      $ref_rec_var_xyz, $rec_var_clk, $ref_rec_var_enu) = @_;
+      $ref_rec_var_xyz, $rec_var_clk,
+      $ref_rec_enu, $ref_rec_var_enu) = @_;
 
   $ref_epoch_info->{REC_POSITION}{ STATUS  } = $status;
   $ref_epoch_info->{REC_POSITION}{ XYZ     } = $ref_rec_est_xyz;
   $ref_epoch_info->{REC_POSITION}{ CLK     } = $rec_est_clk;
+  $ref_epoch_info->{REC_POSITION}{ ENU     } = $ref_rec_enu;
   $ref_epoch_info->{REC_POSITION}{ VAR_XYZ } = $ref_rec_var_xyz;
   $ref_epoch_info->{REC_POSITION}{ VAR_CLK } = $rec_var_clk;
   $ref_epoch_info->{REC_POSITION}{ VAR_ENU } = $ref_rec_var_enu;
 
+  return TRUE;
+}
+
+sub FillIntegrityInfoHash {
+  my ( $ref_epoch_info,
+       $h_error, $v_error,
+       $h_precision, $v_precision,
+       $ref_h_integ_flags, $ref_v_integ_flags ) = @_;
+
+  # De-reference input arguments:
+  my ( $h_mi_flag, $h_hmi_flag, $h_avail_flag ) = @{ $ref_h_integ_flags };
+  my ( $v_mi_flag, $v_hmi_flag, $v_avail_flag ) = @{ $ref_v_integ_flags };
+
+  # Fill hash:
+  # For horizontal component:
+  $ref_epoch_info->{INTEGRITY_INFO}{HORIZONTAL}{ ERROR      } = $h_error;
+  $ref_epoch_info->{INTEGRITY_INFO}{HORIZONTAL}{ PRECISION  } = $h_precision;
+  $ref_epoch_info->{INTEGRITY_INFO}{HORIZONTAL}{ MI_FLAG    } = $h_mi_flag;
+  $ref_epoch_info->{INTEGRITY_INFO}{HORIZONTAL}{ HMI_FLAG   } = $h_hmi_flag;
+  $ref_epoch_info->{INTEGRITY_INFO}{HORIZONTAL}{ AVAIL_FLAG } = $h_avail_flag;
+
+  # For vertical component:
+  $ref_epoch_info->{INTEGRITY_INFO}{VERTICAL}{ ERROR      } = $v_error;
+  $ref_epoch_info->{INTEGRITY_INFO}{VERTICAL}{ PRECISION  } = $v_precision;
+  $ref_epoch_info->{INTEGRITY_INFO}{VERTICAL}{ MI_FLAG    } = $v_mi_flag;
+  $ref_epoch_info->{INTEGRITY_INFO}{VERTICAL}{ HMI_FLAG   } = $v_hmi_flag;
+  $ref_epoch_info->{INTEGRITY_INFO}{VERTICAL}{ AVAIL_FLAG } = $v_avail_flag;
 
   return TRUE;
 }
