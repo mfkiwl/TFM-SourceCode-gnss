@@ -361,6 +361,43 @@ sub DataDumpingRoutine {
 
   for (*STDOUT, $fh_log) {
     print $_ "\n" x 1;
+    PrintTitle3($_, "Dumping integrity related data...");
+    PrintBulletedInfo($_, "\t- ",
+      "Vertical integrity information",
+      "Horizontal integrity information");
+  }
+
+  my $ini_integ_data = [gettimeofday];
+
+  if ( $ref_gen_conf->{INTEGRITY}{STATUS} ) {
+
+    $sub_status =
+      DumpVerticalIntegrityInfo( $ref_gen_conf,
+                                 $ref_obs_data,
+                                 $ref_gen_conf->{OUTPUT_PATH}, $fh_log );
+
+    # Update status:
+    $status *= ($sub_status != KILLED) ? TRUE : FALSE;
+
+    $sub_status =
+      DumpHorizontalIntegrityInfo( $ref_gen_conf,
+                                   $ref_obs_data,
+                                   $ref_gen_conf->{OUTPUT_PATH}, $fh_log );
+
+    # Update status:
+    $status *= ($sub_status != KILLED) ? TRUE : FALSE;
+
+  } else {
+    for (*STDOUT, $fh_log) {
+      print $_ "\n" x 1;
+      PrintComment($_, "However, no integrity mode was configured...");
+    }
+  }
+
+  my $end_integ_data = [gettimeofday];
+
+  for (*STDOUT, $fh_log) {
+    print $_ "\n" x 1;
     PrintTitle3($_, "Dumping raw configuration and data hashes...");
     PrintBulletedInfo($_, "\t- ",
       'Raw general configuration perl hash : "$ref_gen_conf"',
@@ -399,6 +436,8 @@ sub DataDumpingRoutine {
                        "dumping least squares related data      = ", $_ );
     ReportElapsedTime( $ini_rec_data, $end_rec_data,
                        "dumping receiver position related data  = ", $_ );
+    ReportElapsedTime( $ini_integ_data, $end_integ_data,
+                       "dumping integrity related data          = ", $_ );
     ReportElapsedTime( $ini_hash_data, $end_hash_data,
                        "dumping raw configuration and data hash = ", $_ );
     print $_ "\n" x 1;
