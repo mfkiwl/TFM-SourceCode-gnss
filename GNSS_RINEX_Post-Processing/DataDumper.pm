@@ -77,7 +77,9 @@ BEGIN {
                           &DumpIonoCorrBySat
                           &DumpTropoCorrBySat
                           &DumpResidualsBySat
-                          &DumpPreciseSatellitePosition );
+                          &DumpPreciseSatellitePosition
+                          &DumpVerticalIntegrityInfo
+                          &DumpHorizontalIntegrityInfo );
 
   # Merge constants and subroutines:
   our @EXPORT_OK = (@EXPORT_CONST, @EXPORT_SUB);
@@ -713,6 +715,7 @@ sub DumpLSQReportByEpoch {
   return TRUE;
 }
 
+# TODO: review ENU coordinates section!
 sub DumpRecPosition {
   my ( $ref_gen_conf, $ref_obs_data, $output_path, $fh_log ) = @_;
 
@@ -1860,6 +1863,206 @@ sub DumpPreciseSatellitePosition {
       close($fh);
 
   } # end for $sat_sys
+
+  return TRUE;
+}
+
+sub DumpHorizontalIntegrityInfo {
+  my ($ref_gen_conf, $ref_obs_data, $output_path, $fh_log) = @_;
+
+  # Default input values if not defined:
+  $fh_log = *STDOUT unless $fh_log;
+
+  # ************************* #
+  # Input consistency cehcks: #
+  # ************************* #
+
+  # Output path must exist and have write permissions:
+  unless (-w $output_path) {
+   RaiseError($fh_log, ERR_WRITE_PERMISSION_DENIED,
+     "User '".$ENV{USER}."' does not have write permissions at $output_path");
+   return KILLED;
+  }
+
+  # General configuration must be hash type:
+  unless (ref($ref_gen_conf) eq 'HASH') {
+   RaiseError($fh_log, ERR_WRONG_HASH_REF,
+     "Input argument \'$ref_gen_conf\' is not HASH type");
+   return KILLED;
+  }
+
+  # Observation data must be hash type:
+  unless (ref($ref_obs_data) eq 'HASH') {
+   RaiseError($fh_log, ERR_WRONG_HASH_REF,
+     "Input argument \'$ref_obs_data\' is not HASH type");
+   return KILLED;
+  }
+
+  # *************** #
+  # Dumper routine: #
+  # *************** #
+
+  # Retrieve dumper configuration:
+  my $delimiter    = $ref_gen_conf->{DATA_DUMPER}{ DELIMITER      };
+  my $epoch_format = $ref_gen_conf->{DATA_DUMPER}{ EPOCH_FORMAT   };
+
+  # Set epoch subroutine reference:
+  my $ref_epoch_sub = REF_EPOCH_SUB_CONF->{$epoch_format};
+
+  # 1. Open dumper file at output path:
+    my $file_path = join('/', ($output_path, "integrity-horizontal.out"));
+    my $fh; open($fh, '>', $file_path) or die "Could not open $!";
+
+  # 2. Write title line:
+    say $fh sprintf("# > Horizontal integrity information.\n".
+                    "# > Created : %s ", GetPrettyLocalDate());
+
+  # 3. Write header line:
+    # Retrieve configured satellite mask:
+    my @header_items = ( SetEpochHeaderItems($epoch_format),
+                         'SigmaScaleFactor', 'AlertLimit',
+                         'Error', 'Precision', 'MI', 'HMI', 'Available');
+    say $fh join($delimiter, @header_items);
+
+  # 4. Write data:
+    # Iterate over observation epochs:
+    for (my $i = 0; $i < scalar(@{ $ref_obs_data->{BODY} }); $i += 1)
+    {
+
+      # Point to current epoch:
+      my $ref_epoch_info = $ref_obs_data->{BODY}[$i];
+
+      # Retrieve observation epoch:
+      my $gps_epoch = $ref_epoch_info->{EPOCH};
+      my @epoch = &{$ref_epoch_sub}( $ref_epoch_info->{EPOCH} );
+
+      # Retrieve integrity information:
+      # Configured scale factor and alert limit:
+      my ( $h_scale_factor, $h_alert_limit ) =
+         ( $ref_gen_conf->{INTEGRITY}{HORIZONTAL}{ SIGMA_FACTOR },
+           $ref_gen_conf->{INTEGRITY}{HORIZONTAL}{ ALERT_LIMIT  } );
+
+      # Computed info:
+      my ( $h_error, $h_precision,
+           $h_mi_flag, $h_hmi_flag, $h_avail_flag ) =
+         ( $ref_epoch_info->{INTEGRITY_INFO}{HORIZONTAL}{ ERROR      },
+           $ref_epoch_info->{INTEGRITY_INFO}{HORIZONTAL}{ PRECISION  },
+           $ref_epoch_info->{INTEGRITY_INFO}{HORIZONTAL}{ MI_FLAG    },
+           $ref_epoch_info->{INTEGRITY_INFO}{HORIZONTAL}{ HMI_FLAG   },
+           $ref_epoch_info->{INTEGRITY_INFO}{HORIZONTAL}{ AVAIL_FLAG } );
+
+      my @line_items = ( @epoch,
+                         $h_scale_factor, $h_alert_limit,
+                         $h_error, $h_precision, $h_mi_flag,
+                         $h_hmi_flag, $h_avail_flag );
+
+      # Write line items:
+      say $fh join($delimiter, @line_items);
+
+    }
+
+  # 5. Close file:
+    close($fh);
+
+  return TRUE;
+}
+
+sub DumpVerticalIntegrityInfo {
+  my ($ref_gen_conf, $ref_obs_data, $output_path, $fh_log) = @_;
+
+  # Default input values if not defined:
+  $fh_log = *STDOUT unless $fh_log;
+
+  # ************************* #
+  # Input consistency cehcks: #
+  # ************************* #
+
+  # Output path must exist and have write permissions:
+  unless (-w $output_path) {
+   RaiseError($fh_log, ERR_WRITE_PERMISSION_DENIED,
+     "User '".$ENV{USER}."' does not have write permissions at $output_path");
+   return KILLED;
+  }
+
+  # General configuration must be hash type:
+  unless (ref($ref_gen_conf) eq 'HASH') {
+   RaiseError($fh_log, ERR_WRONG_HASH_REF,
+     "Input argument \'$ref_gen_conf\' is not HASH type");
+   return KILLED;
+  }
+
+  # Observation data must be hash type:
+  unless (ref($ref_obs_data) eq 'HASH') {
+   RaiseError($fh_log, ERR_WRONG_HASH_REF,
+     "Input argument \'$ref_obs_data\' is not HASH type");
+   return KILLED;
+  }
+
+  # *************** #
+  # Dumper routine: #
+  # *************** #
+
+  # Retrieve dumper configuration:
+  my $delimiter    = $ref_gen_conf->{DATA_DUMPER}{ DELIMITER      };
+  my $epoch_format = $ref_gen_conf->{DATA_DUMPER}{ EPOCH_FORMAT   };
+
+  # Set epoch subroutine reference:
+  my $ref_epoch_sub = REF_EPOCH_SUB_CONF->{$epoch_format};
+
+  # 1. Open dumper file at output path:
+    my $file_path = join('/', ($output_path, "integrity-vertical.out"));
+    my $fh; open($fh, '>', $file_path) or die "Could not open $!";
+
+  # 2. Write title line:
+    say $fh sprintf("# > Vertical integrity information.\n".
+                    "# > Created : %s ", GetPrettyLocalDate());
+
+  # 3. Write header line:
+    # Retrieve configured satellite mask:
+    my @header_items = ( SetEpochHeaderItems($epoch_format),
+                         'SigmaScaleFactor', 'AlertLimit',
+                         'Error', 'Precision', 'MI', 'HMI', 'Available');
+    say $fh join($delimiter, @header_items);
+
+  # 4. Write data:
+    # Iterate over observation epochs:
+    for (my $i = 0; $i < scalar(@{ $ref_obs_data->{BODY} }); $i += 1)
+    {
+
+      # Point to current epoch:
+      my $ref_epoch_info = $ref_obs_data->{BODY}[$i];
+
+      # Retrieve observation epoch:
+      my $gps_epoch = $ref_epoch_info->{EPOCH};
+      my @epoch = &{$ref_epoch_sub}( $ref_epoch_info->{EPOCH} );
+
+      # Retrieve integrity information:
+      # Configured scale factor and alert limit:
+      my ( $v_scale_factor, $v_alert_limit ) =
+         ( $ref_gen_conf->{INTEGRITY}{VERTICAL}{ SIGMA_FACTOR },
+           $ref_gen_conf->{INTEGRITY}{VERTICAL}{ ALERT_LIMIT  } );
+
+      # Computed info:
+      my ( $v_error, $v_precision,
+           $v_mi_flag, $v_hmi_flag, $v_avail_flag ) =
+         ( $ref_epoch_info->{INTEGRITY_INFO}{VERTICAL}{ ERROR      },
+           $ref_epoch_info->{INTEGRITY_INFO}{VERTICAL}{ PRECISION  },
+           $ref_epoch_info->{INTEGRITY_INFO}{VERTICAL}{ MI_FLAG    },
+           $ref_epoch_info->{INTEGRITY_INFO}{VERTICAL}{ HMI_FLAG   },
+           $ref_epoch_info->{INTEGRITY_INFO}{VERTICAL}{ AVAIL_FLAG } );
+
+      my @line_items = ( @epoch,
+                         $v_scale_factor, $v_alert_limit,
+                         $v_error, $v_precision, $v_mi_flag,
+                         $v_hmi_flag, $v_avail_flag );
+
+      # Write line items:
+      say $fh join($delimiter, @line_items);
+
+    }
+
+  # 5. Close file:
+    close($fh);
 
   return TRUE;
 }
