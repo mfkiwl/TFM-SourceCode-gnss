@@ -185,6 +185,7 @@ use constant {
 };
 
 # Keys for Delta UTC parameters of navigation header:
+# TODO: Call constant properly (no UTC only)
 use constant DELTA_UTC_KEYS => qw(A0 A1 T W);
 
 # Navigation parameters per line:
