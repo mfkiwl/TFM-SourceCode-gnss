@@ -35,6 +35,7 @@ BEGIN {
                        &GPS2ToW
                        &Date2UniversalTime
                        &UniversalTime2LocalTime
+                       &ComputeTimeCorrection
                        &SECONDS_IN_DAY
                        &SECONDS_IN_HOUR
                        &SECONDS_IN_WEEK
@@ -161,6 +162,15 @@ sub UniversalTime2LocalTime {
   # Magic number '15' is the degree arc resulting from dividing 360º (whole
   # earth's circumference) between 24 hours:
   return $universal_time + $longitude/15; # [hour decimal]
+}
+
+sub ComputeTimeCorrection {
+  my ($epoch, $a0, $a1, $ref_time) = @_;
+
+  # CORR(t) = A0 + A1*deltaT; deltaT = t - ref_t;
+  my $time_corr = $a0 + $a1*($epoch - $ref_time);
+
+  return $time_corr;
 }
 
 1;
