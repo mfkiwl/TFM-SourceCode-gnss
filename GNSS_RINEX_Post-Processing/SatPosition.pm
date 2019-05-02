@@ -244,10 +244,13 @@ sub ComputeSatPosition {
                  ( $ref_gen_conf->{CARRIER_FREQUENCY}{$sat_sys}{F1},
                    $ref_gen_conf->{CARRIER_FREQUENCY}{$sat_sys}{F2} );
 
+              # TODO: include satellite system time correction
+              my $sat_sys_epoch = $obs_epoch;
+
               # Compute satellite coordinates for observation epoch:
               ($sat_status, @sat_coord) =
-                &{$ref_sat_position_sub}( $obs_epoch,
-                                          $obs_meas, $sat, $ref_sat_eph,
+                &{$ref_sat_position_sub}( $sat_sys_epoch,
+                                          $obs_meas, $ref_sat_eph,
                                           $carrier_freq_f1, $carrier_freq_f2 );
             } else {
               # Satellite coordintes cannot be computed:
@@ -325,7 +328,7 @@ sub SelectNavigationBlock {
 }
 
 sub ComputeSatelliteCoordinates {
-  my ($epoch, $obs_meas, $sat, $ref_eph,
+  my ($epoch, $obs_meas, $ref_eph,
       $carrier_freq_f1, $carrier_freq_f2) = @_;
 
   # Init algorithm status:
@@ -458,7 +461,7 @@ sub ComputeSatelliteCoordinates {
 }
 
 sub ComputeSatelliteCoordinatesTest {
-  my ($epoch, undef, $sat, $ref_eph, undef, undef) = @_;
+  my ($epoch, undef, $ref_eph, undef, undef) = @_;
 
   # NOTE: this sub does not need raw measurement and f1 and f2 carrier
   #       frequencies...
