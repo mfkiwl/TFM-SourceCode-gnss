@@ -48,8 +48,9 @@ use strict;   # enables strict syntax...
 use Math::Trig;                         # load trigonometry methods...
 use Scalar::Util qq(looks_like_number); # scalar utility...
 
-use feature qq(say); # print adding carriage return...
-use Data::Dumper;    # enables pretty print...
+use Data::Dumper;       # enables pretty print...
+use feature qq(say);    # print adding carriage return...
+use feature qq(switch); # switch case...
 
 # Import configuration and common interface module:
 use lib SRC_ROOT_PATH;
@@ -86,6 +87,7 @@ use constant {
   WARN_OBS_NOT_VALID     => 90301,
   WARN_NO_SAT_NAVIGATION => 90303,
   WARN_NO_SAT_EPH_FOUND  => 90304,
+  WARN_BAD_SAT_SYS_TIME_CORR => 90305,
   ERR_WRONG_SAT_POSITION_CODE => 30301,
 };
 
@@ -245,7 +247,23 @@ sub ComputeSatPosition {
                    $ref_gen_conf->{CARRIER_FREQUENCY}{$sat_sys}{F2} );
 
               # TODO: include satellite system time correction
-              my $sat_sys_epoch = $obs_epoch;
+              my $sat_sys_epoch =
+                ApplySatSysTimeCorrection( $ref_sat_sys_nav->{$sat_sys},
+                                           $sat_sys, $obs_epoch );
+
+              # Raise warning in case of bad time correction computation:
+              if ( $sat_sys_epoch == KILLED ) {
+                RaiseWarning($fh_log, WARN_BAD_SAT_SYS_TIME_CORR,
+                  "Satellite system, '$sat_sys' time correction, could not ".
+                  "be properly computed.".
+                  "This may lead to bad positioning performances!",
+                  "Common reasons for this issue are:",
+                  "\tUnrecognized satellite system.",
+                  "\tNecessary 'TIME SYSTEM CORR' parameters are not present ".
+                  "in the navigation file header.");
+                # Sat sys epoch is reset to observation epoch:
+                $sat_sys_epoch = $obs_epoch;
+              }
 
               # Compute satellite coordinates for observation epoch:
               ($sat_status, @sat_coord) =
@@ -325,6 +343,47 @@ sub SelectNavigationBlock {
   # If no ephemerids have met the condition,
   # the subroutine returns a negative answer:
   return FALSE;
+}
+
+sub ApplySatSysTimeCorrection {
+  my ($ref_nav_info, $sat_sys, $epoch) = @_;
+
+  # Init satellite system epoch:
+  my $sat_sys_epoch;
+
+  # Switch case for satellite system:
+  given ( $sat_sys ) {
+
+    # For GPS case, it is assumed that
+    # input epoch is given in GPS time
+    when ($_ eq RINEX_GPS_ID) {
+      $sat_sys_epoch = $epoch;
+    } # end when GPS
+
+    # For GALILEO case, the GPS to GAL time correction is appllied.
+    # 'GPGA' entry in navigation rinex must be deined. Otherwise, time
+    # correction will not be computed:
+    when ($_ eq RINEX_GAL_ID) {
+      if ( defined $ref_nav_info->{HEAD}{GPGA} ) {
+        $sat_sys_epoch =
+          $sat_sys_epoch +
+          ComputeTimeCorrection( $epoch,
+                                 $ref_nav_info->{HEAD}{GPGA}{ A0 },
+                                 $ref_nav_info->{HEAD}{GPGA}{ A1 },
+                                 $ref_nav_info->{HEAD}{GPGA}{  T } );
+      } else {
+        $sat_sys_epoch = KILLED;
+      }
+    } # end when GAL
+
+    # For the rest of the cases, GRPP version does not support
+    # other satellite system time trasformations:
+    default { $sat_sys_epoch = KILLED; }
+
+  } # end given $sat_sys
+
+  # Return applied time correction:
+  return $sat_sys_epoch;
 }
 
 sub ComputeSatelliteCoordinates {
