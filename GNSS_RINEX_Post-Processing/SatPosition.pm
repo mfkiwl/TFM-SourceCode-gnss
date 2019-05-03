@@ -246,7 +246,8 @@ sub ComputeSatPosition {
                  ( $ref_gen_conf->{CARRIER_FREQUENCY}{$sat_sys}{F1},
                    $ref_gen_conf->{CARRIER_FREQUENCY}{$sat_sys}{F2} );
 
-              # TODO: include satellite system time correction
+              # TODO: Transform GPS epoch into ToW format.
+              #       ToW will be inputed in ApplySatSysTimeCorrection
               my $sat_sys_epoch =
                 ApplySatSysTimeCorrection( $ref_sat_sys_nav->{$sat_sys},
                                            $sat_sys, $obs_epoch );
@@ -273,7 +274,7 @@ sub ComputeSatPosition {
             } else {
               # Satellite coordintes cannot be computed:
               $sat_status = FALSE;
-              @sat_coord  = (0, 0, 0, 0);
+              @sat_coord  = (NULL_DATA, NULL_DATA, NULL_DATA, NULL_DATA);
             } # end unless $obs_meas eq NULL_OBSERVATION
 
           } # end unless ($sat_eph_epoch != FALSE)
@@ -405,6 +406,7 @@ sub ComputeSatelliteCoordinates {
   # Init algorithm status:
   my $status = FALSE;
 
+  # TODO: this transformation should be done outside the sub
   # Transform target epoch into GPS time of week format:
   my ( $wn, $dn, $tow ) = GPS2ToW($epoch);
 
