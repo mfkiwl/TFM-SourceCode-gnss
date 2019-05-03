@@ -339,7 +339,7 @@ sub ComputeRecPosition {
         } else {
 
           # Fill position solution hash with null info:
-          FillSolutionDataHash( $ref_gen_conf, $ref_epoch_info, $iter_status,
+          FillSolutionDataHash( $ref_epoch_info, $iter_status,
                                 [NULL_DATA, NULL_DATA, NULL_DATA], NULL_DATA,
                                 [NULL_DATA, NULL_DATA, NULL_DATA], NULL_DATA,
                                 [NULL_DATA, NULL_DATA, NULL_DATA],
@@ -349,6 +349,8 @@ sub ComputeRecPosition {
           # NOTE: integrity mode must be activated on configuration
           if ( $ref_gen_conf->{INTEGRITY}{STATUS} ) {
             FillIntegrityInfoHash( $ref_gen_conf,
+                                   NULL_DATA, NULL_DATA,
+                                   NULL_DATA, NULL_DATA,
                                    [NULL_DATA, NULL_DATA, NULL_DATA],
                                    [NULL_DATA, NULL_DATA, NULL_DATA] );
           }
