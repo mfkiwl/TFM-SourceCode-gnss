@@ -365,12 +365,24 @@ sub ApplySatSysTimeCorrection {
     # correction will not be computed:
     when ($_ eq RINEX_GAL_ID) {
       if ( defined $ref_nav_info->{HEAD}{GPGA} ) {
-        $sat_sys_epoch =
-          $sat_sys_epoch +
+
+        # say "GAL Rinex nav file GPGA header parameters:";
+        # print Dumper $ref_nav_info->{HEAD}{GPGA};
+
+        my $gal_sys_time_corr =
           ComputeTimeCorrection( $epoch,
                                  $ref_nav_info->{HEAD}{GPGA}{ A0 },
                                  $ref_nav_info->{HEAD}{GPGA}{ A1 },
                                  $ref_nav_info->{HEAD}{GPGA}{  T } );
+
+        $sat_sys_epoch = $epoch + $gal_sys_time_corr;
+
+        # PrintBulletedInfo(*STDOUT, "  - ",
+        #   "Observation epoch = $epoch s -> ".BuildDateString(GPS2Date($epoch)),
+        #   "GAL time system correction = $gal_sys_time_corr s",
+        #   "ep + gal_sys_time_corr = $epoch + $gal_sys_time_corr = $sat_sys_epoch s -> ".
+        #   BuildDateString(GPS2Date($sat_sys_epoch)));
+
       } else {
         $sat_sys_epoch = KILLED;
       }
