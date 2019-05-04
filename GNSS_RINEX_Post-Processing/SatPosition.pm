@@ -421,9 +421,9 @@ sub ComputeSatelliteCoordinates {
     elsif ($time_emis1 < -1*SECONDS_IN_WEEK/2) {$time_emis1 += SECONDS_IN_WEEK;}
 
     # First satellite clock estimation:
-    my ($a0, $a1, $a2) = ( $ref_eph->{SV_CLOCK_BIAS},
-                           $ref_eph->{SV_CLOCK_DRIFT},
-                           $ref_eph->{SV_CLOCK_RATE} );
+    my ($a0, $a1, $a2) = ( $ref_eph->{SV_CLK_BIAS},
+                           $ref_eph->{SV_CLK_DRIFT},
+                           $ref_eph->{SV_CLK_RATE} );
 
     my $time_corr1 = $a0 + $a1*$time_emis1 + $a2*$time_emis1**2;
 

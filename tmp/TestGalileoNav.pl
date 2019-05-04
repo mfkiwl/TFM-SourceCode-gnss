@@ -52,9 +52,9 @@ for my $gal_sat ( 'E01', 'E02' ) {
 
     # SV clock parameters:
     my $ref_sv_clk_parameters = [
-      $ref_nav_rinex->{BODY}{$gal_sat}{$eph_epoch}{ SV_CLOCK_BIAS  }*1,
-      $ref_nav_rinex->{BODY}{$gal_sat}{$eph_epoch}{ SV_CLOCK_DRIFT }*1,
-      $ref_nav_rinex->{BODY}{$gal_sat}{$eph_epoch}{ SV_CLOCK_RATE  }*1
+      $ref_nav_rinex->{BODY}{$gal_sat}{$eph_epoch}{ SV_CLK_BIAS  }*1,
+      $ref_nav_rinex->{BODY}{$gal_sat}{$eph_epoch}{ SV_CLK_DRIFT }*1,
+      $ref_nav_rinex->{BODY}{$gal_sat}{$eph_epoch}{ SV_CLK_RATE  }*1
     ];
 
     # Data source --> integer format:

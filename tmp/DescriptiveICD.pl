@@ -324,9 +324,9 @@
 %sat_ephemerids  = ( $epoch => \%ephemerids_data, '[...]' ); # not fixed length
 %ephemerids_data = (
   # Satellite's cock parameters:
-  SV_CLOCK_BIAS  => $sv_clock_bias,  # satellite's clock bias [s]
-  SV_CLOCK_DRIFT => $sv_clock_drift, # satellite's clock drift [s/s]
-  SV_CLOCK_RATE  => $sv_clock_rate,  # satellite's clock drift rate [s/s^2]
+  SV_CLK_BIAS  => $sv_clock_bias,  # satellite's clock bias [s]
+  SV_CLK_DRIFT => $sv_clock_drift, # satellite's clock drift [s/s]
+  SV_CLK_RATE  => $sv_clock_rate,  # satellite's clock drift rate [s/s^2]
 
   # Issues of data:
   IODE => $iode, # issue of data (ephemerids) [N/A]
