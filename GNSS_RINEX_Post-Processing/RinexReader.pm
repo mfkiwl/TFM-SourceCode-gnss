@@ -198,7 +198,21 @@ use constant NAV_GPS_PRM_LINE_5 => qw(IO CRC OMEGA OMEGA_DOT);
 use constant NAV_GPS_PRM_LINE_6 => qw(IDOT L2_CODE_CHANNEL GPS_WEEK L2_P_FLAG);
 use constant NAV_GPS_PRM_LINE_7 => qw(SV_ACC SV_HEALTH TGD IODC);
 use constant NAV_GPS_PRM_LINE_8 => qw(TRANS_TIME FIT_INTERVAL);
+# For GAL navigation rinex:
+use constant NAV_GAL_PRM_LINE_1 => qw(SV_CLK_BIAS SV_CLK_DRIFT SV_CLK_RATE);
+use constant NAV_GAL_PRM_LINE_2 => qw(IODE CRS DELTA_N MO);
+use constant NAV_GAL_PRM_LINE_3 => qw(CUC ECCENTRICITY CUS SQRT_A);
+use constant NAV_GAL_PRM_LINE_4 => qw(TOE CIC OMEGA_0 CIS);
+use constant NAV_GAL_PRM_LINE_5 => qw(IO CRC OMEGA OMEGA_DOT);
+use constant NAV_GAL_PRM_LINE_6 => qw(IDOT DATA_SOURCE GAL_WEEK SPARE);
+use constant NAV_GAL_PRM_LINE_7 => qw(SISA SV_HEALTH BGD_E5A_E1 BGD_E5B_E1);
+use constant NAV_GAL_PRM_LINE_8 => qw(TRANS_TIME);
 
+# Satellite system hash holding sub reference to read navigation block:
+use constant REF_READ_EPH_BLOCK => {
+  RINEX_GPS_ID => \&ReadGPSNavigationBlock,
+  RINEX_GAL_ID => \&ReadGALNavigationBlock,
+};
 
 # Anciliary constants:
 # RINEX properties:
@@ -769,7 +783,8 @@ sub ReadNavigationRinex {
     {
       # Read navigation block:
       my ($epoch, $sat, $ref_nav_prm) =
-        ReadGPSNavigationBlock($sat_sys, $buffer, $first_line_temp, $line_temp);
+        &{ REF_READ_EPH_BLOCK->{$sat_sys} }( $buffer,
+                                             $first_line_temp, $line_temp );
 
       # Fill navigation body hash:
       $ref_nav_body->{$sat}{$epoch} = $ref_nav_prm;
@@ -1054,7 +1069,7 @@ sub ReadTimeSystemCorr {
 }
 
 sub ReadGPSNavigationBlock {
-  my ($sat_sys, $buffer, $first_line_temp, $line_temp, $fh_log) = @_;
+  my ($buffer, $first_line_temp, $line_temp) = @_;
 
   # Before reading the navigation bock, is necessary to convert the numbers
   # into scientific notation:
@@ -1096,6 +1111,83 @@ sub ReadGPSNavigationBlock {
 
   # Return epoch, satellite PRN and hash with retreived parameters:
   return ($epoch, $sat, \%nav_prm_hash);
+}
+
+sub ReadGALNavigationBlock {
+  my ($buffer, $first_line_temp, $line_temp) = @_;
+
+  # Before reading the navigation bock, is necessary to convert the numbers
+  # into scientific notation:
+  $buffer =~ s/D/e/g;
+
+  # Read navigation block:
+  my @line_buffer = split(/\n/, $buffer);
+
+ # First navigation line:
+  my ($sat, $yyyy, $mm, $dd, $hh, $mi, $ss, $clk_bias, $clk_drift, $clk_rate)
+                                    = unpack($first_line_temp, $line_buffer[0]);
+  # Rest of navigation lines:
+  my ($iode, $crs, $delta_n, $mo)        = unpack($line_temp, $line_buffer[1]);
+  my ($cuc, $ecc, $cus, $sqrt_a)         = unpack($line_temp, $line_buffer[2]);
+  my ($toe, $cic, $omega_0, $cis)        = unpack($line_temp, $line_buffer[3]);
+  my ($cio, $crc, $omega, $omega_dot)    = unpack($line_temp, $line_buffer[4]);
+  my ($idot, $dat_src, $week, undef)     = unpack($line_temp, $line_buffer[5]);
+  my ($sisa, $sv_health, $bdg_1, $bdg_2) = unpack($line_temp, $line_buffer[6]);
+  my ($trans_time, $fit_inter, @empty)   = unpack($line_temp, $line_buffer[7]);
+
+  # Decode data source information:
+  my $ref_dat_src = DecodeGALDataSources($dat_src*1);
+
+  # Fill hash:
+  my %nav_prm_hash;
+
+  @nav_prm_hash{&NAV_GAL_PRM_LINE_1} = ($clk_bias, $clk_drift, $clk_rate);
+  @nav_prm_hash{&NAV_GAL_PRM_LINE_2} = ($iode, $crs, $delta_n, $mo);
+  @nav_prm_hash{&NAV_GAL_PRM_LINE_3} = ($cuc, $ecc, $cus, $sqrt_a);
+  @nav_prm_hash{&NAV_GAL_PRM_LINE_4} = ($toe, $cic, $omega_0, $cis);
+  @nav_prm_hash{&NAV_GAL_PRM_LINE_5} = ($cio, $crc, $omega, $omega_dot);
+  @nav_prm_hash{&NAV_GAL_PRM_LINE_6} = ($idot, $ref_dat_src, $week, undef);
+  @nav_prm_hash{&NAV_GAL_PRM_LINE_7} = ($sisa, $sv_health, $bdg_1, $bdg_2);
+  @nav_prm_hash{&NAV_GAL_PRM_LINE_8} = ($trans_time);
+
+  # Determine satellite PRN if sat ID is not provided:
+  if (looks_like_number($sat)) { $sat = sprintf("%s%02d", $sat_sys, $sat); }
+
+  # Determine epoch in GPS time format:
+  if (length($yyyy) == 2) { $yyyy += ($yyyy < 80) ? 2000 : 1900; }
+  my $epoch = Date2GPS($yyyy, $mm, $dd, $hh, $mi, $ss );
+
+  # Return epoch, satellite PRN and hash with retreived parameters:
+  return ($epoch, $sat, \%nav_prm_hash);
+}
+
+sub DecodeGALDataSources {
+  my ($int_data_source) = @_;
+
+  # Init hash to store data source info:
+  my $ref_data_source = {
+    INT => $int_data_source,
+    CORR_E5A_E1  => FALSE,
+    CORR_E5B_E1  => FALSE,
+    SOURCE_INAV_E1_B  => FALSE,
+    SOURCE_FNAV_E5A_I => FALSE,
+    SOURCE_INAV_E5B_I => FALSE,
+  };
+
+  # Data source integer to bit string transformation:
+  # NOTE: bit string is reversed to be aligned with array index order
+  my @bit_array = split('', (reverse(sprintf("%b", $int_data_source))) );
+
+  # Update status for data source information according to the bit
+  # index of each parameter:
+  $ref_data_source->{ SOURCE_INAV_E1_B  } = TRUE if $bit_array[0];
+  $ref_data_source->{ SOURCE_FNAV_E5A_I } = TRUE if $bit_array[1];
+  $ref_data_source->{ SOURCE_INAV_E5B_I } = TRUE if $bit_array[2];
+  # rest of bits are reserved ...
+  $ref_data_source->{ CORR_E5A_E1       } = TRUE if $bit_array[8];
+  $ref_data_source->{ CORR_E5B_E1       } = TRUE if $bit_array[9];
+
+  return $ref_data_source;
 }
 
 TRUE;
