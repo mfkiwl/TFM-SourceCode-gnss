@@ -192,11 +192,13 @@ use constant DELTA_UTC_KEYS => qw(A0 A1 T W);
 use constant NAV_PRM_LINE_1 => qw(SV_CLOCK_BIAS SV_CLOCK_DRIFT SV_CLOCK_RATE);
 use constant NAV_PRM_LINE_2 => qw(IODE CRS DELTA_N MO);
 use constant NAV_PRM_LINE_3 => qw(CUC ECCENTRICITY CUS SQRT_A);
-use constant NAV_PRM_LINE_4 => qw(TOE CIC OMEGA_1 CIS);
-use constant NAV_PRM_LINE_5 => qw(IO CRC OMEGA_2 OMEGA_DOT);
+use constant NAV_PRM_LINE_4 => qw(TOE CIC OMEGA_0 CIS);
+use constant NAV_PRM_LINE_5 => qw(IO CRC OMEGA OMEGA_DOT);
 use constant NAV_PRM_LINE_6 => qw(IDOT L2_CODE_CHANNEL GPS_WEEK L2_P_FLAG);
 use constant NAV_PRM_LINE_7 => qw(SV_ACC SV_HEALTH TGD IODC);
 use constant NAV_PRM_LINE_8 => qw(TRANS_TIME FIT_INTERVAL);
+
+
 
 # Anciliary constants:
 # RINEX properties:
@@ -1067,8 +1069,8 @@ sub ReadNavigationBlock {
   # Rest of navigation lines:
   my ($iode, $crs, $delta_n, $mo)       = unpack($line_temp, $line_buffer[1]);
   my ($cuc, $ecc, $cus, $sqrt_a)        = unpack($line_temp, $line_buffer[2]);
-  my ($toe, $cic, $omega_1, $cis)       = unpack($line_temp, $line_buffer[3]);
-  my ($cio, $crc, $omega_2, $omega_dot) = unpack($line_temp, $line_buffer[4]);
+  my ($toe, $cic, $omega_0, $cis)       = unpack($line_temp, $line_buffer[3]);
+  my ($cio, $crc, $omega, $omega_dot) = unpack($line_temp, $line_buffer[4]);
   my ($idot, $l2_chn, $gps_w, $l2_flag) = unpack($line_temp, $line_buffer[5]);
   my ($sv_acc, $sv_health, $tgd, $iodc) = unpack($line_temp, $line_buffer[6]);
   my ($trans_time, $fit_inter, @empty)  = unpack($line_temp, $line_buffer[7]);
@@ -1079,8 +1081,8 @@ sub ReadNavigationBlock {
   @nav_prm_hash{&NAV_PRM_LINE_1} = ($clk_bias, $clk_drift, $clk_rate);
   @nav_prm_hash{&NAV_PRM_LINE_2} = ($iode, $crs, $delta_n, $mo);
   @nav_prm_hash{&NAV_PRM_LINE_3} = ($cuc, $ecc, $cus, $sqrt_a);
-  @nav_prm_hash{&NAV_PRM_LINE_4} = ($toe, $cic, $omega_1, $cis);
-  @nav_prm_hash{&NAV_PRM_LINE_5} = ($cio, $crc, $omega_2, $omega_dot);
+  @nav_prm_hash{&NAV_PRM_LINE_4} = ($toe, $cic, $omega_0, $cis);
+  @nav_prm_hash{&NAV_PRM_LINE_5} = ($cio, $crc, $omega, $omega_dot);
   @nav_prm_hash{&NAV_PRM_LINE_6} = ($idot, $l2_chn, $gps_w, $l2_flag);
   @nav_prm_hash{&NAV_PRM_LINE_7} = ($sv_acc, $sv_health, $tgd, $iodc);
   @nav_prm_hash{&NAV_PRM_LINE_8} = ($trans_time, $fit_inter);

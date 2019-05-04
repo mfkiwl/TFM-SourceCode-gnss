@@ -263,7 +263,7 @@
     PRECISION  => $postioning_precision,
     MI_FLAG    => $misleading_info_flag,
     HMI_FLAG   => $hazardous_misleading_info_flag,
-    AVAIL_FLAG => $availability_boolean, 
+    AVAIL_FLAG => $availability_boolean,
   ),
   VERTICAL   => (
     ERROR      => $positioning_error,
@@ -346,8 +346,8 @@
     ECCENTRICITY => $eccentricity, # orbit's eccentricity [N/A]
 
     # "Omega" parameters:
-    OMEGA_1   => $omega_1,   # node's longitude at t0 [rad]
-    OMEGA_2   => $omega_2,   # perigee's argument [rad]
+    OMEGA_0   => $omega_0,   # node's longitude at t0 [rad]
+    OMEGA     => $omega,   # perigee's argument [rad]
     OMEGA_DOT => $omega_dot, # ascension's change rate [rad/s]
 
     # Anomaly parameters:

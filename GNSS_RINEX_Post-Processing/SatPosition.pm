@@ -367,9 +367,6 @@ sub ApplySatSysTimeCorrection {
     when ($_ eq RINEX_GAL_ID) {
       if ( defined $ref_nav_info->{HEAD}{GPGA} ) {
 
-        # say "GAL Rinex nav file GPGA header parameters:";
-        # print Dumper $ref_nav_info->{HEAD}{GPGA};
-
         my $gal_sys_time_corr =
           ComputeTimeCorrection( $epoch,
                                  $ref_nav_info->{HEAD}{GPGA}{ A0 },
@@ -482,7 +479,7 @@ sub ComputeSatelliteCoordinates {
                    cos($e)    - $ref_eph->{ECCENTRICITY} );
 
     # Latitude argument:
-    my $phi0 = $v + $ref_eph->{OMEGA_2}; # NOTE: OMEGA_1 or OMEGA_2 ?!
+    my $phi0 = $v + $ref_eph->{OMEGA};
 
     # Orbital correction terms:
       # NOTE: what do they mean these terms? --> physical meaning...
@@ -500,7 +497,7 @@ sub ComputeSatelliteCoordinates {
     my ( $x_op, $y_op ) = ( $rad*cos($phi), $rad*sin($phi) );
 
     # Corrected ascending node longitude:
-    my $omega = $ref_eph->{OMEGA_1} +
+    my $omega = $ref_eph->{OMEGA_0} +
                ($ref_eph->{OMEGA_DOT} - EARTH_ANGULAR_SPEED)*$time_emis -
                 EARTH_ANGULAR_SPEED*$ref_eph->{TOE};
 
@@ -576,7 +573,7 @@ sub ComputeSatelliteCoordinatesTest {
 
   # 5. Compute latitude's argument:
     # Retrieve omega --> perigee's argument
-    my $omega = $ref_eph->{OMEGA_2};
+    my $omega = $ref_eph->{OMEGA};
 
     # Auxiliar
     my $cos_2times_omega_plus_true_anomaly = cos( 2*($omega + $true_anomaly) );
@@ -602,7 +599,7 @@ sub ComputeSatelliteCoordinatesTest {
 
   # 8. Compute ascending node's longitude:
     my $lon_ascending_node =
-      ( $ref_eph->{OMEGA_1} ) +
+      ( $ref_eph->{OMEGA_0} ) +
       ( $ref_eph->{OMEGA_DOT} - EARTH_ANGULAR_SPEED  ) -
       ( $t_ref - EARTH_ANGULAR_SPEED*$ref_eph->{TOE} );
 
