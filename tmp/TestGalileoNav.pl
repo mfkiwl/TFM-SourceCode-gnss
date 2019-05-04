@@ -39,16 +39,23 @@ my $ref_nav_rinex = ReadNavigationRinex($rinex_nav_path, *STDOUT);
   };
 
 # Iterate over GAL satellites:
-for my $gal_sat ( 'E01' ) {
+for my $gal_sat ( 'E01', 'E02' ) {
 
   print "\n", LEVEL_2_DELIMITER, "\n";
   PrintComment(*STDOUT, "For GAL sat $gal_sat"); print "\n" x 1;
 
-  # ITerate over ephemerids epochs:
+  # Iterate over ephemerids epochs:
   for my $eph_epoch ( sort (keys %{ $ref_nav_rinex->{BODY}{$gal_sat} }) ) {
 
     # Ephemerids issue of data:
     my $iod = $ref_nav_rinex->{BODY}{$gal_sat}{$eph_epoch}{IODE}*1;
+
+    # SV clock parameters:
+    my $ref_sv_clk_parameters = [
+      $ref_nav_rinex->{BODY}{$gal_sat}{$eph_epoch}{ SV_CLOCK_BIAS  }*1,
+      $ref_nav_rinex->{BODY}{$gal_sat}{$eph_epoch}{ SV_CLOCK_DRIFT }*1,
+      $ref_nav_rinex->{BODY}{$gal_sat}{$eph_epoch}{ SV_CLOCK_RATE  }*1
+    ];
 
     # Data source --> integer format:
     my $gal_data_source_int =
@@ -78,6 +85,7 @@ for my $gal_sat ( 'E01' ) {
       PrintBulletedInfo(*STDOUT, '  - ',
         "Ephemerids Epoch      = $eph_epoch -> ".BuildDateString(GPS2Date($eph_epoch)),
         "Ephemerids IOD        = $iod",
+        "SV clock (a0, a1, a2) = ".sprintf("%.11f, " x 3, @{ $ref_sv_clk_parameters }),
         "GAL Data source (int) = $gal_data_source_int",
         # "GAL Data source (bin) = $gal_data_source_bin",
         "GAL Data source (bit) = ". join('', @bit_arr),
