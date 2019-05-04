@@ -330,7 +330,7 @@
 
   # Issues of data:
   IODE => $iode, # issue of data (ephemerids) [N/A]
-  IODC => $iodc, # issue of data (clock corrections) [N/A]
+  IODC => $iodc, # issue of data (clock corrections) [N/A], only for GPS
 
   # Ephemerid's epochs:
   TOE => $toe,
@@ -338,9 +338,11 @@
   TRANS_TIME => $transmission_time,
     # ephemerids transmission time (usually same as TOE) [gps week seconds]
   GPS_WEEK => $gps_week
-    # number of gps week [N/A]
+    # number of gps week [N/A], only for GPS
+  GAL_WEEK => $gal_week,
+    # number of gps week [N/A], only for GAL
   FIT_INTERVAL => $fit_interval,
-    # ephemerid's curve fit interval (0 = 4h, 1 > 4h) [hours]
+    # ephemerid's curve fit interval (0 = 4h, 1 > 4h) [hours], only for GPS
 
   # Orbital parameters:
     ECCENTRICITY => $eccentricity, # orbit's eccentricity [N/A]
@@ -369,14 +371,32 @@
     CIC  => $cic,  # inclination correction (cosine component) [rad]
     IDOT => $idot, # orbit's inclination rate [rad/s]
 
-  # Satellite's indicators:
-  SV_ACC => $sv_accuaracy,        # satellite's ephemerids accuaracy [m]
+  # Satellite and signal indicators:
   SV_HEALTH => $sv_health_status, # satellite's health status (0 = OK) [N/A]
 
-  # Signal indicators:
+  # For GPS:
   TGD             => $tgd,             # total group delay [s]
+  SV_ACC          => $sv_accuaracy,    # satellite's ephemerids accuaracy [m]
   L2_P_FLAG       => $l2_p_flag,       # L2 P code flag (0 = OK) [N/A]
   L2_CODE_CHANNEL => $l2_code_channel, # number of codes in L2 channel [N/A]
+
+  # For GALILEO:
+  SISA => $sisa,              # Signal in space accuracy [m]
+  BGD_E5A_E1  => $bdg_e5a_e1, # broadcast group delay for E5a,E1 [s]
+  BGD_E5B_E1  => $bdg_e5b_e1, # broadcast group delay for E5a,E1 [s]
+
+  # GAL data source info:
+  DATA_SOURCE => {
+    INT => $int_data_source, # integer coded data source info
+    BIT => $bit_data_source, # decoded bit string from int data source info
+    CORR_E5A_E1  => $boolean_status,
+    CORR_E5B_E1  => $boolean_status,
+    # NOTE: Sum of CORR_INFO flags must be 1
+    SOURCE_INAV_E1_B  => $boolean_status,
+    SOURCE_FNAV_E5A_I => $boolean_status,
+    SOURCE_INAV_E5B_I => $boolean_status,
+    # NOTE: Sum of SOURCE_INFO flags must be > 0 && < 3
+  },
 );
 
 # NeQuick Ionospheric model parameters:
