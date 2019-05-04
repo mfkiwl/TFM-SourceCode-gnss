@@ -1175,8 +1175,9 @@ sub DecodeGALDataSources {
   };
 
   # Data source integer to bit string transformation:
+  my $bit_string = sprintf("%b", $int_data_source);
   # NOTE: bit string is reversed to be aligned with array index order
-  my @bit_array = split('', (reverse(sprintf("%b", $int_data_source))) );
+  my @bit_array = split('', (reverse($bit_string) );
 
   # Update status for data source information according to the bit
   # index of each parameter:
@@ -1186,6 +1187,9 @@ sub DecodeGALDataSources {
   # rest of bits are reserved ...
   $ref_data_source->{ CORR_E5A_E1       } = TRUE if $bit_array[8];
   $ref_data_source->{ CORR_E5B_E1       } = TRUE if $bit_array[9];
+
+  # Finally, add bit string to hash:
+  $ref_data_source->{BIT} = $bit_string;
 
   return $ref_data_source;
 }
