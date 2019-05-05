@@ -75,9 +75,16 @@ use ErrorSource qq(:ALL); # ionosphere & troposphere correction models...
 # GLobal contants:
 # ---------------------------------------------------------------------------- #
 
+# Sat sys hash holding the sub reference for selecting the ehemerids block:
+use constant
+  REF_SUB_SELECT_EPHEMERIDS => {
+    &RINEX_GPS_ID => \&SelectGPSEphemerids,
+    &RINEX_GAL_ID => \&SelectGALEphemerids,
+  };
+
 # Hash involving relation among code and satellite position algorithm:
 use constant
-  SAT_POSITION_ALGORITHM => {
+  REF_SUB_SAT_POSITION => {
     1 => \&ComputeSatelliteCoordinates,
     2 => \&ComputeSatelliteCoordinatesTest,
   };
@@ -88,6 +95,7 @@ use constant {
   WARN_NO_SAT_NAVIGATION => 90303,
   WARN_NO_SAT_EPH_FOUND  => 90304,
   WARN_BAD_SAT_SYS_TIME_CORR => 90305,
+  WARN_SAT_POSITION_NOT_AVAILABLE => 900306,
   ERR_WRONG_SAT_POSITION_CODE => 30301,
 };
 
@@ -147,8 +155,7 @@ sub ComputeSatPosition {
   }
 
   # Select compute satellite position algorithm based on input code:
-  my $ref_sat_position_sub =
-     SAT_POSITION_ALGORITHM->{$sat_algorithm_code};
+  my $ref_sat_position_sub = REF_SUB_SAT_POSITION->{$sat_algorithm_code};
 
 
   # ****************************** #
@@ -200,7 +207,7 @@ sub ComputeSatPosition {
 
           # Set invalid data for satellite:
           $sat_status = FALSE;
-          @sat_coord  = (0, 0, 0, 0);
+          @sat_coord  = (NULL_DATA, NULL_DATA, NULL_DATA, NULL_DATA);
 
           # Raise warning and skip code to next satellite:
           RaiseWarning($fh_log, WARN_NO_SAT_NAVIGATION,
@@ -209,17 +216,16 @@ sub ComputeSatPosition {
         } else { # If satellite navigation data is available:
 
           # Determine best ephemerids to compute satellite coordinates:
-          my $sat_eph_epoch = SelectNavigationBlock(
-                                $ref_gen_conf->{EPH_TIME_THRESHOLD},
-                                $obs_epoch, sort(keys %{$ref_nav_body->{$sat}})
-                              );
+          my $sat_eph_epoch =
+             &{ REF_SUB_SELECT_EPHEMERIDS->{$sat_sys} }
+              ( $ref_gen_conf, $obs_epoch, $sat, $ref_nav_body);
 
           # Check that the ephemerids have been selected:
-          unless ($sat_eph_epoch != FALSE) {
+          if ($sat_eph_epoch == KILLED) {
 
             # Set invalid data for satellite:
             $sat_status = FALSE;
-            @sat_coord  = (0, 0, 0, 0);
+            @sat_coord  = (NULL_DATA, NULL_DATA, NULL_DATA, NULL_DATA);
 
             # Raise a warning and go to the next satellite:
             RaiseWarning($fh_log, WARN_NO_SAT_EPH_FOUND,
@@ -241,6 +247,7 @@ sub ComputeSatPosition {
             # Do not compute satellite coordinates if the observation is not
             # valid:
             unless ($obs_meas eq NULL_OBSERVATION) {
+
               # Retrieve carrier frequencies:
               my ( $carrier_freq_f1, $carrier_freq_f2 ) =
                  ( $ref_gen_conf->{CARRIER_FREQUENCY}{$sat_sys}{F1},
@@ -253,7 +260,8 @@ sub ComputeSatPosition {
                                            $sat_sys, $obs_epoch );
 
               # Raise warning in case of bad time correction computation:
-              if ( $sat_sys_epoch == KILLED ) {
+              if ( $sat_sys_epoch == KILLED )
+              {
                 RaiseWarning($fh_log, WARN_BAD_SAT_SYS_TIME_CORR,
                   "Satellite system, '$sat_sys' time correction, could not ".
                   "be properly computed.".
@@ -262,6 +270,7 @@ sub ComputeSatPosition {
                   "\tUnrecognized satellite system.",
                   "\tNecessary 'TIME SYSTEM CORR' parameters are not present ".
                   "in the navigation file header.");
+
                 # Sat sys epoch is reset to observation epoch:
                 $sat_sys_epoch = $obs_epoch;
               }
@@ -272,9 +281,16 @@ sub ComputeSatPosition {
                                           $obs_meas, $ref_sat_eph,
                                           $carrier_freq_f1, $carrier_freq_f2 );
             } else {
+
               # Satellite coordintes cannot be computed:
               $sat_status = FALSE;
               @sat_coord  = (NULL_DATA, NULL_DATA, NULL_DATA, NULL_DATA);
+
+              RaiseWarning($fh_log, WARN_SAT_POSITION_NOT_AVAILABLE,
+                "On $obs_epoch --> ".BuildDateString(GPS2Date($obs_epoch)),
+                "Satellite position for sat ID '$sat', could not be computed ".
+                "due to NULL_OBSERVATION entry from observation data.");
+
             } # end unless $obs_meas eq NULL_OBSERVATION
 
           } # end unless ($sat_eph_epoch != FALSE)
@@ -326,6 +342,7 @@ sub CountValidNavigationSat {
   return TRUE;
 }
 
+# NOTE: obsolete sub
 sub SelectNavigationBlock {
   my ($time_threshold, $obs_epoch, @sat_nav_epochs) = @_;
 
@@ -344,6 +361,56 @@ sub SelectNavigationBlock {
   # If no ephemerids have met the condition,
   # the subroutine returns a negative answer:
   return FALSE;
+}
+
+sub SelectGPSEphemerids {
+  my ($ref_gen_conf, $obs_epoch, $sat, $ref_nav_body) = @_;
+
+  # Init ephemerids epoch to be returned:
+  # NOTE: epoch is init to killed in case no valid ephemerids are found
+  my $eph_epoch = KILLED;
+
+  # Retrieve from configuration, the ephemerids time threshold:
+  my $time_threshold = $ref_gen_conf->{EPH_TIME_THRESHOLD};
+
+  # Iterate over the available ephemerid epochs:
+  for my $nav_epoch ( sort(keys(%{ $ref_nav_body->{$sat} })) ) {
+    # Check only for time threshold criteria:
+    if ( abs($obs_epoch - $nav_epoch) < $time_threshold ) {
+      $eph_epoch = $nav_epoch;
+      last; # once valid ephemerids are found, the loop is broken...
+    }
+  }
+
+  return $eph_epoch;
+}
+
+sub SelectGALEphemerids {
+  my ($ref_gen_conf, $obs_epoch, $sat, $ref_nav_body) = @_;
+
+  # Init ephemerids epoch to be returned:
+  # NOTE: epoch is init to killed in case no valid ephemerids are found
+  my $eph_epoch = KILLED;
+
+  # Retrieve from configuration: ephemerids time threshold and selected GAL
+  # signal:
+  # NOTE: signal obs is trimmed until second character
+  my $time_threshold = $ref_gen_conf->{EPH_TIME_THRESHOLD};
+  my $signal = substr($ref_gen_conf->{SELECTED_SIGNALS}{&RINEX_GAL_ID}, 0, 2);
+
+  # Iterate over the available ephemerid epochs:
+  for my $nav_epoch ( sort(keys(%{ $ref_nav_body->{$sat} })) )
+  {
+
+    # Check for time threshold criteria and GAL data source:
+    if ( abs($obs_epoch - $nav_epoch) < $time_threshold  &&
+         $ref_nav_body->{$sat}{$nav_epoch}{DATA_SOURCE}{SERVICE}{$signal} ) {
+      $eph_epoch = $nav_epoch;
+      last; # once valid ephemerids are found, the loop is broken...
+    }
+  }
+
+  return $eph_epoch;
 }
 
 sub ApplySatSysTimeCorrection {
@@ -374,12 +441,6 @@ sub ApplySatSysTimeCorrection {
                                  $ref_nav_info->{HEAD}{GPGA}{  T } );
 
         $sat_sys_epoch = $epoch + $gal_sys_time_corr;
-
-        # PrintBulletedInfo(*STDOUT, "  - ",
-        #   "Observation epoch = $epoch s -> ".BuildDateString(GPS2Date($epoch)),
-        #   "GAL time system correction = $gal_sys_time_corr s",
-        #   "ep + gal_sys_time_corr = $epoch + $gal_sys_time_corr = $sat_sys_epoch s -> ".
-        #   BuildDateString(GPS2Date($sat_sys_epoch)));
 
       } else {
         $sat_sys_epoch = KILLED;
