@@ -11,6 +11,9 @@ use feature qq(say);
 use lib $ENV{ ENV_ROOT };
 use Enviroments qq(:CONSTANTS);
 
+use lib SRC_ROOT_PATH;
+use GeneralConfiguration qq(:ALL);
+
 use lib GRPP_ROOT_PATH;
 use RinexReader qq(:ALL);
 
@@ -24,10 +27,13 @@ my $rinex_nav_path =
   '/home/ppinto/WorkArea/dat/nav/gal/ABMF00GLP_R_20190510000_01D_EN.rnx';
 
 
-my $ref_nav_rinex = ReadNavigationRinex($rinex_nav_path, *STDOUT);
+my $ref_nav_rinex =
+  ReadNavigationRinex($rinex_nav_path, RINEX_GAL_ID, *STDOUT);
 
 # print Dumper $ref_nav_rinex->{HEAD};
-# print Dumper $ref_nav_rinex->{BODY}{E01};
+print Dumper $ref_nav_rinex->{BODY}{E01};
+
+exit 0;
 
 # Bit activation for GAL data source:
   my $ref_gal_data_source_info = {
