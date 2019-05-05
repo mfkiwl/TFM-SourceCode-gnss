@@ -389,13 +389,20 @@
   DATA_SOURCE => {
     INT => $int_data_source, # integer coded data source info
     BIT => $bit_data_source, # decoded bit string from int data source info
-    CORR_E5A_E1  => $boolean_status,
-    CORR_E5B_E1  => $boolean_status,
-    # NOTE: Sum of CORR_INFO flags must be 1
-    SOURCE_INAV_E1_B  => $boolean_status,
-    SOURCE_FNAV_E5A_I => $boolean_status,
-    SOURCE_INAV_E5B_I => $boolean_status,
-    # NOTE: Sum of SOURCE_INFO flags must be > 0 && < 3
+    SERVICE => {
+      C1 => $boolean_status, # = CORRECTION->E5B_E1
+      C5 => $boolean_status, # = CORRECTION->EAB_E1
+      C7 => $boolean_status, # = CORRECTION->E5B_E1
+    },
+    SOURCE => {
+      INAV_E1_B  => $boolean_status,
+      FNAV_E5A_I => $boolean_status,
+      INAV_E5B_I => $boolean_status,
+    }, # NOTE: Sum of SOURCE_INFO flags must be > 0 && < 3
+    CORRECTION => {
+      E5A_E1  => $boolean_status,
+      E5B_E1  => $boolean_status,
+    }, # NOTE: Sum of CORR_INFO flags must be 1
   },
 );
 
