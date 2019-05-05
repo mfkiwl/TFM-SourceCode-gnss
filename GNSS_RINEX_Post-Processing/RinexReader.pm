@@ -1169,26 +1169,43 @@ sub DecodeGALDataSources {
   # Init hash to store data source info:
   my $ref_data_source = {
     INT => $int_data_source,
-    CORR_E5A_E1  => FALSE,
-    CORR_E5B_E1  => FALSE,
-    SOURCE_INAV_E1_B  => FALSE,
-    SOURCE_FNAV_E5A_I => FALSE,
-    SOURCE_INAV_E5B_I => FALSE,
+    BIT => 0,
+    SERVICE => {
+      C1 => FALSE,
+      C5 => FALSE,
+      C7 => FALSE,
+    },
+    SOURCE => {
+      INAV_E1_B  => FALSE,
+      FNAV_E5A_I => FALSE,
+      INAV_E5B_I => FALSE,
+    },
+    CORRECTION => {
+      E5A_E1  => FALSE,
+      E5B_E1  => FALSE,
+    }
   };
 
   # Data source integer to bit string transformation:
-  my $bit_string = sprintf("%b", $int_data_source);
+  my $bit_string = sprintf("%010b", $int_data_source);
   # NOTE: bit string is reversed to be aligned with array index order
   my @bit_array = split('', reverse($bit_string) );
 
   # Update status for data source information according to the bit
   # index of each parameter:
-  $ref_data_source->{ SOURCE_INAV_E1_B  } = TRUE if $bit_array[0];
-  $ref_data_source->{ SOURCE_FNAV_E5A_I } = TRUE if $bit_array[1];
-  $ref_data_source->{ SOURCE_INAV_E5B_I } = TRUE if $bit_array[2];
+  $ref_data_source->{SOURCE}{ INAV_E1_B  } = $bit_array[0];
+  $ref_data_source->{SOURCE}{ FNAV_E5A_I } = $bit_array[1];
+  $ref_data_source->{SOURCE}{ INAV_E5B_I } = $bit_array[2];
   # rest of bits are reserved ...
-  $ref_data_source->{ CORR_E5A_E1       } = TRUE if $bit_array[8];
-  $ref_data_source->{ CORR_E5B_E1       } = TRUE if $bit_array[9];
+  $ref_data_source->{CORRECTION}{ E5A_E1 } = $bit_array[8];
+  $ref_data_source->{CORRECTION}{ E5B_E1 } = $bit_array[9];
+
+  # Add RINEX signal active service info:
+  # NOTE: service is available as long as the corrections
+  #       are flaged for the relevant signal
+  $ref_data_source->{SERVICE}{C1} = ( $bit_array[9] ); # E1
+  $ref_data_source->{SERVICE}{C5} = ( $bit_array[8] ); # E5a
+  $ref_data_source->{SERVICE}{C7} = ( $bit_array[9] ); # E5b
 
   # Finally, add bit string to hash:
   $ref_data_source->{BIT} = $bit_string;
