@@ -94,8 +94,8 @@ use constant {
   WARN_OBS_NOT_VALID     => 90301,
   WARN_NO_SAT_NAVIGATION => 90303,
   WARN_NO_SAT_EPH_FOUND  => 90304,
-  WARN_BAD_SAT_SYS_TIME_CORR => 90305,
   WARN_SAT_POSITION_NOT_AVAILABLE => 900306,
+  ERR_BAD_SAT_SYS_TIME_CORR => 90305,
   ERR_WRONG_SAT_POSITION_CODE => 30301,
 };
 
@@ -248,36 +248,37 @@ sub ComputeSatPosition {
             # valid:
             unless ($obs_meas eq NULL_OBSERVATION) {
 
-              # Retrieve carrier frequencies:
-              my ( $carrier_freq_f1, $carrier_freq_f2 ) =
-                 ( $ref_gen_conf->{CARRIER_FREQUENCY}{$sat_sys}{F1},
-                   $ref_gen_conf->{CARRIER_FREQUENCY}{$sat_sys}{F2} );
+              # Observation epoch is trasnformed into time of week format:
+              # NOTE: it is assumed that obervation epoch is given in GPST
+              my ($gps_week, $gps_dow, $gps_tow) = GPS2ToW( $obs_epoch );
 
-              # TODO: Transform GPS epoch into ToW format.
-              #       ToW will be inputed in ApplySatSysTimeCorrection
-              my $sat_sys_epoch =
-                ApplySatSysTimeCorrection( $ref_sat_sys_nav->{$sat_sys},
-                                           $sat_sys, $obs_epoch );
+              my $sat_sys_tow =
+                 ApplySatSysTimeCorrection( $ref_sat_sys_nav->{$sat_sys}{HEAD},
+                                            $ref_sat_eph, $sat_sys, $gps_tow );
 
               # Raise warning in case of bad time correction computation:
-              if ( $sat_sys_epoch == KILLED )
+              if ( $sat_sys_tow == KILLED )
               {
-                RaiseWarning($fh_log, WARN_BAD_SAT_SYS_TIME_CORR,
+                RaiseError($fh_log, ERR_BAD_SAT_SYS_TIME_CORR,
                   "Satellite system, '$sat_sys' time correction, could not ".
-                  "be properly computed.".
-                  "This may lead to bad positioning performances!",
+                  "be properly computed.",
                   "Common reasons for this issue are:",
                   "\tUnrecognized satellite system.",
                   "\tNecessary 'TIME SYSTEM CORR' parameters are not present ".
                   "in the navigation file header.");
 
-                # Sat sys epoch is reset to observation epoch:
-                $sat_sys_epoch = $obs_epoch;
+                # ComputeSatPosition sub is aborted:
+                return KILLED;
               }
+
+              # Retrieve carrier frequencies:
+              my ( $carrier_freq_f1, $carrier_freq_f2 ) =
+                 ( $ref_gen_conf->{CARRIER_FREQUENCY}{$sat_sys}{F1},
+                   $ref_gen_conf->{CARRIER_FREQUENCY}{$sat_sys}{F2} );
 
               # Compute satellite coordinates for observation epoch:
               ($sat_status, @sat_coord) =
-                &{$ref_sat_position_sub}( $sat_sys_epoch,
+                &{$ref_sat_position_sub}( $sat_sys_tow,
                                           $obs_meas, $ref_sat_eph,
                                           $carrier_freq_f1, $carrier_freq_f2 );
             } else {
@@ -342,27 +343,6 @@ sub CountValidNavigationSat {
   return TRUE;
 }
 
-# NOTE: obsolete sub
-sub SelectNavigationBlock {
-  my ($time_threshold, $obs_epoch, @sat_nav_epochs) = @_;
-
-  # Init as undefined the selected navigation epoch:
-  my $selected_nav_epoch;
-
-  # Iterate over the ephemerids epochs:
-  for my $nav_epoch (@sat_nav_epochs)
-  {
-    # The ephemerids epoch is selected if the time threshold is acomplished:
-    if ( abs($obs_epoch - $nav_epoch) < $time_threshold ) {
-      return $nav_epoch;
-    }
-  }
-
-  # If no ephemerids have met the condition,
-  # the subroutine returns a negative answer:
-  return FALSE;
-}
-
 sub SelectGPSEphemerids {
   my ($ref_gen_conf, $obs_epoch, $sat, $ref_nav_body) = @_;
 
@@ -413,60 +393,60 @@ sub SelectGALEphemerids {
   return $eph_epoch;
 }
 
+# TODO: give a tough about making independent GPS and GAL subs and then call
+#       them by reference
 sub ApplySatSysTimeCorrection {
-  my ($ref_nav_info, $sat_sys, $epoch) = @_;
+  my ($ref_nav_header, $ref_sat_eph, $sat_sys, $gps_tow) = @_;
 
-  # Init satellite system epoch:
-  my $sat_sys_epoch;
+  # Init satellite system time of week:
+  my $sat_sys_tow;
 
   # Switch case for satellite system:
   given ( $sat_sys ) {
 
     # For GPS case, it is assumed that
-    # input epoch is given in GPS time
+    # input ToW is given in GPS time
     when ($_ eq RINEX_GPS_ID) {
-      $sat_sys_epoch = $epoch;
+      $sat_sys_tow = $gps_tow;
     } # end when GPS
 
     # For GALILEO case, the GPS to GAL time correction is appllied.
     # 'GPGA' entry in navigation rinex must be deined. Otherwise, time
     # correction will not be computed:
     when ($_ eq RINEX_GAL_ID) {
-      if ( defined $ref_nav_info->{HEAD}{GPGA} ) {
+      if ( defined $ref_nav_header->{GPGA} ) {
 
-        my $gal_sys_time_corr =
-          ComputeTimeCorrection( $epoch,
-                                 $ref_nav_info->{HEAD}{GPGA}{ A0 },
-                                 $ref_nav_info->{HEAD}{GPGA}{ A1 },
-                                 $ref_nav_info->{HEAD}{GPGA}{  T } );
+        my $gps_to_gal_time_corr =
+          ComputeSatSysTimeCorrection( $gps_tow,
+                                       $ref_sat_eph->{GAL_WEEK},
+                                       $ref_nav_header->{GPGA}{ A0 },
+                                       $ref_nav_header->{GPGA}{ A1 },
+                                       $ref_nav_header->{GPGA}{  T },
+                                       $ref_nav_header->{GPGA}{  W }, );
 
-        $sat_sys_epoch = $epoch + $gal_sys_time_corr;
+        $sat_sys_tow = $gps_tow + $gps_to_gal_time_corr;
 
       } else {
-        $sat_sys_epoch = KILLED;
+        $sat_sys_tow = KILLED;
       }
     } # end when GAL
 
     # For the rest of the cases, GRPP version does not support
     # other satellite system time trasformations:
-    default { $sat_sys_epoch = KILLED; }
+    default { $sat_sys_tow = KILLED; }
 
   } # end given $sat_sys
 
   # Return applied time correction:
-  return $sat_sys_epoch;
+  return $sat_sys_tow;
 }
 
 sub ComputeSatelliteCoordinates {
-  my ($epoch, $obs_meas, $ref_eph,
+  my ($tow, $obs_meas, $ref_eph,
       $carrier_freq_f1, $carrier_freq_f2) = @_;
 
   # Init algorithm status:
   my $status = FALSE;
-
-  # TODO: this transformation should be done outside the sub
-  # Transform target epoch into GPS time of week format:
-  my ( $wn, $dn, $tow ) = GPS2ToW($epoch);
 
   # ************************** #
   # Emission time computation: #
@@ -592,7 +572,7 @@ sub ComputeSatelliteCoordinates {
 }
 
 sub ComputeSatelliteCoordinatesTest {
-  my ($epoch, undef, $ref_eph, undef, undef) = @_;
+  my ($tow, undef, $ref_eph, undef, undef) = @_;
 
   # NOTE: this sub does not need raw measurement and f1 and f2 carrier
   #       frequencies...
@@ -601,16 +581,13 @@ sub ComputeSatelliteCoordinatesTest {
   my $status = FALSE;
   my ($x_sat, $y_sat, $z_sat, $time_corr);
 
-  # NOTE: By the movement, time correction will be init but not computed...
+  # NOTE: By the moment, time correction will be init but not computed...
 
   # 1. Compute the time from the ephemrids reference epoch:
-    # a. Transform input gps epoch into gps format:
-    my ($week, $day, $tow) = GPS2ToW($epoch);
-
-    # b. Compute time difference:
+    # a. Compute time difference:
     my $t_ref = $tow - $ref_eph->{TOE};
 
-    # 3. Interpolation protection:
+    # b. Interpolation protection:
     $t_ref -= 604800 if ($t_ref >  302400);
     $t_ref += 604800 if ($t_ref < -302400);
 
