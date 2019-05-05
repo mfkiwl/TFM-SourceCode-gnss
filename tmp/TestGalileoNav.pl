@@ -33,7 +33,14 @@ my $ref_nav_rinex =
 # print Dumper $ref_nav_rinex->{HEAD};
 print Dumper $ref_nav_rinex->{BODY}{E01};
 
+for ( sort(keys %{ $ref_nav_rinex->{BODY}{E01} }) ) {
+  print "\n" x 1;
+  PrintComment(*STDOUT, "On ".BuildDateString(GPS2Date($_)).", for sat E01");
+  print Dumper $ref_nav_rinex->{BODY}{E01}{$_}{DATA_SOURCE};
+}
+
 exit 0;
+
 
 # Bit activation for GAL data source:
   my $ref_gal_data_source_info = {
@@ -45,7 +52,7 @@ exit 0;
   };
 
 # Iterate over GAL satellites:
-for my $gal_sat ( 'E01', 'E02' ) {
+for my $gal_sat ( 'E01' ) {
 
   print "\n", LEVEL_2_DELIMITER, "\n";
   PrintComment(*STDOUT, "For GAL sat $gal_sat"); print "\n" x 1;
