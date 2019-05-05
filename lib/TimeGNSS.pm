@@ -35,7 +35,7 @@ BEGIN {
                        &GPS2ToW
                        &Date2UniversalTime
                        &UniversalTime2LocalTime
-                       &ComputeTimeCorrection
+                       &ComputeSatSysTimeCorrection
                        &SECONDS_IN_DAY
                        &SECONDS_IN_HOUR
                        &SECONDS_IN_WEEK
@@ -164,11 +164,10 @@ sub UniversalTime2LocalTime {
   return $universal_time + $longitude/15; # [hour decimal]
 }
 
-sub ComputeTimeCorrection {
-  my ($epoch, $a0, $a1, $ref_time) = @_;
+sub ComputeSatSysTimeCorrection {
+  my ($tow, $week, $a0, $a1, $tow_0, $week_0) = @_;
 
-  # CORR(t) = A0 + A1*deltaT; deltaT = t - ref_t;
-  my $time_corr = $a0 + $a1*($epoch - $ref_time);
+  my $time_corr = $a0 + $a1*($tow - $tow_0 + SECONDS_IN_WEEK*($week - $week_0));
 
   return $time_corr;
 }
