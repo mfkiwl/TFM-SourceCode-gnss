@@ -210,8 +210,8 @@ use constant NAV_GAL_PRM_LINE_8 => qw(TRANS_TIME);
 
 # Satellite system hash holding sub reference to read navigation block:
 use constant REF_READ_EPH_BLOCK => {
-  RINEX_GPS_ID => \&ReadGPSNavigationBlock,
-  RINEX_GAL_ID => \&ReadGALNavigationBlock,
+  &RINEX_GPS_ID => \&ReadGPSNavigationBlock,
+  &RINEX_GAL_ID => \&ReadGALNavigationBlock,
 };
 
 # Anciliary constants:
@@ -736,6 +736,8 @@ sub ReadObservationRinexV3 {
 
 sub ReadNavigationRinex {
   my ($file_path, $sat_sys, $fh_log) = @_;
+  # NOTE: with this iterface, the sub is not prepared for reading mixed
+  #       sat sys navigation files...
 
   # Init navigation body hash to fill:
   my %nav_body_hash; my $ref_nav_body = \%nav_body_hash;
@@ -1103,7 +1105,7 @@ sub ReadGPSNavigationBlock {
   @nav_prm_hash{&NAV_GPS_PRM_LINE_8} = ($trans_time, $fit_inter);
 
   # Determine satellite PRN:
-  if (looks_like_number($sat)) { $sat = sprintf("%s%02d", $sat_sys, $sat); }
+  if (looks_like_number($sat)) { $sat = sprintf("%s%02d", RINEX_GPS_ID, $sat); }
 
   # Determine epoch in GPS time format:
   if (length($yyyy) == 2) { $yyyy += ($yyyy < 80) ? 2000 : 1900; }
@@ -1151,7 +1153,7 @@ sub ReadGALNavigationBlock {
   @nav_prm_hash{&NAV_GAL_PRM_LINE_8} = ($trans_time);
 
   # Determine satellite PRN if sat ID is not provided:
-  if (looks_like_number($sat)) { $sat = sprintf("%s%02d", $sat_sys, $sat); }
+  if (looks_like_number($sat)) { $sat = sprintf("%s%02d", RINEX_GAL_ID, $sat); }
 
   # Determine epoch in GPS time format:
   if (length($yyyy) == 2) { $yyyy += ($yyyy < 80) ? 2000 : 1900; }
@@ -1177,7 +1179,7 @@ sub DecodeGALDataSources {
   # Data source integer to bit string transformation:
   my $bit_string = sprintf("%b", $int_data_source);
   # NOTE: bit string is reversed to be aligned with array index order
-  my @bit_array = split('', (reverse($bit_string) );
+  my @bit_array = split('', reverse($bit_string) );
 
   # Update status for data source information according to the bit
   # index of each parameter:
