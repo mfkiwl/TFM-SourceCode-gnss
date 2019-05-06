@@ -82,11 +82,11 @@ use constant
     &RINEX_GAL_ID => \&SelectGALEphemerids,
   };
 
-# Hash involving relation among code and satellite position algorithm:
+# Sat sys hash holding sub reference for computing satellite coordinates
 use constant
   REF_SUB_SAT_POSITION => {
-    1 => \&ComputeSatelliteCoordinates,
-    2 => \&ComputeSatelliteCoordinatesTest,
+    &RINEX_GPS_ID => \&ComputeGPSSatelliteCoordinates,
+    &RINEX_GAL_ID => \&ComputeGALSatelliteCoordinates,
   };
 
 # Module specific warning codes:
@@ -153,9 +153,6 @@ sub ComputeSatPosition {
       ReadNavigationRinex( $ref_gen_conf->{RINEX_NAV_PATH}{$sat_sys},
                            $sat_sys, $fh_log );
   }
-
-  # Select compute satellite position algorithm based on input code:
-  my $ref_sat_position_sub = REF_SUB_SAT_POSITION->{$sat_algorithm_code};
 
 
   # ****************************** #
@@ -252,6 +249,11 @@ sub ComputeSatPosition {
               # NOTE: it is assumed that obervation epoch is given in GPST
               my ($gps_week, $gps_dow, $gps_tow) = GPS2ToW( $obs_epoch );
 
+              # Navigation ephemerids epoch is also transofmed into ToW
+              # format:
+              my ($nav_week, $nav_dow, $nav_tow) = GPS2ToW( $sat_eph_epoch );
+
+              # Apply satellite system time correction:
               my $sat_sys_tow =
                  ApplySatSysTimeCorrection( $ref_sat_sys_nav->{$sat_sys}{HEAD},
                                             $ref_sat_eph, $sat_sys, $gps_tow );
@@ -278,9 +280,11 @@ sub ComputeSatPosition {
 
               # Compute satellite coordinates for observation epoch:
               ($sat_status, @sat_coord) =
-                &{$ref_sat_position_sub}( $sat_sys_tow,
-                                          $obs_meas, $ref_sat_eph,
-                                          $carrier_freq_f1, $carrier_freq_f2 );
+                &{ REF_SUB_SAT_POSITION->{$sat_sys} }
+                  ( $ref_sat_eph,
+                    $sat_sys_tow, $nav_tow, $obs_meas,
+                    $carrier_freq_f1, $carrier_freq_f2 );
+
             } else {
 
               # Satellite coordintes cannot be computed:
@@ -441,6 +445,232 @@ sub ApplySatSysTimeCorrection {
   return $sat_sys_tow;
 }
 
+sub ComputeGPSSatelliteCoordinates {
+  my ($ref_eph, $tow, $toc, $obs_meas, $freq1, $freq2) = @_;
+
+  # Init status:
+  my $status = FALSE;
+
+  # ************************** #
+  # Emission time computation: #
+  # ************************** #
+    my $time_recp = $tow;
+
+    # First emission time and clock correction estimation:
+    my $time_emis1 =
+      ComputeEmissionTime($time_recp, $obs_meas, $ref_eph->{TOE}, 0);
+
+    my $time_corr1 =
+      ComputeGPSSatClockCorrection( $ref_eph->{SV_CLK_BIAS},
+                                    $ref_eph->{SV_CLK_RATE},
+                                    $ref_eph->{SV_CLK_DRIFT}, $time_emis1 );
+
+    # Second iteration for emission and clock correction:
+    my $time_emis2 =
+      ComputeEmissionTime($time_recp, $obs_meas, $ref_eph->{TOE}, $time_corr1);
+
+    my $time_corr2 =
+      ComputeGPSSatClockCorrection( $ref_eph->{SV_CLK_BIAS},
+                                    $ref_eph->{SV_CLK_RATE},
+                                    $ref_eph->{SV_CLK_DRIFT}, $time_emis2 );
+
+    # Final emission time is computed using second time correction:
+    my $time_emis =
+      ComputeEmissionTime($time_recp, $obs_meas, $ref_eph->{TOE}, $time_corr2);
+
+
+  # ******************************************* #
+  # Satellite coordinates computation sequence: #
+  # ******************************************* #
+
+    my ( $x_sat, $y_sat, $z_sat, $ecc_anomaly ) =
+        ComputeSatelliteCoordinatesFromEphemerids( $time_emis, $ref_eph );
+
+
+  # ********************** #
+  # Final time correction: #
+  # ********************** #
+
+    # Aplly: relativistic effect and total group delay:
+    my $time_corr = $time_corr2 -
+                    ComputeGPSGroupDelay( $freq1, $freq2, $ref_eph ) +
+                    ComputeRelativisticEffect( $ref_eph, $ecc_anomaly );
+
+    # Assign time correction to sat time correction:
+    my $sat_clk_corr = $time_corr;
+
+
+  # Update final status:
+  $status = TRUE;
+
+  # TODO: need status var?
+  return ($status, $x_sat, $y_sat, $z_sat, $sat_clk_corr);
+}
+
+sub ComputeGALSatelliteCoordinates {
+
+}
+
+sub ComputeSatelliteCoordinatesFromEphemerids {
+  my ($time_emis, $ref_eph) = @_;
+
+  # Iinit satellite position parameters to be returned:
+  my ($x_sat, $y_sat, $z_sat, $ecc_anomaly);
+
+  # ******************************************* #
+  # Satellite coordinates computation sequence: #
+  # ******************************************* #
+
+    # Orbit's semi-major axis:
+    my $a = $ref_eph->{SQRT_A}**2;
+
+    # Mean motion:
+    my $n = ((EARTH_GRAV_CONST/$a**3))**0.5 + $ref_eph->{DELTA_N};
+
+    # Mean anomaly:
+    my $m = $ref_eph->{MO} + $n*$time_emis;
+
+    # Eccentricity anomaly:
+      # It is computed by an itertive process where in the first iteration, the
+      # eccentrcity anomaly is equals to the mean anomaly.
+      my $e = $m;
+      my $e_new = $m + $ref_eph->{ECCENTRICITY}*sin($e);
+
+      # The iteration process goes on until the difference is below the
+      # threshold or if the process has performed 10 steps:
+      my $iter = 0;
+      while ( abs($e - $e_new) > 1.0e-12 ) {
+        $iter++; last if ($iter >= 10);
+        $e = $e_new; $e_new = $m + $ref_eph->{ECCENTRICITY}*sin($e);
+      }
+
+      # Last computed value is saved as the ecentricity anomaly:
+      $e = $e_new;
+
+    # True anomaly:
+    my $v = atan2( sin($e)*(1 - $ref_eph->{ECCENTRICITY}**2)**0.5,
+                   cos($e)    - $ref_eph->{ECCENTRICITY} );
+
+    # Latitude argument:
+    my $phi0 = $v + $ref_eph->{OMEGA};
+
+    # Orbital correction terms:
+      # NOTE: what do they mean these terms? --> physical meaning...
+      my ( $delta_u, $delta_r, $delta_i ) =
+         ( $ref_eph->{CUS}*sin(2*$phi0) + $ref_eph->{CUC}*cos(2*$phi0),
+           $ref_eph->{CRS}*sin(2*$phi0) + $ref_eph->{CRC}*cos(2*$phi0),
+           $ref_eph->{CIS}*sin(2*$phi0) + $ref_eph->{CIC}*cos(2*$phi0) );
+
+      # Apply corrections to: latitude argument, orbital radius and inclination:
+      my $phi = $phi0 + $delta_u;
+      my $rad = $a*(1 - $ref_eph->{ECCENTRICITY}*cos($e)) + $delta_r;
+      my $inc = $ref_eph->{IO} + $delta_i + $ref_eph->{IDOT}*$time_emis;
+
+    # Orbital plane position:
+    my ( $x_op, $y_op ) = ( $rad*cos($phi), $rad*sin($phi) );
+
+    # Corrected ascending node longitude:
+    my $omega = $ref_eph->{OMEGA_0} +
+               ($ref_eph->{OMEGA_DOT} - EARTH_ANGULAR_SPEED)*$time_emis -
+                EARTH_ANGULAR_SPEED*$ref_eph->{TOE};
+
+    # Satellite coordinates:
+    my ( $x_sat,
+         $y_sat,
+         $z_sat ) = ( $x_op*cos($omega) - $y_op*cos($inc)*sin($omega),
+                      $x_op*sin($omega) + $y_op*cos($inc)*cos($omega),
+                      $y_op*sin($inc) );
+
+    # Assign eccentricity anomaly:
+    $ecc_anomaly = $e;
+
+  # Return satellite parameters:
+  return ($x_sat, $y_sat, $z_sat, $ecc_anomaly);
+}
+
+sub ComputeEmissionTime {
+  my ( $time_recp, $obs_meas, $toe, $time_corr ) = @_;
+
+  # Compute emission time:
+  # NOTE: Reception time, ToE and correction time are given in ToW format.
+  #       Thus, emission time is computed in ToW as well.
+  my $time_emis = ($time_recp - $obs_meas/SPEED_OF_LIGHT - $time_corr) - $toe;
+
+  # Account for interpolation jumps:
+  if    ($time_emis >  1*SECONDS_IN_WEEK/2) { $time_emis -= SECONDS_IN_WEEK; }
+  elsif ($time_emis < -1*SECONDS_IN_WEEK/2) { $time_emis += SECONDS_IN_WEEK; }
+
+  return $time_emis;
+}
+
+sub ComputeRelativisticEffect {
+  my ($ref_eph, $ecc_anomaly) = @_;
+
+  my $delta_rel_efffect;
+
+  # Retrieve orbit's semimajor axis:
+  my $a = ($ref_eph->{SQRT_A})**2;
+
+  $delta_rel_efffect =
+    -2*( ((EARTH_GRAV_CONST * $a)**0.5)/(SPEED_OF_LIGHT**2) )*
+    $ref_eph->{ECCENTRICITY}*sin($ecc_anomaly);
+
+  return $delta_rel_efffect;
+}
+
+sub ComputeGPSSatClockCorrection {
+  my ( $a0, $a1, $a2, $time_emis ) = @_;
+
+  # NOTE: Emission time is given in ToW format.
+  #       Thus, correction time will be computed in ToW as well.
+  my $time_corr = $a0 + $a1*($time_emis) + $a2*($time_emis**2);
+
+  return $time_corr;
+}
+
+sub ComputeGALSatClockCorrection {
+  my ( $a0, $a1, $a2, $time_emis, $toc ) = @_;
+
+  # NOTE: Emission time and ToC is given in ToW format.
+  #       Thus, correction time will be computed in ToW as well.
+  my $aux = ($time_emis - $toc);
+  my $time_corr = $a0 + $a1*($aux) + $a2*($aux**2);
+
+  return $time_corr;
+}
+
+sub ComputeGPSGroupDelay {
+  my ($freq1, $freq2, $ref_eph) = @_;
+
+  my $delta_group_delay = ( ($freq1/$freq2)**2 )*$ref_eph->{TGD};
+
+  return $delta_group_delay;
+}
+
+sub ComputeGALGroupDelay {
+  my ($freq1, $freq2, $ref_eph) = @_;
+
+  # Init group delay correction:
+  my $delta_group_delay;
+
+  # Select brodcast group delay based on selected frequency 2:
+  my $bgd; # init broadcast group delay
+  given ($freq2) {
+    when( $_ eq GAL_E1_FREQ  ) { $bgd = $ref_eph->{BGD_E5B_E1}; }
+    when( $_ eq GAL_E5b_FREQ ) { $bgd = $ref_eph->{BGD_E5B_E1}; }
+    when( $_ eq GAL_E5a_FREQ ) { $bgd = $ref_eph->{BGD_E5A_E1}; }
+    default                    { $bgd = 0;                      }
+  }
+
+  # Compute group delay correction:
+  $delta_group_delay = ( ($freq1/$freq2)**2 )*$bgd;
+
+  return $delta_group_delay;
+}
+
+
+
+# NOTE: obsolote sub
 sub ComputeSatelliteCoordinates {
   my ($tow, $obs_meas, $ref_eph,
       $carrier_freq_f1, $carrier_freq_f2) = @_;
@@ -571,6 +801,7 @@ sub ComputeSatelliteCoordinates {
   return  ($status, $x_sat, $y_sat, $z_sat, $time_corr);
 }
 
+# NOTE: obsolote sub
 sub ComputeSatelliteCoordinatesTest {
   my ($tow, undef, $ref_eph, undef, undef) = @_;
 
@@ -588,8 +819,8 @@ sub ComputeSatelliteCoordinatesTest {
     my $t_ref = $tow - $ref_eph->{TOE};
 
     # b. Interpolation protection:
-    $t_ref -= 604800 if ($t_ref >  302400);
-    $t_ref += 604800 if ($t_ref < -302400);
+    $t_ref -= SECONDS_IN_WEEK if ($t_ref >  302400);
+    $t_ref += SECONDS_IN_WEEK if ($t_ref < -302400);
 
   # 2. Compute mean anomaly at $t_ref:
     # a. Compute mean movement:
