@@ -160,8 +160,7 @@ sub DataProcessingRoutine {
   # Compute satellite positions:
   my $ini_sat_position = [gettimeofday];
     my $ref_nav_data =
-      ComputeSatPosition( $ref_gen_conf, $ref_obs_data,
-                          $fh_log, $compute_sat_coord_code );
+      ComputeSatPosition( $ref_gen_conf, $ref_obs_data, $fh_log );
   my $end_sat_position = [gettimeofday];
 
   # Update sub status:
