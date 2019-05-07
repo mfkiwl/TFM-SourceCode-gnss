@@ -36,6 +36,7 @@ BEGIN {
                        &Date2UniversalTime
                        &UniversalTime2LocalTime
                        &ComputeSatSysTimeCorrection
+                       &TimeOfWeekInterpProtection
                        &SECONDS_IN_DAY
                        &SECONDS_IN_HOUR
                        &SECONDS_IN_WEEK
@@ -170,6 +171,15 @@ sub ComputeSatSysTimeCorrection {
   my $time_corr = $a0 + $a1*($tow - $tow_0 + SECONDS_IN_WEEK*($week - $week_0));
 
   return $time_corr;
+}
+
+sub TimeOfWeekInterpProtection {
+  my ($tow) = @_;
+
+  if    ($tow >  1*SECONDS_IN_WEEK/2) { $tow -= SECONDS_IN_WEEK; }
+  elsif ($tow < -1*SECONDS_IN_WEEK/2) { $tow += SECONDS_IN_WEEK; }
+
+  return $tow;
 }
 
 1;
