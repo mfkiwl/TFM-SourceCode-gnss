@@ -603,6 +603,7 @@ sub PlotReceiverPosition {
      $pdl_rec_xyz($ref_file_layout->{ITEMS}{Sigma_ClkBias}{INDEX});
 
   # Build polar coordinates from easting and northing components:
+  # TODO: compute properly azimut by adding + pi*K!
   my $pdl_rec_azimut = pi/2 - atan2($pdl_rec_northing, $pdl_rec_easting);
   my $pdl_rec_distance = ($pdl_rec_easting**2 + $pdl_rec_northing**2)**.5;
 
