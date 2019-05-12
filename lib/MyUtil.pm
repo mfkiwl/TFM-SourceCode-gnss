@@ -38,7 +38,9 @@ BEGIN {
                        &PushUnique
                        &ReadBoolean
                        &PurgeExtraSpaces
-                       &GetPrettyLocalDate );
+                       &GetPrettyLocalDate
+                       &GetFileLayout
+                       &LoadFileByLayout );
 
   our %EXPORT_TAGS = ( DEFAULT => [],
                        ALL     => \@EXPORT_OK );
@@ -134,6 +136,61 @@ sub GetPrettyLocalDate {
     sprintf("%04d/%02d/%02d %02d:%02d:%02d", $year, $mo+1, $dd, $hh, $mm, $ss);
 
   return $date;
+}
+
+sub GetFileLayout {
+  my ($file_path, $head_line, $delimiter) = @_;
+
+  my $ref_file_layout = {};
+
+  $ref_file_layout->{FILE}{ PATH      } = $file_path;
+  $ref_file_layout->{FILE}{ HEAD      } = $head_line;
+  $ref_file_layout->{FILE}{ DELIMITER } = $delimiter;
+
+  my $fh; open($fh, '<', $file_path) or die "Could not open $file_path. $!";
+
+  while (my $line = <$fh>) {
+    if ($. == $head_line) {
+
+      my @head_items = split(/[\s$delimiter]+/, $line);
+
+      for my $index (keys @head_items) {
+        $ref_file_layout->{ITEMS}{$head_items[$index]}{INDEX} = $index;
+      }
+
+      last;
+
+    }
+  }
+
+  close($fh);
+
+  return $ref_file_layout;
+}
+
+sub LoadFileByLayout {
+  my ($ref_file_layout) = @_;
+
+  # Retrieve file properties:
+  my ( $file_path,
+       $head_line,
+       $delimiter ) = ( $ref_file_layout->{FILE}{PATH},
+                        $ref_file_layout->{FILE}{HEAD},
+                        $ref_file_layout->{FILE}{DELIMITER} );
+
+  my $ref_array = [];
+
+  my $fh; open($fh, '<', $file_path) or die "Could not open $!";
+
+  SkipLines($fh, $head_line);
+
+  while (my $line = <$fh>) {
+    push( @{$ref_array}, [split(/$delimiter/, $line)] );
+  }
+
+  close($fh);
+
+  return $ref_array;
 }
 
 1;
