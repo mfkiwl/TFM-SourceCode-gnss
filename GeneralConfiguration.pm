@@ -183,8 +183,6 @@ use constant
 # Satellite system signal frequencies:
 # GPS signal frequencies:
 use constant {
-  GPS_CA_FREQ =>    1.023e6, # [Hz]
-  GPS_P_FREQ  =>   10.230e6, # [Hz]
   GPS_L1_FREQ => 1575.420e6, # [Hz]
   GPS_L2_FREQ => 1227.600e6, # [Hz]
   GPS_L5_FREQ => 1176.450e6, # [Hz]
