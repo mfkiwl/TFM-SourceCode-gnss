@@ -29,6 +29,7 @@ BEGIN {
 
   # All subroutines and constats to export:
   our @EXPORT_OK = qw( &BuildDateString
+                       &Date2DoY
                        &Date2GPS
                        &GPS2Date
                        &GPS2DateString
@@ -89,6 +90,22 @@ sub BuildDateString {
                       $yyyy, $mo, $dd, $hh, $mi, $ss );
 
   return $date;
+}
+
+sub Date2DoY {
+  my ($yyyy, $mo, $dd, $hh, $mi, $ss) = @_;
+
+  # Retrive unix posix time from the begining of the year. This is
+  # the first of January (month 0). Then, retrieve the unix posix
+  # time from the input date:
+  my $year_t0_time = timegm( 00,  00,  00,   1,       0, $yyyy);
+  my $current_time = timegm($ss, $mi, $hh, $dd, $mo - 1, $yyyy);
+
+  # Compute elapsed seconds:
+  my $time_diff = $current_time - $year_t0_time;
+
+  # Add 1 to day of year since day 0 (01/01) is day 1:
+  return int( $time_diff/SECONDS_IN_DAY ) + 1;
 }
 
 sub Date2GPS {
