@@ -3,6 +3,7 @@
 use Carp;
 use strict;
 
+use Storable;
 use Data::Dumper;
 use feature qq(say);
 use Cwd qq(abs_path);
@@ -19,6 +20,10 @@ use MyPrint qq(:ALL);
 use TimeGNSS qq(:ALL);
 
 # ---------------------------------------------------------------------------- #
+
+
+# Configuration flags:
+my $download_data_flag = FALSE;
 
 
 # 1. Load info containing stations and date information:
@@ -54,6 +59,9 @@ for my $sta (@station_list) {
     my $year = $ref_date_yy_mm_dd->[0];
     my $doy  = Date2DoY( @{ $ref_date_yy_mm_dd }, 0, 0, 0 );
 
+    # Append DoY to station-date hash:
+    $ref_station_date_cfg->{$sta}{$date}{DOY} = $doy;
+
     # Define path to sotre rinex data:
     my $dat_path = join('/', $dat_root_path, $sta, $date, '');
 
@@ -61,12 +69,18 @@ for my $sta (@station_list) {
 
     # De-refernece date info:
     # Rinex observation files:
-    qx{$down_obs_rinex_path $year $doy $sta $dat_path};
+    qx{$down_obs_rinex_path $year $doy $sta $dat_path} if $download_data_flag;
 
     # Rinex navigation files:
     for my $sat_sys (&RINEX_GPS_ID, &RINEX_GAL_ID) {
-      qx{$down_nav_rinex_path $sat_sys $year $doy $sta $dat_path};
+      qx{$down_nav_rinex_path $sat_sys $year $doy $sta $dat_path} if $download_data_flag;
     } # end for $sat_sys
 
   } # end for $date
 } # end for $sta
+
+print Dumper $ref_station_date_cfg;
+store($ref_station_date_cfg, 'ref_station_date_cfg.hash');
+
+# ---------------------------------------------------------------------------- #
+# END OF SCRIPT
