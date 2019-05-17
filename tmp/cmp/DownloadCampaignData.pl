@@ -1,5 +1,8 @@
 #!/usr/bin/perl -w
 
+# ---------------------------------------------------------------------------- #
+# Load perl modules:
+
 use Carp;
 use strict;
 
@@ -7,6 +10,10 @@ use Storable;
 use Data::Dumper;
 use feature qq(say);
 use Cwd qq(abs_path);
+
+
+# ---------------------------------------------------------------------------- #
+# Load dedicated modules:
 
 use lib $ENV{ ENV_ROOT };
 use Enviroments qq(:ALL);
@@ -19,21 +26,17 @@ use MyUtil qq(:ALL);
 use MyPrint qq(:ALL);
 use TimeGNSS qq(:ALL);
 
-# ---------------------------------------------------------------------------- #
 
+# ---------------------------------------------------------------------------- #
+# Main Routine:
 
 # Configuration flags:
 my $download_data_flag = FALSE;
 
-
 # 1. Load info containing stations and date information:
 # Script argument is expected to be the hash station-date configuration:
 my $station_date_cfg_path = abs_path( $ARGV[0] );
-
 my $ref_station_date_cfg = do $station_date_cfg_path;
-
-# print Dumper $ref_station_date_cfg; exit 0;
-
 
 # 2. Download rinex data:
 # Define observation and navigation root paths:
