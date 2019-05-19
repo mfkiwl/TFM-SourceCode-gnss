@@ -30,6 +30,10 @@ BEGIN {
                           &DAT_ROOT_PATH
                           &UTIL_ROOT_PATH
                           &GRPP_ROOT_PATH
+                          &GSPA_ROOT_PATH
+                          &GRPP
+                          &GSPA_SOLE
+                          &GSPA_DUAL
                           &NEQUICK_DAT_PATH );
 
   # Define subroutines to export:
@@ -55,6 +59,9 @@ use constant {
   UTIL_ROOT_PATH => $ENV{ UTIL_ROOT },
   GRPP_ROOT_PATH => $ENV{ GRPP_ROOT },
   GSPA_ROOT_PATH => $ENV{ GSPA_ROOT },
+  GRPP           => $ENV{ GRPP      },
+  GSPA_SOLE      => $ENV{ GSPA_SOLE },
+  GSPA_DUAL      => $ENV{ GSPA_DUAL },
 };
 
 use constant {

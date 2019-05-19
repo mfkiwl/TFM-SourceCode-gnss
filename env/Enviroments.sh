@@ -22,6 +22,9 @@ export DAT_ROOT=$SRC_ROOT/dat/
 export UTIL_ROOT=$SRC_ROOT/util/
 export GRPP_ROOT=$SRC_ROOT/GNSS_RINEX_Post-Processing/
 export GSPA_ROOT=$SRC_ROOT/GNSS_Service-Performance-Analyzer/
+export GRPP=$GRPP_ROOT/MainRoutine.pl
+export GSPA_SOLE=$GSPA_ROOT/MainSoleService.pl
+export GSPA_DUAL=$GSPA_ROOT/MainDualService.pl
 
 # Goddby message:
 echo ""
