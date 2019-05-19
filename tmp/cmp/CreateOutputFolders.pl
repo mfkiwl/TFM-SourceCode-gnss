@@ -33,16 +33,16 @@ use TimeGNSS qq(:ALL);
 # Read script argument:
 #   $1 -> Report root path
 #   $2 -> Station-Date hash configuration (binary hash)
-my ($rpt_root_path, $ref_station_date_hash_path) = @ARGV;
+my ($rpt_root_path, $cmp_cfg_hash_path) = @ARGV;
 
 $rpt_root_path = abs_path($rpt_root_path);
 
 # Load satation-date hash configuration:
-my $ref_station_date_cfg = retrieve($ref_station_date_hash_path);
+my $ref_cmp_cfg = retrieve($cmp_cfg_hash_path);
 
-for my $station (keys %{$ref_station_date_cfg}) {
-  for my $date (keys %{$ref_station_date_cfg->{$station}}) {
-    for my $signal (keys %{$ref_station_date_cfg->{$station}{$date}{SIGNAL_OBS}}) {
+for my $station (keys %{$ref_cmp_cfg}) {
+  for my $date (keys %{$ref_cmp_cfg->{$station}}) {
+    for my $signal (keys %{$ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}}) {
 
       my $rpt_grpp_path =
         join('/', $rpt_root_path, $station, $date, $signal, "GRPP");

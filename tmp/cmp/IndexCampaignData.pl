@@ -33,24 +33,24 @@ use TimeGNSS qq(:ALL);
 # Read script argument:
 #   $1 -> Campaign root path
 #   $2 -> Station-Date hash configuration (binary hash)
-my ($campaign_path, $ref_station_date_hash_path) = @ARGV;
+my ($dat_root_path, $cmp_cfg_hash_path) = @ARGV;
 
 # Set absolute path for campaign root:
-$campaign_path = abs_path($campaign_path);
+$dat_root_path = abs_path($dat_root_path);
 
 # Load satation-date hash configuration:
-my $ref_station_date_cfg = retrieve($ref_station_date_hash_path);
+my $ref_cmp_cfg = retrieve($cmp_cfg_hash_path);
 
 # Create index path:
-my $index_path = join('/', $campaign_path, "index", "");
+my $index_path = join('/', $dat_root_path, "index", "");
 qx{mkdir $index_path} unless (-e $index_path);
 
 # Iterate over stations and dates:
-for my $station (keys %{ $ref_station_date_cfg }) {
-  for my $date (keys %{ $ref_station_date_cfg->{$station} }) {
+for my $station (keys %{ $ref_cmp_cfg }) {
+  for my $date (keys %{ $ref_cmp_cfg->{$station} }) {
 
     # Retrieve station-date absolute path whhere rinex data is stored:
-    my $station_date_data_path = join('/', $campaign_path, $station, $date);
+    my $station_date_data_path = join('/', $dat_root_path, $station, $date);
 
     # Find observation file:
     my $obs_file_path = qx{ls $station_date_data_path/*MO.rnx};
@@ -83,7 +83,7 @@ for my $station (keys %{ $ref_station_date_cfg }) {
     # TODO: Make some consistency checks
 
     # Append link information to station-date hash:
-    my $ref_tmp = $ref_station_date_cfg->{$station}{$date};
+    my $ref_tmp = $ref_cmp_cfg->{$station}{$date};
     $ref_tmp->{OBS_PATH} = $obs_link_path;
     $ref_tmp->{NAV_PATH}{&RINEX_GPS_ID} = $gps_nav_link_path;
     $ref_tmp->{NAV_PATH}{&RINEX_GAL_ID} = $gal_nav_link_path;
@@ -91,8 +91,8 @@ for my $station (keys %{ $ref_station_date_cfg }) {
   } # end for $date
 } # end for $station
 
-print Dumper $ref_station_date_cfg;
-store($ref_station_date_cfg, "ref_station_date_link_cfg.hash");
+print Dumper $ref_cmp_cfg;
+store($ref_cmp_cfg, "ref_station_date_link_cfg.hash");
 
 # ---------------------------------------------------------------------------- #
 # END OF SCRIPT

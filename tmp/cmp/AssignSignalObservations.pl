@@ -31,10 +31,10 @@ use TimeGNSS qq(:ALL);
 
 # Read script argument:
 #   $1 -> Station-Date hash configuration (binary hash)
-my ($ref_station_date_hash_path) = @ARGV;
+my ($cmp_cfg_hash_path) = @ARGV;
 
 # Load satation-date hash configuration:
-my $ref_station_date_cfg = retrieve($ref_station_date_hash_path);
+my $ref_cmp_cfg = retrieve($cmp_cfg_hash_path);
 
 # Assign observation codes for station-date pair:
 my ($station, $date);
@@ -42,86 +42,86 @@ my ($station, $date);
 # KIRU:
 for $station (qw(KIRU)) {
   for $date  (qw(DATE_1 DATE_2 DATE_3)) {
-    $ref_station_date_cfg->{$station}{$date}{SIGNAL_OBS}{ CA  } = 'C1C';
-    $ref_station_date_cfg->{$station}{$date}{SIGNAL_OBS}{ L2C } = 'C2L';
-    $ref_station_date_cfg->{$station}{$date}{SIGNAL_OBS}{ E1  } = 'C1C';
-    $ref_station_date_cfg->{$station}{$date}{SIGNAL_OBS}{ E5B } = 'C7Q';
+    $ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}{ CA  } = 'C1C';
+    $ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}{ L2C } = 'C2L';
+    $ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}{ E1  } = 'C1C';
+    $ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}{ E5B } = 'C7Q';
   }
 }
 
 # KITG:
 for $station (qw(KITG)) {
   for $date  (qw(DATE_1 DATE_2)) {
-    $ref_station_date_cfg->{$station}{$date}{SIGNAL_OBS}{ CA  } = 'C1C';
-    $ref_station_date_cfg->{$station}{$date}{SIGNAL_OBS}{ L2C } = 'C2L';
-    $ref_station_date_cfg->{$station}{$date}{SIGNAL_OBS}{ E1  } = 'C1C';
-    $ref_station_date_cfg->{$station}{$date}{SIGNAL_OBS}{ E5B } = 'C7Q';
+    $ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}{ CA  } = 'C1C';
+    $ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}{ L2C } = 'C2L';
+    $ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}{ E1  } = 'C1C';
+    $ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}{ E5B } = 'C7Q';
   }
 }
 
 # OWMG:
 for $station (qw(OWMG)) {
   for $date  (qw(DATE_1 DATE_2)) {
-    $ref_station_date_cfg->{$station}{$date}{SIGNAL_OBS}{ CA  } = 'C1C';
-    $ref_station_date_cfg->{$station}{$date}{SIGNAL_OBS}{ L2C } = 'C2X';
-    $ref_station_date_cfg->{$station}{$date}{SIGNAL_OBS}{ E1  } = 'C1X';
-    $ref_station_date_cfg->{$station}{$date}{SIGNAL_OBS}{ E5B } = 'C7X';
+    $ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}{ CA  } = 'C1C';
+    $ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}{ L2C } = 'C2X';
+    $ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}{ E1  } = 'C1X';
+    $ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}{ E5B } = 'C7X';
   }
 }
 
 # KOKV:
 for $station (qw(KOKV)) {
   for $date  (qw(DATE_1 DATE_2 DATE_3)) {
-    $ref_station_date_cfg->{$station}{$date}{SIGNAL_OBS}{ CA  } = 'C1C';
-    $ref_station_date_cfg->{$station}{$date}{SIGNAL_OBS}{ L2C } = 'C2X';
-    $ref_station_date_cfg->{$station}{$date}{SIGNAL_OBS}{ E1  } = 'C1X';
-    $ref_station_date_cfg->{$station}{$date}{SIGNAL_OBS}{ E5B } = 'C7X';
+    $ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}{ CA  } = 'C1C';
+    $ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}{ L2C } = 'C2X';
+    $ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}{ E1  } = 'C1X';
+    $ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}{ E5B } = 'C7X';
   }
 }
 
 # ABMF:
 for $station (qw(ABMF)) {
   for $date  (qw(DATE_1 DATE_2)) {
-    $ref_station_date_cfg->{$station}{$date}{SIGNAL_OBS}{ CA  } = 'C1C';
-    $ref_station_date_cfg->{$station}{$date}{SIGNAL_OBS}{ L2C } = 'C2W';
-    $ref_station_date_cfg->{$station}{$date}{SIGNAL_OBS}{ E1  } = 'C1C';
-    $ref_station_date_cfg->{$station}{$date}{SIGNAL_OBS}{ E5B } = 'C7Q';
+    $ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}{ CA  } = 'C1C';
+    $ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}{ L2C } = 'C2W';
+    $ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}{ E1  } = 'C1C';
+    $ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}{ E5B } = 'C7Q';
   }
 }
 
 # FAIR:
 for $station (qw(FAIR)) {
   for $date  (qw(DATE_3)) {
-    $ref_station_date_cfg->{$station}{$date}{SIGNAL_OBS}{ CA  } = 'C1C';
-    $ref_station_date_cfg->{$station}{$date}{SIGNAL_OBS}{ L2C } = 'C2W';
-    $ref_station_date_cfg->{$station}{$date}{SIGNAL_OBS}{ E1  } = 'C1';
-    $ref_station_date_cfg->{$station}{$date}{SIGNAL_OBS}{ E5B } = 'C5';
+    $ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}{ CA  } = 'C1C';
+    $ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}{ L2C } = 'C2W';
+    $ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}{ E1  } = 'C1';
+    $ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}{ E5B } = 'C5';
   }
 }
 
 # MAJU:
 for $station (qw(MAJU)) {
   for $date  (qw(DATE_3)) {
-    $ref_station_date_cfg->{$station}{$date}{SIGNAL_OBS}{ CA  } = 'C1C';
-    $ref_station_date_cfg->{$station}{$date}{SIGNAL_OBS}{ L2C } = 'C2L';
-    $ref_station_date_cfg->{$station}{$date}{SIGNAL_OBS}{ E1  } = 'C1C';
-    $ref_station_date_cfg->{$station}{$date}{SIGNAL_OBS}{ E5B } = 'C7Q';
+    $ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}{ CA  } = 'C1C';
+    $ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}{ L2C } = 'C2L';
+    $ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}{ E1  } = 'C1C';
+    $ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}{ E5B } = 'C7Q';
   }
 }
 
 # KOUG:
 for $station (qw(KOUG)) {
   for $date  (qw(DATE_3)) {
-    $ref_station_date_cfg->{$station}{$date}{SIGNAL_OBS}{ CA  } = 'C1C';
-    $ref_station_date_cfg->{$station}{$date}{SIGNAL_OBS}{ L2C } = 'C2L';
-    $ref_station_date_cfg->{$station}{$date}{SIGNAL_OBS}{ E1  } = 'C1C';
-    $ref_station_date_cfg->{$station}{$date}{SIGNAL_OBS}{ E5B } = 'C7Q';
+    $ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}{ CA  } = 'C1C';
+    $ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}{ L2C } = 'C2L';
+    $ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}{ E1  } = 'C1C';
+    $ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}{ E5B } = 'C7Q';
   }
 }
 
 # Save hash configuration:
-print Dumper $ref_station_date_cfg;
-store($ref_station_date_cfg, "ref_station_date_link_obs.hash");
+print Dumper $ref_cmp_cfg;
+store($ref_cmp_cfg, "ref_station_date_link_obs.hash");
 
 
 # ---------------------------------------------------------------------------- #

@@ -35,13 +35,12 @@ my $download_data_flag = FALSE;
 
 # 1. Load info containing stations and date information:
 # Script argument is expected to be the hash station-date configuration:
-my $station_date_cfg_path = abs_path( $ARGV[0] );
-my $ref_station_date_cfg = do $station_date_cfg_path;
+my ($dat_root_path, $cmp_hash_cfg_path) = @ARGV;
+
+$dat_root_path = abs_path($dat_root_path);
+my $ref_cmp_cfg = do $cmp_hash_cfg_path;
 
 # 2. Download rinex data:
-# Define observation and navigation root paths:
-my $dat_root_path = '/home/ppinto/WorkArea/dat/cmp/';
-
 # Define source codes to download scripts:
 my $down_obs_rinex_path =
   join('/', UTIL_ROOT_PATH, "DownloadRinexObsFromFTP-BKG.pl");
@@ -49,21 +48,21 @@ my $down_nav_rinex_path =
   join('/', UTIL_ROOT_PATH, "DownloadRinexNavFromFTP-BKG.pl");
 
 
-my @station_list = keys %{ $ref_station_date_cfg };
+my @station_list = keys %{ $ref_cmp_cfg };
 
 for my $sta (@station_list) {
 
-  my @date_list = keys %{ $ref_station_date_cfg->{$sta} };
+  my @date_list = keys %{ $ref_cmp_cfg->{$sta} };
 
   for my $date (@date_list) {
 
     # Retrieve year and compute day of year:
-    my $ref_date_yy_mm_dd = $ref_station_date_cfg->{$sta}{$date}{YY_MO_DD};
+    my $ref_date_yy_mm_dd = $ref_cmp_cfg->{$sta}{$date}{YY_MO_DD};
     my $year = $ref_date_yy_mm_dd->[0];
     my $doy  = Date2DoY( @{ $ref_date_yy_mm_dd }, 0, 0, 0 );
 
     # Append DoY to station-date hash:
-    $ref_station_date_cfg->{$sta}{$date}{DOY} = $doy;
+    $ref_cmp_cfg->{$sta}{$date}{DOY} = $doy;
 
     # Define path to sotre rinex data:
     my $dat_path = join('/', $dat_root_path, $sta, $date, '');
@@ -82,8 +81,8 @@ for my $sta (@station_list) {
   } # end for $date
 } # end for $sta
 
-print Dumper $ref_station_date_cfg;
-store($ref_station_date_cfg, 'ref_station_date_cfg.hash');
+print Dumper $ref_cmp_cfg;
+store($ref_cmp_cfg, 'ref_station_date_cfg.hash');
 
 # ---------------------------------------------------------------------------- #
 # END OF SCRIPT

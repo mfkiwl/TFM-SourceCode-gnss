@@ -32,35 +32,35 @@ use TimeGNSS qq(:ALL);
 # Read script argument:
 #   $1 -> Configuration root path
 #   $2 -> Station-Date hash configuration (binary hash)
-my ($cfg_root_path, $ref_station_date_hash_path) = @ARGV;
+my ($cfg_root_path, $cmp_hash_cfg_path) = @ARGV;
 
 # Set absolute path:
 $cfg_root_path = abs_path($cfg_root_path);
 
 # Load satation-date hash configuration:
-my $ref_station_date_cfg = retrieve($ref_station_date_hash_path);
+my $ref_cmp_cfg = retrieve($cmp_hash_cfg_path);
 
 # Set PutConfiguration scrip path:
 my $set_cfg_script =
   '/home/ppinto/WorkArea/src/tmp/cmp/PutProcessingConfiguration.sh';
 
-for my $station (keys %{$ref_station_date_cfg}) {
-  for my $date (keys %{$ref_station_date_cfg->{$station}}) {
+for my $station (keys %{$ref_cmp_cfg}) {
+  for my $date (keys %{$ref_cmp_cfg->{$station}}) {
 
     # Set processing start and end times:
     my $ini =
-       BuildDateString(@{ $ref_station_date_cfg->{$station}{$date}{YY_MO_DD} },
-                       @{ $ref_station_date_cfg->{$station}{$date}{INI_TIME} });
+       BuildDateString(@{ $ref_cmp_cfg->{$station}{$date}{YY_MO_DD} },
+                       @{ $ref_cmp_cfg->{$station}{$date}{INI_TIME} });
 
     my $end =
-       BuildDateString(@{ $ref_station_date_cfg->{$station}{$date}{YY_MO_DD} },
-                       @{ $ref_station_date_cfg->{$station}{$date}{END_TIME} });
+       BuildDateString(@{ $ref_cmp_cfg->{$station}{$date}{YY_MO_DD} },
+                       @{ $ref_cmp_cfg->{$station}{$date}{END_TIME} });
 
-    for my $signal (keys %{$ref_station_date_cfg->{$station}{$date}{SIGNAL_OBS}}) {
+    for my $signal (keys %{$ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}}) {
 
-      # Retreve observation:
+      # Retrieve observation:
       my $obs =
-         $ref_station_date_cfg->{$station}{$date}{SIGNAL_OBS}{$signal};
+         $ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}{$signal};
 
       # Copy template:
       my $temp_file_path =
@@ -74,15 +74,15 @@ for my $station (keys %{$ref_station_date_cfg}) {
       qx{$set_cfg_script $cfg_file_path \"$station\" \"$date\" \"$ini\" \"$end\" \"$signal\" \"$obs\"};
 
       # Save configuration path in hash:
-      $ref_station_date_cfg->{$station}{$date}{CFG_PATH}{$signal} = $cfg_file_path;
+      $ref_cmp_cfg->{$station}{$date}{CFG_PATH}{$signal} = $cfg_file_path;
 
     }
   }
 }
 
 # Save hash configuration:
-print Dumper $ref_station_date_cfg;
-store($ref_station_date_cfg, "ref_station_date_link_obs_cfg.hash");
+print Dumper $ref_cmp_cfg;
+store($ref_cmp_cfg, "ref_station_date_link_obs_cfg.hash");
 
 
 # ---------------------------------------------------------------------------- #
