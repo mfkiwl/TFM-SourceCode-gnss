@@ -59,6 +59,7 @@ print $script_description;
 my ($cmp_root_path, $cmp_hash_cfg_path) = @ARGV;
 
 # Retrieve absolute paths:
+   $cmp_root_path = abs_path( $cmp_root_path );
 my $cfg_root_path = abs_path( join('/', $cmp_root_path, 'cfg') );
 my $tmp_root_path = abs_path( join('/', $cmp_root_path, 'tmp') );
 
@@ -92,11 +93,11 @@ for my $station (keys %{$ref_cmp_cfg}) {
       my $cfg_file_path =
          join('/', $cfg_root_path, join('_', $station, $date, $signal).".cfg");
 
+      say "$temp_file_path -> $cfg_file_path";
       qx{cp $temp_file_path $cfg_file_path};
 
       # Put configuration in template:
-      qx{$set_cfg_script $cfg_file_path \"$cmp_root_path\"
-         \"$station\" \"$date\" \"$ini\" \"$end\" \"$signal\" \"$obs\"};
+      qx{$set_cfg_script $cfg_file_path \"$cmp_root_path\" \"$station\" \"$date\" \"$ini\" \"$end\" \"$signal\" \"$obs\"};
 
       # Save configuration path in hash:
       $ref_cmp_cfg->{$station}{$date}{CFG_PATH}{$signal} = $cfg_file_path;
@@ -109,7 +110,6 @@ for my $station (keys %{$ref_cmp_cfg}) {
 print Dumper $ref_cmp_cfg;
 my $new_cmp_hash_file = 'ref_station_date_index_obs_cfg.hash';
 store( $ref_cmp_cfg, join('/', $tmp_root_path, $new_cmp_hash_file) );
-
 
 # ---------------------------------------------------------------------------- #
 # END OF SCRIPT

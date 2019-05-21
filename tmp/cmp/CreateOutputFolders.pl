@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl -X
 
 # ---------------------------------------------------------------------------- #
 # Load Perl modules:
@@ -72,6 +72,9 @@ for my $station (keys %{$ref_cmp_cfg}) {
         join('/', $rpt_root_path, $station, $date, $signal, "GRPP");
       my $rpt_gspa_path =
         join('/', $rpt_root_path, $station, $date, $signal, "GSPA");
+
+      say "Creating: $rpt_grpp_path ";
+      say "Creating: $rpt_gspa_path ";
 
       qx{mkdir -p $rpt_grpp_path} unless (-e $rpt_grpp_path);
       qx{mkdir -p $rpt_gspa_path} unless (-e $rpt_gspa_path);

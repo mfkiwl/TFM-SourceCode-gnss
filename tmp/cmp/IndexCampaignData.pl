@@ -68,7 +68,7 @@ my $index_root_path = abs_path( join('/', $dat_root_path, 'index') );
 my $ref_cmp_cfg = retrieve($cmp_cfg_hash_path);
 
 # Create index path if not already:
-qx{mkdir $index_path} unless (-e $index_path);
+qx{mkdir $index_root_path} unless (-e $index_root_path);
 
 # Iterate over stations and dates:
 for my $station (keys %{ $ref_cmp_cfg }) {
@@ -94,9 +94,9 @@ for my $station (keys %{ $ref_cmp_cfg }) {
     my $gps_nav_link_name = join('_', $station, $date, "GPS-NAV");
     my $gal_nav_link_name = join('_', $station, $date, "GAL-NAV");
 
-    my $obs_link_path     = join('/', $index_path, $obs_link_name);
-    my $gps_nav_link_path = join('/', $index_path, $gps_nav_link_name);
-    my $gal_nav_link_path = join('/', $index_path, $gal_nav_link_name);
+    my $obs_link_path     = join('/', $index_root_path, $obs_link_name);
+    my $gps_nav_link_path = join('/', $index_root_path, $gps_nav_link_name);
+    my $gal_nav_link_path = join('/', $index_root_path, $gal_nav_link_name);
 
     qx{ln -s $obs_file_path $obs_link_path};
     qx{ln -s $gps_nav_file_path $gps_nav_link_path};

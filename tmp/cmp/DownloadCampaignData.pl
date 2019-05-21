@@ -35,13 +35,13 @@ my $script_description = <<'EOF';
 # Script: DownloadCampaignData.pl
 # ============================================================================ #
 # Purpose: Downloads from BKG repository, RINEX observation and navigation data.
-#          The data is downloaded in $1/dat/ and structured by station and
-#          date.
+#          The data is downloaded in $cmp_root_path/dat/ and structured by
+#          station and date.
 #
 # ============================================================================ #
 # Usage:
 # ============================================================================ #
-#  ./DownloadCampaignData.pl <cmp_root_path> <station_date_hash_conf_file>
+#  ./DownloadCampaignData.pl <cmp_root_path> <station_date_hash> <download_flag>
 #
 # * NOTE:
 #    - Station-date hash must have the following format, e.g.:
@@ -58,17 +58,16 @@ my $script_description = <<'EOF';
 # ============================================================================ #
 #  - $1 -> Campaign root path
 #  - $2 -> Station-Date configuration hash (plain text)
+#  - $3 -> Download data flag (1 for TRUE, 0 for FALSE)
 #
 EOF
 
 print $script_description;
 
-# Configuration flags:
-my $download_data_flag = FALSE;
 
 # 1. Load info containing stations and date information:
 # Script argument is expected to be the hash station-date configuration:
-my ($cmp_root_path, $cmp_hash_cfg_path) = @ARGV;
+my ($cmp_root_path, $cmp_hash_cfg_path, $download_data_flag) = @ARGV;
 
 # Define RINEX data and temporal absolute paths:
 my $dat_root_path = abs_path( join('/', $cmp_root_path, 'dat') );
