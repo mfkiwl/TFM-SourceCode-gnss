@@ -2,13 +2,15 @@
 
 # Retrieve script arguments:
 CFG_FILE=$1
-station=$2
-date=$3
-ini=$4
-end=$5
-signal=$6
-obs=$7
+cmp_path=$2
+station=$3
+date=$4
+ini=$5
+end=$6
+signal=$7
+obs=$8
 
+sed -i "s!\$cmp_path!$cmp_path!" $CFG_FILE
 sed -i "s!\$station!$station!" $CFG_FILE
 sed -i "s!\$date!$date!" $CFG_FILE
 sed -i "s!\$ini!$ini!" $CFG_FILE

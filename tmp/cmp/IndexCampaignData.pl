@@ -30,19 +30,44 @@ use TimeGNSS qq(:ALL);
 # ---------------------------------------------------------------------------- #
 # Main Routine:
 
+my $script_description = <<'EOF';
+# ============================================================================ #
+# Script: IndexCampaignData.pl
+# ============================================================================ #
+# Purpose: Creates symbolic links to RINEX observation and navigaton data.
+#
+# ============================================================================ #
+# Usage:
+# ============================================================================ #
+#  ./IndexCampaignData.pl <cmp_root_path> <station_date_hash_bin>
+#
+# * NOTE:
+#    - Station-date hash configuration must be in binary format
+#
+# ============================================================================ #
+# Script arguments:
+# ============================================================================ #
+#  - $1 -> Campaign root path
+#  - $2 -> Station-Date configuration hash (Storable binary)
+#
+EOF
+
+print $script_description;
+
 # Read script argument:
 #   $1 -> Campaign root path
 #   $2 -> Station-Date hash configuration (binary hash)
-my ($dat_root_path, $cmp_cfg_hash_path) = @ARGV;
+my ($cmp_root_path, $cmp_cfg_hash_path) = @ARGV;
 
-# Set absolute path for campaign root:
-$dat_root_path = abs_path($dat_root_path);
+# Retrieve absolute paths:
+my $dat_root_path   = abs_path( join('/', $cmp_root_path, 'dat') );
+my $tmp_root_path   = abs_path( join('/', $cmp_root_path, 'tmp') );
+my $index_root_path = abs_path( join('/', $dat_root_path, 'index') );
 
 # Load satation-date hash configuration:
 my $ref_cmp_cfg = retrieve($cmp_cfg_hash_path);
 
-# Create index path:
-my $index_path = join('/', $dat_root_path, "index", "");
+# Create index path if not already:
 qx{mkdir $index_path} unless (-e $index_path);
 
 # Iterate over stations and dates:
@@ -54,18 +79,15 @@ for my $station (keys %{ $ref_cmp_cfg }) {
 
     # Find observation file:
     my $obs_file_path = qx{ls $station_date_data_path/*MO.rnx};
-    chomp $obs_file_path;
-    say $obs_file_path;
+    chomp $obs_file_path; say $obs_file_path;
 
     # Find GPS navigation file:
     my $gps_nav_file_path = qx{ls $station_date_data_path/*GN.rnx};
-    chomp $gps_nav_file_path;
-    say $gps_nav_file_path;
+    chomp $gps_nav_file_path; say $gps_nav_file_path;
 
     # Find GAL navigation file:
     my $gal_nav_file_path = qx{ls $station_date_data_path/*EN.rnx};
-    chomp $gal_nav_file_path;
-    say $gal_nav_file_path;
+    chomp $gal_nav_file_path; say $gal_nav_file_path;
 
     # Build synbolic links in index path:
     my $obs_link_name     = join('_', $station, $date, "OBS");
@@ -91,8 +113,8 @@ for my $station (keys %{ $ref_cmp_cfg }) {
   } # end for $date
 } # end for $station
 
-print Dumper $ref_cmp_cfg;
-store($ref_cmp_cfg, "ref_station_date_link_cfg.hash");
+# print Dumper $ref_cmp_cfg;
+store( $ref_cmp_cfg, join('/', $tmp_root_path, 'ref_station_date_index.hash') );
 
 # ---------------------------------------------------------------------------- #
 # END OF SCRIPT

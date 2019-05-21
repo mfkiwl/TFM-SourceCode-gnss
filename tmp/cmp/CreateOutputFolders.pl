@@ -30,12 +30,36 @@ use TimeGNSS qq(:ALL);
 # ---------------------------------------------------------------------------- #
 # Main Routine:
 
-# Read script argument:
-#   $1 -> Report root path
-#   $2 -> Station-Date hash configuration (binary hash)
-my ($rpt_root_path, $cmp_cfg_hash_path) = @ARGV;
+my $script_description = <<'EOF';
+# ============================================================================ #
+# Script: CreateOutputFolders.pl
+# ============================================================================ #
+# Purpose: Sets signal obsertvations RINEX codes for each station, date and
+#          signal combination.
+#
+# ============================================================================ #
+# Usage:
+# ============================================================================ #
+#  ./CreateOutputFolders.pl <cmp_root_path> <station_date_hash_bin>
+#
+# * NOTE:
+#    - Station-date hash configuration must be in binary format
+#    - Configuration templates must be located at $cmp_root_path/cfg/temp
+#
+# ============================================================================ #
+# Script arguments:
+# ============================================================================ #
+#  - $1 -> Campaign root path
+#  - $2 -> Station-Date configuration hash (Storable binary)
+#
+EOF
+print $script_description;
 
-$rpt_root_path = abs_path($rpt_root_path);
+# Read script arguments:
+my ($cmp_root_path, $cmp_cfg_hash_path) = @ARGV;
+
+# Retrieve absolute paths:
+my $rpt_root_path = abs_path( join('/', $cmp_root_path, 'rpt') );
 
 # Load satation-date hash configuration:
 my $ref_cmp_cfg = retrieve($cmp_cfg_hash_path);
@@ -52,9 +76,9 @@ for my $station (keys %{$ref_cmp_cfg}) {
       qx{mkdir -p $rpt_grpp_path} unless (-e $rpt_grpp_path);
       qx{mkdir -p $rpt_gspa_path} unless (-e $rpt_gspa_path);
 
-    }
-  }
-}
+    } # end for $signal
+  } # end for $date
+} # end for $station
 
 
 

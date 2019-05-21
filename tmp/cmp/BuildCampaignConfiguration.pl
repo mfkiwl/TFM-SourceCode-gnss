@@ -29,20 +29,45 @@ use TimeGNSS qq(:ALL);
 # ---------------------------------------------------------------------------- #
 # Main Routine:
 
-# Read script argument:
-#   $1 -> Configuration root path
-#   $2 -> Station-Date hash configuration (binary hash)
-my ($cfg_root_path, $cmp_hash_cfg_path) = @ARGV;
+my $script_description = <<'EOF';
+# ============================================================================ #
+# Script: BuildCampaignConfiguration.pl
+# ============================================================================ #
+# Purpose: Sets signal obsertvations RINEX codes for each station, date and
+#          signal combination.
+#
+# ============================================================================ #
+# Usage:
+# ============================================================================ #
+#  ./BuildCampaignConfiguration.pl <cmp_root_path> <station_date_hash_bin>
+#
+# * NOTE:
+#    - Station-date hash configuration must be in binary format
+#    - Configuration templates must be located at $cmp_root_path/cfg/temp
+#
+# ============================================================================ #
+# Script arguments:
+# ============================================================================ #
+#  - $1 -> Campaign root path
+#  - $2 -> Station-Date configuration hash (Storable binary)
+#
+EOF
 
-# Set absolute path:
-$cfg_root_path = abs_path($cfg_root_path);
+print $script_description;
+
+# Read script argument:
+my ($cmp_root_path, $cmp_hash_cfg_path) = @ARGV;
+
+# Retrieve absolute paths:
+my $cfg_root_path = abs_path( join('/', $cmp_root_path, 'cfg') );
+my $tmp_root_path = abs_path( join('/', $cmp_root_path, 'tmp') );
 
 # Load satation-date hash configuration:
 my $ref_cmp_cfg = retrieve($cmp_hash_cfg_path);
 
 # Set PutConfiguration scrip path:
 my $set_cfg_script =
-  '/home/ppinto/WorkArea/src/tmp/cmp/PutProcessingConfiguration.sh';
+  join('/', SRC_ROOT_PATH, 'tmp', 'cmp', 'PutProcessingConfiguration.sh' );
 
 for my $station (keys %{$ref_cmp_cfg}) {
   for my $date (keys %{$ref_cmp_cfg->{$station}}) {
@@ -58,9 +83,8 @@ for my $station (keys %{$ref_cmp_cfg}) {
 
     for my $signal (keys %{$ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}}) {
 
-      # Retrieve observation:
-      my $obs =
-         $ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}{$signal};
+      # Retrieve observation RINEX code:
+      my $obs = $ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}{$signal};
 
       # Copy template:
       my $temp_file_path =
@@ -71,18 +95,20 @@ for my $station (keys %{$ref_cmp_cfg}) {
       qx{cp $temp_file_path $cfg_file_path};
 
       # Put configuration in template:
-      qx{$set_cfg_script $cfg_file_path \"$station\" \"$date\" \"$ini\" \"$end\" \"$signal\" \"$obs\"};
+      qx{$set_cfg_script $cfg_file_path \"$cmp_root_path\"
+         \"$station\" \"$date\" \"$ini\" \"$end\" \"$signal\" \"$obs\"};
 
       # Save configuration path in hash:
       $ref_cmp_cfg->{$station}{$date}{CFG_PATH}{$signal} = $cfg_file_path;
 
-    }
-  }
-}
+    } # end for $signal
+  } # end for $date
+} # end for $station
 
 # Save hash configuration:
 print Dumper $ref_cmp_cfg;
-store($ref_cmp_cfg, "ref_station_date_link_obs_cfg.hash");
+my $new_cmp_hash_file = 'ref_station_date_index_obs_cfg.hash';
+store( $ref_cmp_cfg, join('/', $tmp_root_path, $new_cmp_hash_file) );
 
 
 # ---------------------------------------------------------------------------- #

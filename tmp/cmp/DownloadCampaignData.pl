@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl -X
 
 # ---------------------------------------------------------------------------- #
 # Load perl modules:
@@ -30,31 +30,62 @@ use TimeGNSS qq(:ALL);
 # ---------------------------------------------------------------------------- #
 # Main Routine:
 
+my $script_description = <<'EOF';
+# ============================================================================ #
+# Script: DownloadCampaignData.pl
+# ============================================================================ #
+# Purpose: Downloads from BKG repository, RINEX observation and navigation data.
+#          The data is downloaded in $1/dat/ and structured by station and
+#          date.
+#
+# ============================================================================ #
+# Usage:
+# ============================================================================ #
+#  ./DownloadCampaignData.pl <cmp_root_path> <station_date_hash_conf_file>
+#
+# * NOTE:
+#    - Station-date hash must have the following format, e.g.:
+#      {
+#        KIRU => {
+#          DATE_1 => { YY_MO_DD => [], INI_TIME => [], END_TIME => [],  },
+#          ...
+#        },
+#        ...
+#      }
+#
+# ============================================================================ #
+# Script arguments:
+# ============================================================================ #
+#  - $1 -> Campaign root path
+#  - $2 -> Station-Date configuration hash (plain text)
+#
+EOF
+
+print $script_description;
+
 # Configuration flags:
 my $download_data_flag = FALSE;
 
 # 1. Load info containing stations and date information:
 # Script argument is expected to be the hash station-date configuration:
-my ($dat_root_path, $cmp_hash_cfg_path) = @ARGV;
+my ($cmp_root_path, $cmp_hash_cfg_path) = @ARGV;
 
-$dat_root_path = abs_path($dat_root_path);
+# Define RINEX data and temporal absolute paths:
+my $dat_root_path = abs_path( join('/', $cmp_root_path, 'dat') );
+my $tmp_root_path = abs_path( join('/', $cmp_root_path, 'tmp') );
+
+# Load hash configuration:
 my $ref_cmp_cfg = do $cmp_hash_cfg_path;
 
 # 2. Download rinex data:
-# Define source codes to download scripts:
+# Define download scripts:
 my $down_obs_rinex_path =
   join('/', UTIL_ROOT_PATH, "DownloadRinexObsFromFTP-BKG.pl");
 my $down_nav_rinex_path =
   join('/', UTIL_ROOT_PATH, "DownloadRinexNavFromFTP-BKG.pl");
 
-
-my @station_list = keys %{ $ref_cmp_cfg };
-
-for my $sta (@station_list) {
-
-  my @date_list = keys %{ $ref_cmp_cfg->{$sta} };
-
-  for my $date (@date_list) {
+for my $sta (keys %{ $ref_cmp_cfg }) {
+  for my $date (keys %{ $ref_cmp_cfg->{$sta} }) {
 
     # Retrieve year and compute day of year:
     my $ref_date_yy_mm_dd = $ref_cmp_cfg->{$sta}{$date}{YY_MO_DD};
@@ -67,22 +98,27 @@ for my $sta (@station_list) {
     # Define path to sotre rinex data:
     my $dat_path = join('/', $dat_root_path, $sta, $date, '');
 
-    unless(-e $dat_path) { qx{mkdir -p $dat_path}; }
+    # Make station directory:
+     qx{mkdir -p $dat_path} unless(-e $dat_path);
 
     # De-refernece date info:
-    # Rinex observation files:
-    qx{$down_obs_rinex_path $year $doy $sta $dat_path} if $download_data_flag;
+    if ($download_data_flag) {
 
-    # Rinex navigation files:
-    for my $sat_sys (&RINEX_GPS_ID, &RINEX_GAL_ID) {
-      qx{$down_nav_rinex_path $sat_sys $year $doy $sta $dat_path} if $download_data_flag;
-    } # end for $sat_sys
+      # Rinex observation files:
+      qx{$down_obs_rinex_path $year $doy $sta $dat_path};
+
+      # Rinex navigation files:
+      for my $sat_sys (&RINEX_GPS_ID, &RINEX_GAL_ID) {
+        qx{$down_nav_rinex_path $sat_sys $year $doy $sta $dat_path};
+      } # end for $sat_sys
+
+    } # end if $download_data_flag
 
   } # end for $date
 } # end for $sta
 
 print Dumper $ref_cmp_cfg;
-store($ref_cmp_cfg, 'ref_station_date_cfg.hash');
+store( $ref_cmp_cfg, join('/', $tmp_root_path, 'ref_station_date.hash') );
 
 # ---------------------------------------------------------------------------- #
 # END OF SCRIPT

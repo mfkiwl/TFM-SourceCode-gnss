@@ -29,9 +29,36 @@ use TimeGNSS qq(:ALL);
 # ---------------------------------------------------------------------------- #
 # Main Routine:
 
-# Read script argument:
-#   $1 -> Station-Date hash configuration (binary hash)
-my ($cmp_cfg_hash_path) = @ARGV;
+my $script_description = <<'EOF';
+# ============================================================================ #
+# Script: AssignSignalObservations.pl
+# ============================================================================ #
+# Purpose: Sets signal obsertvations RINEX codes for each station, date and
+#          signal combination.
+#
+# ============================================================================ #
+# Usage:
+# ============================================================================ #
+#  ./AssignSignalObservations.pl <cmp_root_path> <station_date_hash_bin>
+#
+# * NOTE:
+#    - Station-date hash configuration must be in binary format
+#
+# ============================================================================ #
+# Script arguments:
+# ============================================================================ #
+#  - $1 -> Campaign root path
+#  - $2 -> Station-Date configuration hash (Storable binary)
+#
+EOF
+
+print $script_description;
+
+# Read script arguments:
+my ($cmp_root_path, $cmp_cfg_hash_path) = @ARGV;
+
+# Retrive absolute paths:
+my $tmp_root_path = abs_path( join('/', $cmp_root_path, 'tmp') );
 
 # Load satation-date hash configuration:
 my $ref_cmp_cfg = retrieve($cmp_cfg_hash_path);
@@ -121,7 +148,8 @@ for $station (qw(KOUG)) {
 
 # Save hash configuration:
 print Dumper $ref_cmp_cfg;
-store($ref_cmp_cfg, "ref_station_date_link_obs.hash");
+my $new_cmp_hash_file = 'ref_station_date_index_obs.hash';
+store( $ref_cmp_cfg, join('/', $tmp_root_path, $new_cmp_hash_file) );
 
 
 # ---------------------------------------------------------------------------- #
