@@ -36,7 +36,9 @@ my $script_description = <<'EOF';
 # ============================================================================ #
 # Purpose: Downloads from BKG repository, RINEX observation and navigation data.
 #          The data is downloaded in $cmp_root_path/dat/ and structured by
-#          station and date.
+#          station and date. To each station-date pair, the date (day month and
+#          year), initial and end processing times (hour, minute, second) shall
+#          be specified.
 #
 # ============================================================================ #
 # Usage:
@@ -47,10 +49,14 @@ my $script_description = <<'EOF';
 #    - Station-date hash must have the following format, e.g.:
 #      {
 #        KIRU => {
-#          DATE_1 => { YY_MO_DD => [], INI_TIME => [], END_TIME => [],  },
-#          ...
+#          DATE_1 => {
+#           YY_MO_DD => [$year, $month, $day],
+#           INI_TIME => [$hour, $minute, $second],
+#           END_TIME => [$hour, $minute, $second],
+#          },
+#          # More dates
 #        },
-#        ...
+#        # More stations
 #      }
 #
 # ============================================================================ #
@@ -61,7 +67,6 @@ my $script_description = <<'EOF';
 #  - $3 -> Download data flag (1 for TRUE, 0 for FALSE)
 #
 EOF
-
 print $script_description;
 
 
@@ -98,16 +103,21 @@ for my $sta (keys %{ $ref_cmp_cfg }) {
     my $dat_path = join('/', $dat_root_path, $sta, $date, '');
 
     # Make station directory:
-     qx{mkdir -p $dat_path} unless(-e $dat_path);
+    say "Making $dat_path";
+    qx{mkdir -p $dat_path} unless(-e $dat_path);
 
     # De-refernece date info:
     if ($download_data_flag) {
 
       # Rinex observation files:
+      PrintComment(*STDOUT,
+        "Downloading RINEX OBS for $sta, on $year-$doy");
       qx{$down_obs_rinex_path $year $doy $sta $dat_path};
 
       # Rinex navigation files:
       for my $sat_sys (&RINEX_GPS_ID, &RINEX_GAL_ID) {
+        PrintComment(*STDOUT,
+          "Downloading RINEX NAV ($sat_sys) for $sta, on $year-$doy");
         qx{$down_nav_rinex_path $sat_sys $year $doy $sta $dat_path};
       } # end for $sat_sys
 
@@ -116,7 +126,7 @@ for my $sta (keys %{ $ref_cmp_cfg }) {
   } # end for $date
 } # end for $sta
 
-print Dumper $ref_cmp_cfg;
+# Save temporal hash:
 store( $ref_cmp_cfg, join('/', $tmp_root_path, 'ref_station_date.hash') );
 
 # ---------------------------------------------------------------------------- #

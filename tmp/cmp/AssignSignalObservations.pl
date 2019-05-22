@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl -X
 
 # ---------------------------------------------------------------------------- #
 # Load perl modules:
@@ -35,6 +35,15 @@ my $script_description = <<'EOF';
 # ============================================================================ #
 # Purpose: Sets signal obsertvations RINEX codes for each station, date and
 #          signal combination.
+#          The singal observations are manually set trough the script in the
+#          SIGNAL_OBS entry for each station and date pair. A relation between
+#          signal and rinex code observation shall be specified as indicated in
+#          the following example:
+#          SIGNAL_OBS => {
+#            CA => C1C,
+#            E1 => C1X,
+#            # More signals
+#          }
 #
 # ============================================================================ #
 # Usage:
@@ -146,8 +155,21 @@ for $station (qw(KOUG)) {
   }
 }
 
-# Save hash configuration:
-print Dumper $ref_cmp_cfg;
+# Show configured observations:
+for $station (keys %{ $ref_cmp_cfg }) {
+  say "$station";
+  for $date   (keys %{ $ref_cmp_cfg->{$station} }) {
+    say "\t$date";
+    for my $signal (keys %{ $ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS} }) {
+      my $obs = $ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}{$signal};
+      say "\t\t$signal -> $obs";
+    }
+    say "";
+  }
+  say "";
+}
+
+# Save hash configuration adding signal observation configuration:
 my $new_cmp_hash_file = 'ref_station_date_index_obs.hash';
 store( $ref_cmp_cfg, join('/', $tmp_root_path, $new_cmp_hash_file) );
 

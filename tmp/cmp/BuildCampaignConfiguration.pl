@@ -33,8 +33,8 @@ my $script_description = <<'EOF';
 # ============================================================================ #
 # Script: BuildCampaignConfiguration.pl
 # ============================================================================ #
-# Purpose: Sets signal obsertvations RINEX codes for each station, date and
-#          signal combination.
+# Purpose: Sets configuration files based on the available templates in
+#          $cmp_root_path/cfg/temp/_station_date_$signla.cfg
 #
 # ============================================================================ #
 # Usage:
@@ -43,6 +43,9 @@ my $script_description = <<'EOF';
 #
 # * NOTE:
 #    - Station-date hash configuration must be in binary format
+#    - Station-date hash must have YY_MO_DD, INI_TIME and END_TIME
+#      entries for each station date pair
+#    - Station-date hash must have SIGNAL_OBS entry
 #    - Configuration templates must be located at $cmp_root_path/cfg/temp
 #
 # ============================================================================ #
@@ -52,7 +55,6 @@ my $script_description = <<'EOF';
 #  - $2 -> Station-Date configuration hash (Storable binary)
 #
 EOF
-
 print $script_description;
 
 # Read script argument:
@@ -93,10 +95,11 @@ for my $station (keys %{$ref_cmp_cfg}) {
       my $cfg_file_path =
          join('/', $cfg_root_path, join('_', $station, $date, $signal).".cfg");
 
-      say "$temp_file_path -> $cfg_file_path";
+      say "Copying: $temp_file_path -> $cfg_file_path";
       qx{cp $temp_file_path $cfg_file_path};
 
       # Put configuration in template:
+      say "Putting configuration...";
       qx{$set_cfg_script $cfg_file_path \"$cmp_root_path\" \"$station\" \"$date\" \"$ini\" \"$end\" \"$signal\" \"$obs\"};
 
       # Save configuration path in hash:
@@ -106,8 +109,7 @@ for my $station (keys %{$ref_cmp_cfg}) {
   } # end for $date
 } # end for $station
 
-# Save hash configuration:
-print Dumper $ref_cmp_cfg;
+# Save hash configuration adding configuration information:
 my $new_cmp_hash_file = 'ref_station_date_index_obs_cfg.hash';
 store( $ref_cmp_cfg, join('/', $tmp_root_path, $new_cmp_hash_file) );
 

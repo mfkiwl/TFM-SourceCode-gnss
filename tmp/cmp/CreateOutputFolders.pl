@@ -36,6 +36,8 @@ my $script_description = <<'EOF';
 # ============================================================================ #
 # Purpose: Sets signal obsertvations RINEX codes for each station, date and
 #          signal combination.
+#          The output directories are created in $cmp_root_path/rpt structured
+#          as $station/$date/$signal/GRPP and $station/$date/$signal/GSPA.
 #
 # ============================================================================ #
 # Usage:
@@ -44,7 +46,8 @@ my $script_description = <<'EOF';
 #
 # * NOTE:
 #    - Station-date hash configuration must be in binary format
-#    - Configuration templates must be located at $cmp_root_path/cfg/temp
+#    - Station-date hash must contain SIGNAL_OBS entry for every station and
+#      date entry
 #
 # ============================================================================ #
 # Script arguments:
@@ -68,21 +71,21 @@ for my $station (keys %{$ref_cmp_cfg}) {
   for my $date (keys %{$ref_cmp_cfg->{$station}}) {
     for my $signal (keys %{$ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}}) {
 
+      # Set output paths:
       my $rpt_grpp_path =
         join('/', $rpt_root_path, $station, $date, $signal, "GRPP");
       my $rpt_gspa_path =
         join('/', $rpt_root_path, $station, $date, $signal, "GSPA");
 
       say "Creating: $rpt_grpp_path ";
-      say "Creating: $rpt_gspa_path ";
-
       qx{mkdir -p $rpt_grpp_path} unless (-e $rpt_grpp_path);
+
+      say "Creating: $rpt_gspa_path ";
       qx{mkdir -p $rpt_gspa_path} unless (-e $rpt_gspa_path);
 
     } # end for $signal
   } # end for $date
 } # end for $station
-
 
 
 # ---------------------------------------------------------------------------- #
