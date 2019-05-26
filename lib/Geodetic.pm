@@ -196,7 +196,7 @@ sub Geodetic2ECEF {
   my ($x, $y, $z);
 
   # Load elipsoid parameters:
-  my $ref_elip_prm = &ELIPSOID_DATABASE->($elip);
+  my $ref_elip_prm = &ELIPSOID_DATABASE->{$elip};
   my ($a, $b) = ($ref_elip_prm->{SEMIMAJOR_AXIS},
                  $ref_elip_prm->{SEMIMINOR_AXIS});
 
