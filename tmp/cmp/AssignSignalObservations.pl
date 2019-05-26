@@ -85,13 +85,13 @@ for $station (qw(KIRU)) {
   }
 }
 
-# KITG:
-for $station (qw(KITG)) {
+# TASH:
+for $station (qw(TASH)) {
   for $date  (qw(DATE_1 DATE_2)) {
     $ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}{ CA  } = 'C1C';
-    $ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}{ L2C } = 'C2L';
-    $ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}{ E1  } = 'C1C';
-    $ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}{ E5B } = 'C7Q';
+    $ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}{ L2C } = 'C2X';
+    $ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}{ E1  } = 'C1X';
+    $ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}{ E5B } = 'C5X';
   }
 }
 
