@@ -100,7 +100,7 @@ BEGIN {
 # Prelimnary Subroutine --> Load IGS reference station coordinates
 # ---------------------------------------------------------------------------- #
 
-use constant IGS_REF_STATIONS_FILE_NAME     => qq(ITRF2008_R.CRD);
+use constant IGS_REF_STATIONS_FILE_NAME     => qq(ITRF2008-2014_R.CRD);
 use constant IGS_REF_STATIONS_LINE_TEMPLATE => 'A3A6A10x4A13x2A13x2A13x4A5';
 use constant IGS_REF_STATIONS_END_OF_HEADER => 11;
 
