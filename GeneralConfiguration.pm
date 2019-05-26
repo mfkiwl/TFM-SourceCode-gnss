@@ -206,10 +206,9 @@ use constant SUPPORTED_GPS_SIGNALS => qw( C1C C1S C1L C1X C1P
                                           C2C C2D C2S C2L C2X C2P C2W
                                           C5I C5Q C5X );
 # GALILEO pseudorange signals:
-use constant SUPPORTED_GAL_SIGNALS => qw( C1C C1A C1B
+use constant SUPPORTED_GAL_SIGNALS => qw( C1C C1A C1B C1X C1Z
                                           C5I C5Q C5X
-                                          C7I C7Q C7X
-                                          C8I C8Q C8X );
+                                          C7I C7Q C7X );
 
 # NULL data constant:
 use constant NULL_DATA => 'NaN';
