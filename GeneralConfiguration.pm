@@ -54,6 +54,7 @@ BEGIN {
                           &RINEX_GAL_ID
                           &SAT_SYS_ID_TO_NAME
                           &SAT_SYS_OBS_TO_NAME
+                          &GPS_NAV_MSG_SOURCE_ID
                           &GPS_L1_FREQ
                           &GPS_L2_FREQ
                           &GPS_L5_FREQ
@@ -179,6 +180,9 @@ use constant
       C8 => 'E5',
     },
   };
+
+# GPS legacy navigation message data channel ID:
+use constant GPS_NAV_MSG_SOURCE_ID => 1;
 
 # Satellite system signal frequencies:
 # GPS signal frequencies:
