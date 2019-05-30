@@ -24,22 +24,22 @@ use TimeGNSS qq(:ALL);
 # ---------------------------------------------------------------------------- #
 
 my $rinex_nav_path =
-  '/home/ppinto/WorkArea/dat/nav/gal/ABMF00GLP_R_20190510000_01D_EN.rnx';
+  '/home/ppinto/GNSS_OS-SPP_Performance-Campaign_v3/dat/index/KIRU_DATE_1_GAL-NAV';
 
 
 my $ref_nav_rinex =
   ReadNavigationRinex($rinex_nav_path, RINEX_GAL_ID, *STDOUT);
 
 # print Dumper $ref_nav_rinex->{HEAD};
-print Dumper $ref_nav_rinex->{BODY}{E01};
+print Dumper $ref_nav_rinex->{BODY}{E01}{1234649400};
+
+exit 0;
 
 for ( sort(keys %{ $ref_nav_rinex->{BODY}{E01} }) ) {
   print "\n" x 1;
   PrintComment(*STDOUT, "On ".BuildDateString(GPS2Date($_)).", for sat E01");
   print Dumper $ref_nav_rinex->{BODY}{E01}{$_}{DATA_SOURCE};
 }
-
-exit 0;
 
 
 # Bit activation for GAL data source:
