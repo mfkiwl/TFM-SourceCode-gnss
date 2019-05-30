@@ -204,7 +204,7 @@ sub ComputeSatPosition {
         } else { # If satellite navigation data is available:
 
           # Determine best ephemerids to compute satellite coordinates:
-          my $sat_eph_epoch =
+          my ($sat_eph_epoch, $sat_eph_source) =
              &{ REF_SUB_SELECT_EPHEMERIDS->{$sat_sys} }
               ( $ref_gen_conf, $obs_epoch, $sat, $ref_nav_body);
 
@@ -224,13 +224,12 @@ sub ComputeSatPosition {
 
             # Save the ephemerid parameters for computing the satellite
             # coordinates:
-            my $ref_sat_eph = $ref_nav_body->{$sat}{$sat_eph_epoch};
+            my $ref_sat_eph =
+               $ref_nav_body->{$sat}{$sat_eph_epoch}{$sat_eph_source};
 
             # Retrieve observation measurement:
-            my $signal =
-               $ref_gen_conf->{SELECTED_SIGNALS}{$sat_sys};
-            my $obs_meas =
-               $ref_epoch_data->{SAT_OBS}{$sat}{$signal};
+            my $signal = $ref_gen_conf->{SELECTED_SIGNALS}{$sat_sys};
+            my $obs_meas = $ref_epoch_data->{SAT_OBS}{$sat}{$signal};
 
             # Do not compute satellite coordinates if the observation is not
             # valid:
@@ -336,9 +335,11 @@ sub CountValidNavigationSat {
 sub SelectGPSEphemerids {
   my ($ref_gen_conf, $obs_epoch, $sat, $ref_nav_body) = @_;
 
-  # Init ephemerids epoch to be returned:
+  # Init ephemerids epoch and source to be returned:
   # NOTE: epoch is init to invalid in case no valid ephemerids are found
-  my $eph_epoch = INVALID_EPH_EPOCH;
+  # NOTE: GPS ephemerids source will always be '1' (ñegacy navigation msg):
+  my $eph_epoch  = INVALID_EPH_EPOCH;
+  my $eph_source = GPS_NAV_MSG_SOURCE_ID;
 
   # Retrieve from configuration, the ephemerids time threshold:
   my $time_threshold = $ref_gen_conf->{EPH_TIME_THRESHOLD};
@@ -352,35 +353,44 @@ sub SelectGPSEphemerids {
     }
   }
 
-  return $eph_epoch;
+  return ($eph_epoch, $eph_source);
 }
 
 sub SelectGALEphemerids {
   my ($ref_gen_conf, $obs_epoch, $sat, $ref_nav_body) = @_;
 
-  # Init ephemerids epoch to be returned:
-  # NOTE: epoch is init to invalid in case no valid ephemerids are found
-  my $eph_epoch = INVALID_EPH_EPOCH;
+  # Init ephemerids epoch and source to be returned:
+  # NOTE: epoch and source is init to invalid in case no valid
+  #       ephemerids are found
+  my $eph_epoch  = INVALID_EPH_EPOCH;
+  my $eph_source = FALSE;
 
   # Retrieve from configuration: ephemerids time threshold and selected GAL
   # signal:
   # NOTE: signal obs is trimmed until second character
   my $time_threshold = $ref_gen_conf->{EPH_TIME_THRESHOLD};
-  my $signal = substr($ref_gen_conf->{SELECTED_SIGNALS}{&RINEX_GAL_ID}, 0, 2);
+  my $target_signal = substr($ref_gen_conf->{SELECTED_SIGNALS}{&RINEX_GAL_ID}, 0, 2);
 
-  # Iterate over the available ephemerid epochs:
-  for my $nav_epoch ( sort(keys(%{ $ref_nav_body->{$sat} })) )
-  {
+  # Iterate over the available ephemerid epochs and its different sources:
+  for my $nav_epoch ( sort(keys(%{ $ref_nav_body->{$sat} })) ) {
+    for my $nav_source ( keys(%{ $ref_nav_body->{$sat}{$nav_epoch} }) ) {
 
-    # Check for time threshold criteria and GAL data source:
-    if ( abs($obs_epoch - $nav_epoch) < $time_threshold  &&
-         $ref_nav_body->{$sat}{$nav_epoch}{DATA_SOURCE}{SERVICE}{$signal} ) {
-      $eph_epoch = $nav_epoch;
-      last; # once valid ephemerids are found, the loop is broken...
-    }
-  }
+      # Retrieve ephemerids signal service boolean:
+      my $signal_service =
+         $ref_nav_body->{$sat}{$nav_epoch}{$nav_source}
+                        {DATA_SOURCE}{SERVICE}{$target_signal};
 
-  return $eph_epoch;
+      # Check for time threshold criteria and GAL data source:
+      if ( abs($obs_epoch - $nav_epoch) < $time_threshold && $signal_service ) {
+        $eph_epoch  = $nav_epoch;
+        $eph_source = $nav_source;
+        last; # once valid ephemerids are found, the loop is broken...
+      }
+
+    } # end for $nav_source
+  } # end for $nav_epoch
+
+  return ($eph_epoch, $eph_source);
 }
 
 sub ComputeGPSSatelliteCoordinates {

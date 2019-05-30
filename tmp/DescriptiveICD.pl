@@ -321,7 +321,12 @@
                            A0 => -9.31322574616e-10 );
 
 # Ephemerids information:
-%sat_ephemerids  = ( $epoch => \%ephemerids_data, '[...]' ); # not fixed length
+%sat_ephemerids  = ( $epoch => (
+                        $source => \%ephemerids_data, '[...]',
+                        $source => \%ephemerids_data, '[...]',
+                     ),
+                     '[...]',
+                    ); # not fixed length
 %ephemerids_data = (
   # Satellite's cock parameters:
   SV_CLK_BIAS  => $sv_clock_bias,  # satellite's clock bias [s]
