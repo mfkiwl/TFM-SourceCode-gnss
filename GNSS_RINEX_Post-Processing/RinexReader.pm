@@ -740,7 +740,7 @@ sub ReadNavigationRinex {
   #       sat sys navigation files...
 
   # Init navigation body hash to fill:
-  my %nav_body_hash; my $ref_nav_body = \%nav_body_hash;
+  my $ref_nav_body = {};
 
   # Read navigation header:
   my $ref_nav_header = ReadNavigationRinexHeader($file_path, $fh_log);
@@ -784,12 +784,12 @@ sub ReadNavigationRinex {
     if ( looks_like_number(unpack($check_nav_block_temp, $buffer)) )
     {
       # Read navigation block:
-      my ($epoch, $sat, $ref_nav_prm) =
+      my ($source, $epoch, $sat, $ref_nav_prm) =
         &{ REF_READ_EPH_BLOCK->{$sat_sys} }( $buffer,
                                              $first_line_temp, $line_temp );
 
       # Fill navigation body hash:
-      $ref_nav_body->{$sat}{$epoch} = $ref_nav_prm;
+      $ref_nav_body->{$sat}{$epoch}{$source} = $ref_nav_prm;
 
     } else {
       # Raise warning to log:
@@ -1111,8 +1111,11 @@ sub ReadGPSNavigationBlock {
   if (length($yyyy) == 2) { $yyyy += ($yyyy < 80) ? 2000 : 1900; }
   my $epoch = Date2GPS($yyyy, $mm, $dd, $hh, $mi, $ss );
 
+  # GPS Data source will always be '1' (legacy navigation message id):
+  my $source = GPS_NAV_MSG_SOURCE_ID;
+
   # Return epoch, satellite PRN and hash with retreived parameters:
-  return ($epoch, $sat, \%nav_prm_hash);
+  return ($source, $epoch, $sat, \%nav_prm_hash);
 }
 
 sub ReadGALNavigationBlock {
@@ -1159,8 +1162,12 @@ sub ReadGALNavigationBlock {
   if (length($yyyy) == 2) { $yyyy += ($yyyy < 80) ? 2000 : 1900; }
   my $epoch = Date2GPS($yyyy, $mm, $dd, $hh, $mi, $ss );
 
+  # GAL navigation message source varies.
+  # The source is set as the data source raw integer from the ephemerids:
+  my $source = $ref_dat_src->{INT};
+
   # Return epoch, satellite PRN and hash with retreived parameters:
-  return ($epoch, $sat, \%nav_prm_hash);
+  return ($source, $epoch, $sat, \%nav_prm_hash);
 }
 
 sub DecodeGALDataSources {
@@ -1203,7 +1210,7 @@ sub DecodeGALDataSources {
   # Add RINEX signal active service info:
   # NOTE: service is available as long as the corrections
   #       are flaged for the relevant signal
-  $ref_data_source->{SERVICE}{C1} = ( $bit_array[9] ); # E1
+  $ref_data_source->{SERVICE}{C1} = ( $bit_array[9] | $bit_array[8] ); # E1
   $ref_data_source->{SERVICE}{C5} = ( $bit_array[8] ); # E5a
   $ref_data_source->{SERVICE}{C7} = ( $bit_array[9] ); # E5b
 
