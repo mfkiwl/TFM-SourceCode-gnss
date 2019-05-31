@@ -80,7 +80,7 @@ if ($station_list[0] eq 'ALL') {
 }
 
 # Inform about stations:
-say "GRPP will be launched for : ", join(', ', @station_list);
+say "\nGRPP will be launched for : ", join(', ', @station_list), "\n";
 
 for my $station (@station_list) {
   for my $date (keys %{ $ref_cmp_cfg->{$station} }) {
@@ -97,6 +97,7 @@ for my $station (@station_list) {
       # Launch command:
       say "Launching : $grpp_launch $grpp_config";
       say "   STDOUT : $stdout_file";
+      say "";
       qx{ $grpp_launch $grpp_config 1> $stdout_file 2>&1 };
 
     } # end for $signal
