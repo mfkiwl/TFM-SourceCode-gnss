@@ -211,11 +211,12 @@ sub ComputeIonoKlobucharDelay {
     # Compute ionospheric delay phase [rad]:
     my $iono_phase = ( 2*pi*($ipp_time - 50400) ) / $iono_period;
 
-    # Compute slant factor delay [m¿?]:
+    # Compute slant factor delay [s]:
     my $slant_fact = 1.0 + 16.0*(0.53 - $elevation)**3;
 
-    # Compute ionospheric time delay for standard frequency [m]:
+    # Compute ionospheric time delay for standard frequency [s]:
     my $iono_delay_f1;
+
     # Depending of the absolue magnitude of the phase delay, delay for L1 signal
     # is computed as:
     if ( abs($iono_phase) <= 1.57 ) {
@@ -230,7 +231,7 @@ sub ComputeIonoKlobucharDelay {
 
     # Compute ionospheric time delay for configured frequency [m]:
     my $iono_delay_f2 =
-      ( ($carrier_freq_f1/$carrier_freq_f2)**2 )*$iono_delay_f1;
+      ( (GPS_L1_FREQ/$carrier_freq_f2)**2 )*$iono_delay_f1;
 
   # Return ionospheric delays for both frequencies:
   return ($iono_delay_f1, $iono_delay_f2)
