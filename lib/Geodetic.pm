@@ -253,7 +253,7 @@ sub Venu2AzZeDs {
   my $orto_dist = ModulusNth($ie, $in);
 
   # Zenital angle:
-  my $zenital = pi/2 - atan($iu/$orto_dist);
+  my $zenital = pi/2 - atan2($iu, $orto_dist);
 
   # Return parameters:
   return ($azimut, $zenital, $geom_dist);
