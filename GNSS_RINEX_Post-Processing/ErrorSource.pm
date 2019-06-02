@@ -154,6 +154,16 @@ sub ComputeIonoKlobucharDelay {
        $ref_iono_alpha, $ref_iono_beta,
        $carrier_freq_f1, $carrier_freq_f2, $elip ) = @_;
 
+  # say '$gps_epoch,
+  #      $leap_sec,
+  #      $ref_sat_xyz,
+  #      $ref_rec_lat_lon_h,
+  #      $azimut, $elevation,
+  #      $ref_iono_alpha, $ref_iono_beta,
+  #      $carrier_freq_f1, $carrier_freq_f2, $elip';
+  #
+  # print Dumper \@_;
+
   # De-reference input arguments:
     # GPS Alpha and Beta coefficients:
     my @iono_alpha_prm = @{ $ref_iono_alpha };
@@ -200,7 +210,7 @@ sub ComputeIonoKlobucharDelay {
 
     # Compute ionospheric delay amplitude [s]:
     my $iono_amplitude  = 0;
-       $iono_amplitude += $iono_alpha_prm[$_]*$geomag_lat_ipp**$_ for (0..3);
+       $iono_amplitude += $iono_alpha_prm[$_]*($geomag_lat_ipp**$_) for (0..3);
        $iono_amplitude  = 0 if ($iono_amplitude < 0);
 
     # Compute ionospheric delay period [s]:
@@ -211,19 +221,18 @@ sub ComputeIonoKlobucharDelay {
     # Compute ionospheric delay phase [rad]:
     my $iono_phase = ( 2*pi*($ipp_time - 50400) ) / $iono_period;
 
-    # Compute slant factor delay [s]:
+    # Compute slant factor delay [m¿?]:
     my $slant_fact = 1.0 + 16.0*(0.53 - $elevation)**3;
 
-    # Compute ionospheric time delay for standard frequency [s]:
+    # Compute ionospheric time delay for standard frequency [m]:
     my $iono_delay_f1;
-
     # Depending of the absolue magnitude of the phase delay, delay for L1 signal
     # is computed as:
     if ( abs($iono_phase) <= 1.57 ) {
       my $aux1       = 1 - ($iono_phase**2/2) + ($iono_phase**4/24);
-      $iono_delay_f1 = ( 5.1e-9 + $iono_amplitude*$aux1 )*$slant_fact;
+      $iono_delay_f1 = ( 5e-9 + $iono_amplitude*$aux1 )*$slant_fact;
     } elsif ( abs($iono_phase) >= 1.57 ) {
-      $iono_delay_f1 = 5.1e-9*$slant_fact;
+      $iono_delay_f1 = 5e-9*$slant_fact;
     }
 
     # Transform ionospheric time delay into meters:
@@ -231,7 +240,22 @@ sub ComputeIonoKlobucharDelay {
 
     # Compute ionospheric time delay for configured frequency [m]:
     my $iono_delay_f2 =
-      ( (GPS_L1_FREQ/$carrier_freq_f2)**2 )*$iono_delay_f1;
+      ( ($carrier_freq_f1/$carrier_freq_f2)**2 )*$iono_delay_f1;
+
+    # PrintTitle3(*STDOUT, "Ionosphere Klobuchar computed parameters:");
+    # PrintBulletedInfo(*STDOUT, "\t\t - ",
+    #   "Earth center angle = $earth_center_angle",
+    #   "IPP's lat    = $ipp_lat",
+    #   "IPP's lon    = $ipp_lon",
+    #   "IPP's GM lat = $geomag_lat_ipp",
+    #   "Iono delay amplitude = $iono_amplitude",
+    #   "Iono delay period    = $iono_period",
+    #   "Iono delay phase     = $iono_phase",
+    #   "Slant factor         = $slant_fact",
+    #   "Aux -> $aux1 = 1 - ($iono_phase**2/2) + ($iono_phase**4/24)",
+    #   "Iono delay [s] -> ".$iono_delay_f1/SPEED_OF_LIGHT." = ( 5e-9 + $iono_amplitude*$aux1 )*$slant_fact",
+    #   "Iono delay at F1     = $iono_delay_f1",
+    #   "Iono delay at F2     = $iono_delay_f2");
 
   # Return ionospheric delays for both frequencies:
   return ($iono_delay_f1, $iono_delay_f2)
