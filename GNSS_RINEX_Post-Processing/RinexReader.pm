@@ -133,8 +133,8 @@ use constant {
 # Navigation RINEX 3 ionosphere coefficients keys:
 use constant {
   ION_GAL_V3   => 'GAL',
-  ION_BETA_V3  => 'GPSA',
-  ION_ALPHA_V3 => 'GPSB',
+  ION_ALPHA_V3 => 'GPSA',
+  ION_BETA_V3  => 'GPSB',
 };
 
 # RINEX hash parameters constants:
