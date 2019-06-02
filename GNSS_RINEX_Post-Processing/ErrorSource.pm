@@ -154,16 +154,6 @@ sub ComputeIonoKlobucharDelay {
        $ref_iono_alpha, $ref_iono_beta,
        $carrier_freq_f1, $carrier_freq_f2, $elip ) = @_;
 
-  # say '$gps_epoch,
-  #      $leap_sec,
-  #      $ref_sat_xyz,
-  #      $ref_rec_lat_lon_h,
-  #      $azimut, $elevation,
-  #      $ref_iono_alpha, $ref_iono_beta,
-  #      $carrier_freq_f1, $carrier_freq_f2, $elip';
-  #
-  # print Dumper \@_;
-
   # De-reference input arguments:
     # GPS Alpha and Beta coefficients:
     my @iono_alpha_prm = @{ $ref_iono_alpha };
@@ -239,23 +229,9 @@ sub ComputeIonoKlobucharDelay {
     $iono_delay_f1 *= SPEED_OF_LIGHT;
 
     # Compute ionospheric time delay for configured frequency [m]:
+    # NOTE: klobuchar model is alway provided over GPS L1 frquency.
     my $iono_delay_f2 =
-      ( ($carrier_freq_f1/$carrier_freq_f2)**2 )*$iono_delay_f1;
-
-    # PrintTitle3(*STDOUT, "Ionosphere Klobuchar computed parameters:");
-    # PrintBulletedInfo(*STDOUT, "\t\t - ",
-    #   "Earth center angle = $earth_center_angle",
-    #   "IPP's lat    = $ipp_lat",
-    #   "IPP's lon    = $ipp_lon",
-    #   "IPP's GM lat = $geomag_lat_ipp",
-    #   "Iono delay amplitude = $iono_amplitude",
-    #   "Iono delay period    = $iono_period",
-    #   "Iono delay phase     = $iono_phase",
-    #   "Slant factor         = $slant_fact",
-    #   "Aux -> $aux1 = 1 - ($iono_phase**2/2) + ($iono_phase**4/24)",
-    #   "Iono delay [s] -> ".$iono_delay_f1/SPEED_OF_LIGHT." = ( 5e-9 + $iono_amplitude*$aux1 )*$slant_fact",
-    #   "Iono delay at F1     = $iono_delay_f1",
-    #   "Iono delay at F2     = $iono_delay_f2");
+      ( (GPS_L1_FREQ/$carrier_freq_f2)**2 )*$iono_delay_f1;
 
   # Return ionospheric delays for both frequencies:
   return ($iono_delay_f1, $iono_delay_f2)
