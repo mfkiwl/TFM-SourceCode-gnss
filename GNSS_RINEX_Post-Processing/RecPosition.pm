@@ -183,6 +183,16 @@ sub ComputeRecPosition {
                                           $first_solution_flag,
                                           $ref_rinex_obs, $i );
 
+        # PrintTitle2(*STDOUT, "After SelectSatForLSQ()");
+        # for (sort(keys( %{ $ref_epoch_info->{SAT_LOS} } ))) {
+        #   PrintComment(*STDOUT, $_);
+        #   PrintBulletedInfo(*STDOUT, "  - ",
+        #     "REC-SV Distance = ".$ref_epoch_info->{SAT_LOS}{$_}{DISTANCE},
+        #     "REC-SV Iono     = ".$ref_epoch_info->{SAT_LOS}{$_}{IONO_CORR},
+        #     "REC-SV Elevaion = ".$ref_epoch_info->{SAT_LOS}{$_}{ELEVATION}*RADIANS_TO_DEGREE,
+        #     "REC-SV Zenital  = ".$ref_epoch_info->{SAT_LOS}{$_}{ZENITAL}*RADIANS_TO_DEGREE);
+        # }
+
         # Init iteration information:
         my @iter_solution; # 2D matrix to save the iteration solutions...
         my ($iteration, $iter_status, $convergence_flag) = (0, FALSE, FALSE);
@@ -222,6 +232,16 @@ sub ComputeRecPosition {
             $ref_rinex_obs->{HEAD}{LEAP_SECONDS},
             $ref_design_matrix, $ref_weight_matrix, $ref_ind_term_matrix
           );
+
+          # PrintTitle2(*STDOUT, "After BuildLSQMatrixSystem()");
+          # for (sort(keys( %{ $ref_epoch_info->{SAT_LOS} } ))) {
+          #   PrintComment(*STDOUT, $_);
+          #   PrintBulletedInfo(*STDOUT, "  - ",
+          #     "REC-SV Distance = ".$ref_epoch_info->{SAT_LOS}{$_}{DISTANCE},
+          #     "REC-SV Iono     = ".$ref_epoch_info->{SAT_LOS}{$_}{IONO_CORR},
+          #     "REC-SV Elevaion = ".$ref_epoch_info->{SAT_LOS}{$_}{ELEVATION}*RADIANS_TO_DEGREE,
+          #     "REC-SV Zenital  = ".$ref_epoch_info->{SAT_LOS}{$_}{ZENITAL}*RADIANS_TO_DEGREE);
+          # }
 
           # ************************ #
           # LSQ position estimation: #
@@ -641,6 +661,11 @@ sub SelectSatForLSQ {
             $rec_sat_elevation) = ReceiverSatelliteLoS( $ref_gen_conf,
                                                        \@rec_apx_xyzdt,
                                                        \@sat_xyz_recep );
+
+        # PrintComment(*STDOUT, $sat);
+        # print Dumper { LAT => $rec_lat*RADIANS_TO_DEGREE,
+        #                LON => $rec_lon*RADIANS_TO_DEGREE,
+        #                HEP => $rec_helip };
 
         # Update LoS hash info:
         # NOTE: ionosphere and troposphere corrections are set to undefined.
