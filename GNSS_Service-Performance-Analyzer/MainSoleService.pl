@@ -218,7 +218,7 @@ sub PlotReportingRoutine {
       # Satellite availability plot:
       for (@streams) {
         print $_ "\n" x 1;
-        PrintTitle3($_, "Ploting $sat_sys_name Satellite Availability");
+        PrintTitle3($_, "Ploting $sat_sys_name satellite availability");
       }
 
       $status *=
@@ -228,7 +228,7 @@ sub PlotReportingRoutine {
       # Satellite observed elevation plot:
       for (@streams) {
         print $_ "\n" x 1;
-        PrintTitle3($_, "Ploting $sat_sys_name Observed Elevation");
+        PrintTitle3($_, "Ploting $sat_sys_name observed elevation");
       }
 
       $status *=
@@ -238,7 +238,7 @@ sub PlotReportingRoutine {
       # Satellite Sky Path:
       for (@streams) {
         print $_ "\n" x 1;
-        PrintTitle3($_, "Ploting $sat_sys_name Sky path");
+        PrintTitle3($_, "Ploting $sat_sys_name sky-path");
       }
 
       $status *=
@@ -262,7 +262,7 @@ sub PlotReportingRoutine {
       # Satellite residuals plot:
       for (@streams) {
         print $_ "\n" x 1;
-        PrintTitle3($_, "Ploting $sat_sys_name Satellite Residuals");
+        PrintTitle3($_, "Ploting $sat_sys_name satellite residuals");
       }
 
       $status *=
@@ -272,7 +272,7 @@ sub PlotReportingRoutine {
       # Satellite ionosphere delay plot:
       for (@streams) {
         print $_ "\n" x 1;
-        PrintTitle3($_, "Ploting $sat_sys_name Satellite Ionosphere Delay");
+        PrintTitle3($_, "Ploting $sat_sys_name satellite ionosphere delay");
       }
 
       $status *=
@@ -282,7 +282,7 @@ sub PlotReportingRoutine {
       # Satellite troposphere delay plot:
       for (@streams) {
         print $_ "\n" x 1;
-        PrintTitle3($_, "Ploting $sat_sys_name Satellite Troposphere Delay");
+        PrintTitle3($_, "Ploting $sat_sys_name satellite troposphere delay");
       }
 
       $status *=
@@ -300,7 +300,7 @@ sub PlotReportingRoutine {
 
     for (@streams) {
       print $_ "\n" x 1;
-      PrintTitle3($_, "Ploting LSQ Estimation Iformation");
+      PrintTitle3($_, "Ploting LSQ estimation iformation");
     }
 
     $status *=
@@ -309,13 +309,13 @@ sub PlotReportingRoutine {
     my $end_lsq_info = [gettimeofday];
 
   # *************************************** #
-  # Plot receiver positioning perofrmances: #
+  # Plot receiver positioning performances: #
   # *************************************** #
   my $ini_pos_perfo = [gettimeofday];
 
     for (@streams) {
       print $_ "\n" x 1;
-      PrintTitle3($_, "Ploting Receiver Position Solutions");
+      PrintTitle3($_, "Ploting receiver position solutions");
     }
 
     $status *=
@@ -323,7 +323,7 @@ sub PlotReportingRoutine {
 
     for (@streams) {
       print $_ "\n" x 1;
-      PrintTitle3($_, "Ploting Accuracy Performance Results");
+      PrintTitle3($_, "Ploting accuracy performance results");
     }
 
     $status *=
@@ -331,7 +331,7 @@ sub PlotReportingRoutine {
 
     for (@streams) {
       print $_ "\n" x 1;
-      PrintTitle3($_, "Ploting Integrity Performance Results");
+      PrintTitle3($_, "Ploting integrity performance results");
     }
 
     # The integrity info is only reported if the static and integrity modes
@@ -353,7 +353,7 @@ sub PlotReportingRoutine {
   # Report elapsed times:
   for (@streams) {
     print $_ "\n" x 1;
-    PrintTitle3($_, "Plot reporting time lapses:");
+    PrintTitle3($_, "Graphical report time lapses:");
     ReportElapsedTime( $ini_sat_obs_info, $end_sat_obs_info,
                        "ploting satellite observation data   = ", $_ );
     ReportElapsedTime( $ini_sat_error, $end_sat_error,
@@ -371,6 +371,97 @@ sub PlotReportingRoutine {
 sub PerformanceReportingRoutine {
   my ( $ref_gen_conf, $ref_obs_data, $inp_path, $out_path, $fh_log ) = @_;
 
+  # Init subroutine status:
+  my $status = TRUE;
+
+  # Init generic streams:
+  my @streams = (*STDOUT, $fh_log);
+
+  # Retrieve station marker name from observation hash:
+  my $marker = $ref_obs_data->{HEAD}{MARKER_NAME};
+
+  # Info message:
+  for (@streams) {
+    print $_ "\n" x 2;
+    PrintTitle1($_, "Performance reporting routine has started");
+  }
+
+  # Accuracy performance report:
+  my $ini_acc_perfo = [gettimeofday];
+
+    for (@streams) {
+      print $_ "\n" x 1;
+      PrintTitle3($_, "Reporting position accuracy performance");
+    }
+
+    $status *=
+      ReportPositionAccuracy( $ref_gen_conf, $inp_path, $out_path, $marker );
+
+  my $end_acc_perfo = [gettimeofday];
+
+  # Error position performance report:
+  my $ini_err_perfo = [gettimeofday];
+
+    # Error position performance only available when static mode has been
+    # activated:
+    if ($ref_gen_conf->{STATIC}{STATUS}) {
+
+      for (@streams) {
+        print $_ "\n" x 1;
+        PrintTitle3($_, "Reporting position error performance");
+      }
+
+      $status *=
+        ReportPositionError( $ref_gen_conf, $inp_path, $out_path, $marker );
+
+    } else {
+      for (*STDOUT, $fh_log) {
+        print $_ "\n" x 1;
+        PrintComment($_, "However, no static mode was configured...");
+      }
+    }
+
+  my $end_err_perfo = [gettimeofday];
+
+  # Integrity performance report:
+  my $ini_int_perfo = [gettimeofday];
+
+    # Integrity position performance only available when both static mode
+    # and itegrity mode have bee activated:
+    if ( $ref_gen_conf->{STATIC}{STATUS} &&
+         $ref_gen_conf->{INTEGRITY}{STATUS} ) {
+
+      for (@streams) {
+        print $_ "\n" x 1;
+        PrintTitle3($_, "Reporting position integrity performance");
+      }
+
+      $status *=
+        ReportPositionIntegrity( $ref_gen_conf, $inp_path, $out_path, $marker );
+
+    } else {
+      for (*STDOUT, $fh_log) {
+        print $_ "\n" x 1;
+        PrintComment($_, "However, no integrity mode was configured...");
+      }
+    }
+
+  my $end_int_perfo = [gettimeofday];
+
+  # Report elapsed times:
+  for (@streams) {
+    print $_ "\n" x 1;
+    PrintTitle3($_, "Numerical report time lapses:");
+    ReportElapsedTime( $ini_acc_perfo, $end_acc_perfo,
+                       "reporting accuracy performance   = ", $_ );
+    ReportElapsedTime( $ini_err_perfo, $end_err_perfo,
+                       "reporting error performance      = ", $_ );
+    ReportElapsedTime( $ini_int_perfo, $end_int_perfo,
+                       "reporting integrity performance  = ", $_ );
+    print $_ "\n" x 1;
+  }
+
+  return $status;
 }
 
 # Print subs:
