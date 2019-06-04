@@ -5,8 +5,9 @@
 # Package declaration:
 package PlotPosPerformance;
 
-# Set package exportation properties:
 # ---------------------------------------------------------------------------- #
+# Set package exportation properties:
+
 BEGIN {
   # Load export module:
   require Exporter;
@@ -37,8 +38,9 @@ BEGIN {
                        SUBROUTINES => \@EXPORT_SUB );
 }
 
-# Import common perl modules:
 # ---------------------------------------------------------------------------- #
+# Import common perl modules:
+
 use Carp;         # advanced warning and failure raise...
 use strict;       # strict syntax and common mistakes advisory...
 
@@ -46,8 +48,9 @@ use Data::Dumper;       # var pretty print...
 use feature qq(say);    # print adding line jump...
 use feature qq(switch); # advanced switch statement...
 
-# Load special tool modules:
 # ---------------------------------------------------------------------------- #
+# Load special tool modules:
+
 # Perl Data Language (PDL) modules:
 use PDL;
 use PDL::NiceSlice;
@@ -56,13 +59,15 @@ use Math::Trig qq(pi);
 # Perl-Gnuplot conection module:
 use Chart::Gnuplot;
 
-# Load bash enviroments:
 # ---------------------------------------------------------------------------- #
+# Load bash enviroments:
+
 use lib $ENV{ ENV_ROOT };
 use Enviroments qq(:CONSTANTS);
 
-# Load dedicated libraries:
 # ---------------------------------------------------------------------------- #
+# Load dedicated libraries:
+
 use lib $ENV{ LIB_ROOT };
 use MyUtil   qq(:ALL); # ancillary utilities...
 use MyMath   qq(:ALL); # dedicated math toolbox...
@@ -71,21 +76,13 @@ use TimeGNSS qq(:ALL); # GNSS time conversion tools...
 use Geodetic qq(:ALL); # dedicated geodesy utilities...
 
 # Load general configuration and interfaces module:
-# ---------------------------------------------------------------------------- #
 use lib $ENV{ SRC_ROOT };
 use GeneralConfiguration qq(:ALL);
 
-
 # ---------------------------------------------------------------------------- #
-# Constants:
-# ---------------------------------------------------------------------------- #
-
-# ---------------------------------------------------------------------------- #
-# Subroutines:
-# ---------------------------------------------------------------------------- #
-
 # Public Subroutines: #
-# ............................................................................ #
+# ---------------------------------------------------------------------------- #
+
 sub PlotReceiverPosition {
   my ($ref_gen_conf, $inp_path, $out_path, $marker_name) = @_;
 
@@ -97,7 +94,8 @@ sub PlotReceiverPosition {
   my $pdl_rec_xyz = pdl( LoadFileByLayout($ref_file_layout) );
 
   # Observation epochs:
-  my $pdl_epochs = $pdl_rec_xyz($ref_file_layout->{ITEMS}{Epoch}{INDEX});
+  my $pdl_epochs =
+     $pdl_rec_xyz($ref_file_layout->{ITEMS}{Epoch}{INDEX});
 
   # Get first and last observation epochs:
   my $ini_epoch = min($pdl_epochs);
@@ -112,12 +110,12 @@ sub PlotReceiverPosition {
      $pdl_rec_xyz($ref_file_layout->{ITEMS}{REF_IU}{INDEX});
 
   # Get maximum upping absolute value:
-  my $max_upping = max($pdl_rec_upping);
-  my $min_upping = min($pdl_rec_upping);
-
+  my $max_upping     = max($pdl_rec_upping);
+  my $min_upping     = min($pdl_rec_upping);
   my $max_abs_upping = max( pdl [abs($max_upping), abs($min_upping)] );
 
   # Retrieve standard deviations for ENU coordinates:
+  # TODO: consider applying configured sigma scale factor
   my $pdl_std_easting =
      $pdl_rec_xyz($ref_file_layout->{ITEMS}{Sigma_E}{INDEX});
   my $pdl_std_northing =
@@ -125,7 +123,7 @@ sub PlotReceiverPosition {
   my $pdl_std_upping =
      $pdl_rec_xyz($ref_file_layout->{ITEMS}{Sigma_U}{INDEX});
 
-  # Compute HDOP:
+  # Compute horizontal standard deviation:
   my $pdl_std_en = ($pdl_std_easting**2 + $pdl_std_northing**2)**0.5;
 
   # Retrieve receiver clock bias estimation and associated error:
@@ -139,17 +137,20 @@ sub PlotReceiverPosition {
   my $pdl_rec_azimut = pi/2 - atan2($pdl_rec_northing, $pdl_rec_easting);
   my $pdl_rec_distance = ($pdl_rec_easting**2 + $pdl_rec_northing**2)**.5;
 
-  # Compute max rec distance for polar plot:
+  # Compute max rec distance for polar plot and add 1 meter.
+  # This is for setting the polar plot bound on the ro domain:
   my $max_rec_distance = int(max($pdl_rec_distance)) + 1;
 
   # Set EN polar title:
+  # Get initial epoch date in 'yyyy/mo/dd' format:
   my $date = ( split(' ', BuildDateString(GPS2Date($ini_epoch))) )[0];
   my $chart_en_polar_hdop_title =
     "Receiver Easting, Northing and HDOP from $marker_name station on $date";
+
   # Set palette label:
   my $palette_label_cmm = 'cblabel "Horizontal DOP [m]"';
 
-  # Create EN chart object:
+  # Create polar plot object for plotting EN components:
   my $chart_en_polar_hdop =
     Chart::Gnuplot->new(
       terminal => 'pngcairo size 874,874',
@@ -189,7 +190,8 @@ sub PlotReceiverPosition {
       style => "circle radius 0.05",
     );
 
-  # Copy polar plot but plot Upping in the color domain:
+  # Copy previous polar plot  plot Upping in the color domain:
+  # TODO: do not copy but init another polar plot...
   my $chart_enu_polar = $chart_en_polar_hdop->copy();
   my $chart_enu_polar_title =
     "Receiver Easting, Northing and Upping from $marker_name station on $date";
@@ -207,6 +209,8 @@ sub PlotReceiverPosition {
     $palette_range_cmm => "",
   );
 
+  # TODO: Create new polar plot and color z domain with epochs.
+
   # Set ENU multiplot chart title:
   my $chart_enu_title =
     "Receiver Easting, Northing and Upping from $marker_name station on $date";
@@ -220,6 +224,7 @@ sub PlotReceiverPosition {
       # NOTE: this does not works properly
       timestamp => "on",
     );
+
   # ENU individual charts for multiplot:
   my $chart_e =
     Chart::Gnuplot->new(
@@ -277,7 +282,8 @@ sub PlotReceiverPosition {
     );
 
 
-  # Build EN polar dataset:
+  # Build EN polar datasets:
+  # EN polar dataset with horizontal accuracy:
   my $rec_en_hdop_polar_dataset =
     Chart::Gnuplot::DataSet->new(
       xdata => unpdl($pdl_rec_azimut->flat),
@@ -286,6 +292,7 @@ sub PlotReceiverPosition {
       style => "circles linecolor pal z",
       fill => { density => 0.8 },
     );
+  # EN polar dataset with upping component:
   my $rec_enu_polar_dataset =
     Chart::Gnuplot::DataSet->new(
       xdata => unpdl($pdl_rec_azimut->flat),
@@ -346,26 +353,26 @@ sub PlotReceiverPosition {
     );
 
   # Plot the datasets on their respectives graphs:
+  # TODO: add grey lines in each component for indicating reference position
+    # ENU multiplot:
+      # Add datasets to their respective charts:
+      $chart_e->add2d( $rec_e_dataset );
+      $chart_n->add2d( $rec_n_dataset );
+      $chart_u->add2d( $rec_u_dataset );
 
-  # ENU multiplot:
-    # Add datasets to their respective charts:
-    $chart_e->add2d( $rec_e_dataset );
-    $chart_n->add2d( $rec_n_dataset );
-    $chart_u->add2d( $rec_u_dataset );
+      # And set plot matrix in parent chart object:
+      $chart_enu->multiplot([ [$chart_e],
+                              [$chart_n],
+                              [$chart_u] ]);
 
-    # And set plot matrix in parent chart object:
-    $chart_enu->multiplot([ [$chart_e],
-                            [$chart_n],
-                            [$chart_u] ]);
+    # Receiver clock bias plot:
+    $chart_clk_bias->plot2d((
+                              $rec_clk_bias_dataset
+                           ));
 
-  # Receiver clock bias plot:
-  $chart_clk_bias->plot2d((
-                            $rec_clk_bias_dataset
-                         ));
-
-  # EN 2D polar plot:
-  $chart_en_polar_hdop->plot2d( $rec_en_hdop_polar_dataset );
-  $chart_enu_polar->plot2d( $rec_enu_polar_dataset );
+    # EN 2D polar plot:
+    $chart_en_polar_hdop->plot2d( $rec_en_hdop_polar_dataset );
+    $chart_enu_polar->plot2d( $rec_enu_polar_dataset );
 
   return TRUE;
 }
@@ -381,7 +388,7 @@ sub PlotDilutionOfPrecission {
   my $pdl_dop_info = pdl( LoadFileByLayout($ref_file_layout) );
 
   my $pdl_epochs =
-    $pdl_dop_info($ref_file_layout->{ITEMS}{EpochGPS}{INDEX});
+     $pdl_dop_info($ref_file_layout->{ITEMS}{EpochGPS}{INDEX});
 
   my $ini_epoch = min($pdl_epochs);
   my $end_epoch = max($pdl_epochs);
@@ -392,12 +399,14 @@ sub PlotDilutionOfPrecission {
   my $pdl_hdop = $pdl_dop_info( $ref_file_layout->{ITEMS}{HDOP}{INDEX} );
   my $pdl_vdop = $pdl_dop_info( $ref_file_layout->{ITEMS}{VDOP}{INDEX} );
 
+  # TODO: consider adding sigma scale factor for standard deviations indicators
+
   # Set chart's titles:
   my $date = ( split(' ', BuildDateString(GPS2Date($ini_epoch))) )[0];
   my $chart_ecef_title =
-    "ECEF Reference Frame Ex-post DOP from $marker_name station on $date";
+    "ECEF Frame Ex-post DOP from $marker_name station on $date";
   my $chart_enu_title =
-    "ENU Reference Frame Ex-post DOP from $marker_name station on $date";
+    "ENU Frame Ex-post DOP from $marker_name station on $date";
 
   # Create chart for ECEF frame DOP:
   my $chart_ecef =
@@ -503,8 +512,5 @@ sub PlotDilutionOfPrecission {
   return TRUE;
 }
 
-
-# Private Subroutines: #
-# ............................................................................ #
 
 TRUE;
