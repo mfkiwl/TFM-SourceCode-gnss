@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl -X
 
 # TODO: SCRIPT DESCRIPTION GOES HERE:
 
@@ -83,15 +83,20 @@ my $ini_script_time = [gettimeofday];
 # ---------------------------------------------------------------------------- #
 # 2. Data plotting routine:
 
-
+  my ($plot_status) =
+    PlotReportingRoutine( $ref_gen_conf, $ref_obs_data,
+                          $inp_path, $out_path, $fh_log );
 
 # ---------------------------------------------------------------------------- #
 # 3. Performance reporting routine:
 
+  my ($perfo_status) =
+    PerformanceReportingRoutine( $ref_gen_conf, $ref_obs_data,
+                                 $inp_path, $out_path, $fh_log );
 
-
-# Termination:
 # ---------------------------------------------------------------------------- #
+# Termination:
+
 PrintGoodbyeMessage( $ref_gen_conf, $out_path, $fh_log,
                      $ini_script_time, [gettimeofday]);
 
@@ -181,11 +186,200 @@ sub CheckInputArguments {
           $ref_gen_conf, $ref_obs_data, $cfg_file );
 }
 
+sub PlotReportingRoutine {
+  my ($ref_gen_conf, $ref_obs_data, $inp_path, $out_path, $fh_log) = @_;
+
+  # Init subroutine status:
+  my $status = TRUE;
+
+  # Init generic streams:
+  my @streams = (*STDOUT, $fh_log);
+
+  # Init var to hold satellite system ID:
+  my $sat_sys;
+
+  # Retrieve station marker name from observation hash:
+  my $marker = $ref_obs_data->{HEAD}{MARKER_NAME};
+
+  # Info message:
+  for (@streams) {
+    print $_ "\n" x 2;
+    PrintTitle1($_, "Plot reporting routine has started");
+  }
+
+  # ********************************************************* #
+  # Ploting satellite dependent data: observation information #
+  # ********************************************************* #
+  my $ini_sat_obs_info = [gettimeofday];
+
+    for $sat_sys (@{ $ref_gen_conf->{SELECTED_SAT_SYS} })
+    {
+      # Literal satellite system:
+      my $sat_sys_name = SAT_SYS_ID_TO_NAME->{$sat_sys};
+
+      # Satellite availability plot:
+      for (@streams) {
+        print $_ "\n" x 1;
+        PrintTitle3($_, "Ploting $sat_sys_name Satellite Availability");
+      }
+
+      $status *=
+        PlotSatelliteAvailability( $ref_gen_conf, $inp_path,
+                                   $out_path, $sat_sys, $marker );
+
+      # Satellite observed elevation plot:
+      for (@streams) {
+        print $_ "\n" x 1;
+        PrintTitle3($_, "Ploting $sat_sys_name Observed Elevation");
+      }
+
+      $status *=
+        PlotSatelliteElevation( $ref_gen_conf, $inp_path,
+                                $out_path, $sat_sys, $marker );
+
+      # Satellite Sky Path:
+      for (@streams) {
+        print $_ "\n" x 1;
+        PrintTitle3($_, "Ploting $sat_sys_name Sky path");
+      }
+
+      $status *=
+        PlotSatelliteSkyPath( $ref_gen_conf, $inp_path,
+                              $out_path, $sat_sys, $marker );
+
+    } # end for $sat_sys
+
+  my $end_sat_obs_info = [gettimeofday];
+
+  # ******************************************************* #
+  # Plot satellite dependent data: error source information #
+  # ******************************************************* #
+  my $ini_sat_error = [gettimeofday];
+
+    for $sat_sys (@{ $ref_gen_conf->{SELECTED_SAT_SYS} })
+    {
+      # Literal satellite system:
+      my $sat_sys_name = SAT_SYS_ID_TO_NAME->{$sat_sys};
+
+      # Satellite residuals plot:
+      for (@streams) {
+        print $_ "\n" x 1;
+        PrintTitle3($_, "Ploting $sat_sys_name Satellite Residuals");
+      }
+
+      $status *=
+        PlotSatelliteResiduals( $ref_gen_conf, $inp_path,
+                                $out_path, $sat_sys, $marker );
+
+      # Satellite ionosphere delay plot:
+      for (@streams) {
+        print $_ "\n" x 1;
+        PrintTitle3($_, "Ploting $sat_sys_name Satellite Ionosphere Delay");
+      }
+
+      $status *=
+        PlotSatelliteIonosphereDelay( $ref_gen_conf, $inp_path,
+                                      $out_path, $sat_sys, $marker );
+
+      # Satellite troposphere delay plot:
+      for (@streams) {
+        print $_ "\n" x 1;
+        PrintTitle3($_, "Ploting $sat_sys_name Satellite Troposphere Delay");
+      }
+
+      $status *=
+        PlotSatelliteTroposphereDelay( $ref_gen_conf, $inp_path,
+                                       $out_path, $sat_sys, $marker );
+
+    } # end for $sat_sys
+
+  my $end_sat_error = [gettimeofday];
+
+  # ******************************** #
+  # Plot LSQ estimation information: #
+  # ******************************** #
+  my $ini_lsq_info = [gettimeofday];
+
+    for (@streams) {
+      print $_ "\n" x 1;
+      PrintTitle3($_, "Ploting LSQ Estimation Iformation");
+    }
+
+    $status *=
+      PlotLSQEpochEstimation( $ref_gen_conf, $inp_path, $out_path, $marker );
+
+    my $end_lsq_info = [gettimeofday];
+
+  # *************************************** #
+  # Plot receiver positioning perofrmances: #
+  # *************************************** #
+  my $ini_pos_perfo = [gettimeofday];
+
+    for (@streams) {
+      print $_ "\n" x 1;
+      PrintTitle3($_, "Ploting Receiver Position Solutions");
+    }
+
+    $status *=
+      PlotReceiverPosition( $ref_gen_conf, $inp_path, $out_path, $marker );
+
+    for (@streams) {
+      print $_ "\n" x 1;
+      PrintTitle3($_, "Ploting Accuracy Performance Results");
+    }
+
+    $status *=
+      PlotDilutionOfPrecission( $ref_gen_conf, $inp_path, $out_path, $marker );
+
+    for (@streams) {
+      print $_ "\n" x 1;
+      PrintTitle3($_, "Ploting Integrity Performance Results");
+    }
+
+    # The integrity info is only reported if the static and integrity modes
+    # are enabled:
+    if ( $ref_gen_conf->{STATIC}{STATUS} &&
+         $ref_gen_conf->{INTEGRITY}{STATUS} ) {
+
+      # TODO: sub
+
+    } else {
+      for (*STDOUT, $fh_log) {
+        print $_ "\n" x 1;
+        PrintComment($_, "However, no integrity mode was configured...");
+      }
+    }
+
+  my $end_pos_perfo = [gettimeofday];
+
+  # Report elapsed times:
+  for (@streams) {
+    print $_ "\n" x 1;
+    PrintTitle3($_, "Plot reporting time lapses:");
+    ReportElapsedTime( $ini_sat_obs_info, $end_sat_obs_info,
+                       "ploting satellite observation data   = ", $_ );
+    ReportElapsedTime( $ini_sat_error, $end_sat_error,
+                       "ploting satellite error source data  = ", $_ );
+    ReportElapsedTime( $ini_lsq_info, $end_lsq_info,
+                       "ploting LSQ estimation information   = ", $_ );
+    ReportElapsedTime( $ini_pos_perfo, $end_pos_perfo,
+                       "ploting positioning performance data = ", $_ );
+    print $_ "\n" x 1;
+  }
+
+  return ($status);
+}
+
+sub PerformanceReportingRoutine {
+  my ( $ref_gen_conf, $ref_obs_data, $inp_path, $out_path, $fh_log ) = @_;
+
+}
+
 # Print subs:
 sub PrintWelcomeMessage {
   my ($inp_path, $cfg_file, @streams) = @_;
 
-  my $msg1 = "Welcome to GNSS Rinex Single Service Performance Analyzer tool";
+  my $msg1 = "Welcome to GNSS Rinex Service Performance Analyzer tool";
   my $msg2 = "Script was called from    : '".abs_path($0)."'";
   my $msg3 = "GRPP data loaded from     : '".abs_path($inp_path)."'";
   my $msg4 = "Configuration loaded from : '".abs_path($cfg_file)."'";
@@ -207,13 +401,12 @@ sub PrintGoodbyeMessage {
 
   for (*STDOUT, $fh_log) {
     print $_ "\n" x 1;
-    PrintTitle1  ($_, "GNSS Rinex Single Service Performance ".
-                      "Analyzer routine is over");
+    PrintTitle1  ($_, "GNSS Service Performance Analyzer routine is over");
     PrintComment ($_, "Plots and reports are available at : '$out_path'");
     PrintComment ($_, "Log file is available at           : '".
                   $ref_gen_conf->{LOG_FILE_PATH}."'");
     print $_ "\n" x 1;
-    ReportElapsedTime($ini_time, $end_time, "Single-GSPA script = ", $_);
+    ReportElapsedTime($ini_time, $end_time, "GSPA script = ", $_);
     print $_ LEVEL_0_DELIMITER;
     print $_ "\n" x 2;
   }
