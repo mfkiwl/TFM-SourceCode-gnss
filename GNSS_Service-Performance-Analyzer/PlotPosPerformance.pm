@@ -259,7 +259,7 @@ sub PlotReceiverPosition {
     "Receiver Clock Bias from $marker_name station on $date";
 
   # Create chart object for receiver clock bias:
-  my $palette_label_cmm = 'cblabel "STD (1 sigma) [m]"';
+  my $palette_label_std_cmm = 'cblabel "STD (1 sigma) [m]"';
   my $chart_clk_bias =
     Chart::Gnuplot->new(
       terminal => 'pngcairo size 874,540',
@@ -274,7 +274,7 @@ sub PlotReceiverPosition {
       xrange => [$ini_epoch, $end_epoch],
       timeaxis => "x",
       xtics => { labelfmt => "%H:%M" },
-      $palette_label_cmm => "",
+      $palette_label_std_cmm => "",
       timestamp =>  {
         fmt  => 'Created on %d/%m/%y %H:%M:%S',
         font => "Helvetica Italic, 10",

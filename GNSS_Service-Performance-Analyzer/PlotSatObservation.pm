@@ -195,7 +195,6 @@ sub PlotSatelliteAvailability {
       title => "Valid for LSQ routine"
     );
 
-
   # Plot satellite number datasets:
   $chart->plot2d(
     $num_avail_sat_dataset,
