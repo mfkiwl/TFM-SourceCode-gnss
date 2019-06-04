@@ -2,8 +2,9 @@
 
 # TODO: SCRIPT DESCRIPTION GOES HERE:
 
-# Import common perl modules:
 # ---------------------------------------------------------------------------- #
+# Import common perl modules:
+
 use Cwd qw(abs_path);    # directory path...
 use Carp;   # advanced STDERR...
 use strict; # enables strict syntax...
@@ -17,13 +18,15 @@ use feature qq(switch); # advanced switch statement...
 # Precise time lapses:
 use Time::HiRes qw(gettimeofday tv_interval);
 
-# Load bash enviroments:
 # ---------------------------------------------------------------------------- #
+# Load bash enviroments:
+
 use lib $ENV{ ENV_ROOT };
 use Enviroments qq(:CONSTANTS);
 
-# Load dedicated libraries:
 # ---------------------------------------------------------------------------- #
+# Load dedicated libraries:
+
 use lib $ENV{ LIB_ROOT };
 use MyUtil   qq(:ALL); # ancillary utilities...
 use MyMath   qq(:ALL); # dedicated math toolbox...
@@ -31,13 +34,14 @@ use MyPrint  qq(:ALL); # plain text print layouts...
 use TimeGNSS qq(:ALL); # GNSS time conversion tools...
 use Geodetic qq(:ALL); # dedicated geodesy utilities...
 
-# Load tool's modules:
 # ---------------------------------------------------------------------------- #
+# Load tool's modules:
+
 # Configuration:
 use lib $ENV{ SRC_ROOT };
 use GeneralConfiguration qq(:ALL);
 
-# Tool classes:
+# GRPP packages:
 use lib $ENV{ GRPP_ROOT };
 use RinexReader qq(:ALL);
 use SatPosition qq(:ALL);
@@ -45,17 +49,21 @@ use ErrorSource qq(:ALL);
 use RecPosition qq(:ALL);
 use DataDumper  qq(:ALL);
 
-# Script constants:
+
 # ---------------------------------------------------------------------------- #
+# Script constants:
+
 use constant WARN_MARKER_NAME_NOT_EQUAL => 90001;
 
+# ============================================================================ #
+# Main Routine #
 # ============================================================================ #
 
 # Init script clock:
 my $ini_script_time = [gettimeofday];
 
-# 1. Read tool configuration:
 # ---------------------------------------------------------------------------- #
+# 1. Read tool configuration:
 
   # Script arguments:
   #   1. Configuration file
@@ -93,8 +101,9 @@ my $ini_script_time = [gettimeofday];
   PrintBasicConfiguration($ref_gen_conf, $fh_log);
 
 
-# 2. Rinex data processing routine:
 # ---------------------------------------------------------------------------- #
+# 2. Rinex data processing routine:
+
   my ( $proc_status,
        $ref_obs_data,
        $ref_nav_data ) = DataProcessingRoutine($ref_gen_conf, $fh_log);
@@ -103,9 +112,9 @@ my $ini_script_time = [gettimeofday];
     croak "Data processing routine exited with error";
   }
 
-
-# 3. Data dumping routine:
 # ---------------------------------------------------------------------------- #
+# 3. Data dumping routine:
+
   my ($dump_status) = DataDumpingRoutine($ref_gen_conf, $ref_obs_data, $fh_log);
 
   if ($proc_status == FALSE) {
@@ -113,11 +122,14 @@ my $ini_script_time = [gettimeofday];
   }
 
 
-# 4. Script termination:
 # ---------------------------------------------------------------------------- #
+# 4. Script termination:
+
   PrintGoodbyeMessage($ref_gen_conf, $fh_log, $ini_script_time, [gettimeofday]);
 
 
+# ============================================================================ #
+# END OF SCRIPT #
 # ============================================================================ #
 
 # Script subroutines:
@@ -366,9 +378,12 @@ sub DataDumpingRoutine {
       "Horizontal integrity information");
   }
 
+  # Integrity outputs are only dumped if static and
+  # integrity modes are activated
   my $ini_integ_data = [gettimeofday];
 
-  if ( $ref_gen_conf->{INTEGRITY}{STATUS} ) {
+  if ( $ref_gen_conf->{STATIC}{STATUS} &&
+       $ref_gen_conf->{INTEGRITY}{STATUS} ) {
 
     $sub_status =
       DumpVerticalIntegrityInfo( $ref_gen_conf,
@@ -459,7 +474,6 @@ sub PrintWelcomeMessage {
     PrintComment ($_, $msg2);
     PrintComment ($_, $msg3);
     print $_ "\n" x 1;
-
   }
 
   return TRUE;
@@ -599,6 +613,7 @@ sub PrintSolutionExtract {
 
   for my $fh (*STDOUT, $fh_log)
   {
+    # First for and last positions:
     print $fh "\n" x 1;
     PrintTitle4($fh, "Receiver positions for first 4 and last epochs:");
     for (0..3, -4..-1) {
@@ -623,6 +638,20 @@ sub PrintSolutionExtract {
 
       PrintBulletedInfo($fh, "\t", "[...]") if ($_ == 3);
     }
+
+    # Status of observation epochs:
+    my $ref_osb_data_body = $ref_obs_data->{BODY};
+    
+    my $num_epochs = scalar(@{ $ref_obs_data_body });
+
+    my $num_valid_epochs = 0;
+
+    for (keys @{ $ref_obs_data_body }) {
+      $num_valid_epochs += $ref_obs_data_body->[$_]{STATUS};
+    }
+
+
+
   }
 
   return TRUE;
