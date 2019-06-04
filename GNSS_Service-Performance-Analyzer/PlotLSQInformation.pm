@@ -5,8 +5,9 @@
 # Package declaration:
 package PlotLSQInformation;
 
-# Set package exportation properties:
 # ---------------------------------------------------------------------------- #
+# Set package exportation properties:
+
 BEGIN {
   # Load export module:
   require Exporter;
@@ -36,8 +37,9 @@ BEGIN {
                        SUBROUTINES => \@EXPORT_SUB );
 }
 
-# Import common perl modules:
 # ---------------------------------------------------------------------------- #
+# Import common perl modules:
+
 use Carp;         # advanced warning and failure raise...
 use strict;       # strict syntax and common mistakes advisory...
 
@@ -45,8 +47,9 @@ use Data::Dumper;       # var pretty print...
 use feature qq(say);    # print adding line jump...
 use feature qq(switch); # advanced switch statement...
 
-# Load special tool modules:
 # ---------------------------------------------------------------------------- #
+# Load special tool modules:
+
 # Perl Data Language (PDL) modules:
 use PDL;
 use PDL::NiceSlice;
@@ -55,13 +58,15 @@ use Math::Trig qq(pi);
 # Perl-Gnuplot conection module:
 use Chart::Gnuplot;
 
-# Load bash enviroments:
 # ---------------------------------------------------------------------------- #
+# Load bash enviroments:
+
 use lib $ENV{ ENV_ROOT };
 use Enviroments qq(:CONSTANTS);
 
-# Load dedicated libraries:
 # ---------------------------------------------------------------------------- #
+# Load dedicated libraries:
+
 use lib $ENV{ LIB_ROOT };
 use MyUtil   qq(:ALL); # ancillary utilities...
 use MyMath   qq(:ALL); # dedicated math toolbox...
@@ -70,21 +75,13 @@ use TimeGNSS qq(:ALL); # GNSS time conversion tools...
 use Geodetic qq(:ALL); # dedicated geodesy utilities...
 
 # Load general configuration and interfaces module:
-# ---------------------------------------------------------------------------- #
 use lib $ENV{ SRC_ROOT };
 use GeneralConfiguration qq(:ALL);
 
-
 # ---------------------------------------------------------------------------- #
-# Constants:
-# ---------------------------------------------------------------------------- #
-
-# ---------------------------------------------------------------------------- #
-# Subroutines:
-# ---------------------------------------------------------------------------- #
-
 # Public Subroutines: #
-# ............................................................................ #
+# ---------------------------------------------------------------------------- #
+
 sub PlotLSQEpochEstimation {
   my ($ref_gen_conf, $inp_path, $out_path, $marker_name) = @_;
 
@@ -93,6 +90,7 @@ sub PlotLSQEpochEstimation {
     GetFileLayout( join('/', ($inp_path, "LSQ-epoch-report-info.out")),
                    3, $ref_gen_conf->{DATA_DUMPER}{DELIMITER} );
 
+  # Make piddle from loaded file:
   my $pdl_lsq_info = pdl( LoadFileByLayout($ref_file_layout) );
 
   # Load epochs:
@@ -102,9 +100,10 @@ sub PlotLSQEpochEstimation {
   my $ini_epoch = min($pdl_epochs);
   my $end_epoch = max($pdl_epochs);
 
-  # Retrieve the following from LSQ info:
+  # Retrieve the following LSQ info:
     # Number of iterations:
-    my $pdl_num_iter = $pdl_lsq_info($ref_file_layout->{ITEMS}{NumIter}{INDEX});
+    my $pdl_num_iter =
+       $pdl_lsq_info($ref_file_layout->{ITEMS}{NumIter}{INDEX});
 
     # LSQ and Convergence status:
     my $pdl_lsq_st =
@@ -159,12 +158,12 @@ sub PlotLSQEpochEstimation {
     my $t_1 = $num_epochs - 1;
 
   # Set's chart titles:
+  # Get initial epoch date in yyyy/mo/dd format:
   my $date = ( split(' ', BuildDateString(GPS2Date($ini_epoch))) )[0];
-  my $chart_lsq_rpt_title =
-    "LSQ routine report from $marker_name on $date";
-  my $chart_x_title = "LSQ ECEF X parameter report from $marker_name on $date";
-  my $chart_y_title = "LSQ ECEF Y parameter report from $marker_name on $date";
-  my $chart_z_title = "LSQ ECEF Z parameter report from $marker_name on $date";
+  my $chart_lsq_rpt_title = "LSQ routine report from $marker_name on $date";
+  my $chart_x_title  = "LSQ ECEF X parameter report from $marker_name on $date";
+  my $chart_y_title  = "LSQ ECEF Y parameter report from $marker_name on $date";
+  my $chart_z_title  = "LSQ ECEF Z parameter report from $marker_name on $date";
   my $chart_dt_title = "LSQ DT parameter report from $marker_name on $date";
 
   # Set chart objects:
@@ -259,6 +258,8 @@ sub PlotLSQEpochEstimation {
           timeaxis => "x",
           xtics => { labelfmt => "%H:%M" },
         );
+
+      # For Y, Z, and DT parameters, copy from X parameter objects:
       my $chart_y_parameter        = $chart_x_parameter       -> copy;
       my $chart_delta_y_parameter  = $chart_delta_x_parameter -> copy;
       my $chart_z_parameter        = $chart_x_parameter       -> copy;
@@ -266,8 +267,12 @@ sub PlotLSQEpochEstimation {
       my $chart_dt_parameter       = $chart_x_parameter       -> copy;
       my $chart_delta_dt_parameter = $chart_delta_x_parameter -> copy;
 
-
   # Set dataset objects:
+
+    # *********************** #
+    # LSQ general information #
+    # *********************** #
+
     # LSQ status:
     my $lsq_st_dataset =
       Chart::Gnuplot::DataSet->new(
@@ -340,6 +345,10 @@ sub PlotLSQEpochEstimation {
         timefmt => "%s",
         title => "Ex-Post STD",
       );
+
+    # ************************* #
+    # LSQ parameter information #
+    # ************************* #
 
     # ECEF X parameter estimation:
     my $est_x_parameter_dataset =
@@ -502,8 +511,5 @@ sub PlotLSQEpochEstimation {
   return TRUE;
 }
 
-
-# Private Subroutines: #
-# ............................................................................ #
 
 TRUE;
