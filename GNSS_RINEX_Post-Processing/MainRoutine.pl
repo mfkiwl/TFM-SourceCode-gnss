@@ -49,7 +49,6 @@ use ErrorSource qq(:ALL);
 use RecPosition qq(:ALL);
 use DataDumper  qq(:ALL);
 
-
 # ---------------------------------------------------------------------------- #
 # Script constants:
 
@@ -57,7 +56,6 @@ use constant WARN_MARKER_NAME_NOT_EQUAL => 90001;
 
 # ============================================================================ #
 # Main Routine #
-# ============================================================================ #
 
 # Init script clock:
 my $ini_script_time = [gettimeofday];
@@ -128,7 +126,6 @@ my $ini_script_time = [gettimeofday];
   PrintGoodbyeMessage($ref_gen_conf, $fh_log, $ini_script_time, [gettimeofday]);
 
 
-# ============================================================================ #
 # END OF SCRIPT #
 # ============================================================================ #
 
@@ -611,11 +608,24 @@ sub PrintBasicConfiguration {
 sub PrintSolutionExtract {
   my ($ref_obs_data, $fh_log) = @_;
 
+  # Compute Status of observation epochs:
+  my $ref_obs_body = $ref_obs_data->{BODY};
+
+  my $num_ok_epochs  = 0;
+  my $num_nok_epochs = 0;
+  my $num_epochs = scalar(@{ $ref_obs_body });
+
+  for (keys @{ $ref_obs_body }) {
+    $num_ok_epochs  += 1 if     ($ref_obs_body->[$_]{REC_POSITION}{STATUS});
+    $num_nok_epochs += 1 unless ($ref_obs_body->[$_]{REC_POSITION}{STATUS});
+  }
+
+
   for my $fh (*STDOUT, $fh_log)
   {
     # First for and last positions:
     print $fh "\n" x 1;
-    PrintTitle4($fh, "Receiver positions for first 4 and last epochs:");
+    PrintTitle4($fh, "Receiver position summary:");
     for (0..3, -4..-1) {
       PrintComment( $fh, "\tObservation epoch : ".
         BuildDateString(GPS2Date($ref_obs_data->{BODY}[$_]{EPOCH})).
@@ -639,18 +649,17 @@ sub PrintSolutionExtract {
       PrintBulletedInfo($fh, "\t", "[...]") if ($_ == 3);
     }
 
-    # Status of observation epochs:
-    my $ref_osb_data_body = $ref_obs_data->{BODY};
-    
-    my $num_epochs = scalar(@{ $ref_obs_data_body });
-
-    my $num_valid_epochs = 0;
-
-    for (keys @{ $ref_obs_data_body }) {
-      $num_valid_epochs += $ref_obs_data_body->[$_]{STATUS};
-    }
-
-
+    # Report status summary:
+    PrintTitle4( $fh, "Receiver position status summary:" );
+    PrintComment( $fh,
+      sprintf("\t> %10d (%3d%) epochs processed",
+        $num_epochs, ($num_epochs/$num_epochs)*100) );
+    PrintComment( $fh,
+      sprintf("\t> %10d (%3d%) epochs with valid status",
+        $num_ok_epochs, ($num_ok_epochs/$num_epochs)*100) );
+    PrintComment( $fh,
+      sprintf("\t> %10d (%3d%) epochs with invalid status",
+        $num_nok_epochs, ($num_nok_epochs/$num_epochs)*100) );
 
   }
 
