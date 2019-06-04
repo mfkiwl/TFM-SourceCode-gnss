@@ -130,8 +130,8 @@ for $station (qw(FAIR)) {
   for $date  (qw(DATE_3)) {
     $ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}{ CA  } = 'C1C';
     $ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}{ L2C } = 'C2W';
-    $ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}{ E1  } = 'C1';
-    $ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}{ E5B } = 'C5';
+    $ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}{ E1  } = 'C1C';
+    $ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}{ E5B } = 'C5Q';
   }
 }
 
