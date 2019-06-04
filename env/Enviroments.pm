@@ -60,8 +60,7 @@ use constant {
   GRPP_ROOT_PATH => $ENV{ GRPP_ROOT },
   GSPA_ROOT_PATH => $ENV{ GSPA_ROOT },
   GRPP           => $ENV{ GRPP      },
-  GSPA_SOLE      => $ENV{ GSPA_SOLE },
-  GSPA_DUAL      => $ENV{ GSPA_DUAL },
+  GSPA           => $ENV{ GSPA      },
 };
 
 use constant {
