@@ -1,4 +1,4 @@
-#!/usr/bin/perl -X
+#!/usr/bin/perl -w
 
 # TODO: SCRIPT DESCRIPTION GOES HERE:
 
@@ -58,7 +58,6 @@ use constant {
 
 # ============================================================================ #
 # Main routine:
-# ============================================================================ #
 
 # Init script clock:
 my $ini_script_time = [gettimeofday];
@@ -100,7 +99,6 @@ my $ini_script_time = [gettimeofday];
 PrintGoodbyeMessage( $ref_gen_conf, $out_path, $fh_log,
                      $ini_script_time, [gettimeofday]);
 
-# ============================================================================ #
 # End of script
 # ============================================================================ #
 

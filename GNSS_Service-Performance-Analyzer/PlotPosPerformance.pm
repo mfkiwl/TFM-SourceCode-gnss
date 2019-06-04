@@ -81,7 +81,6 @@ use GeneralConfiguration qq(:ALL);
 
 # ---------------------------------------------------------------------------- #
 # Public Subroutines: #
-# ---------------------------------------------------------------------------- #
 
 sub PlotReceiverPosition {
   my ($ref_gen_conf, $inp_path, $out_path, $marker_name) = @_;

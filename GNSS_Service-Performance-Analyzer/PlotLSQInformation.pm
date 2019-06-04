@@ -80,7 +80,6 @@ use GeneralConfiguration qq(:ALL);
 
 # ---------------------------------------------------------------------------- #
 # Public Subroutines: #
-# ---------------------------------------------------------------------------- #
 
 sub PlotLSQEpochEstimation {
   my ($ref_gen_conf, $inp_path, $out_path, $marker_name) = @_;
@@ -510,6 +509,5 @@ sub PlotLSQEpochEstimation {
 
   return TRUE;
 }
-
 
 TRUE;
