@@ -1,9 +1,10 @@
-#!/usr/bin/perl -X
+#!/usr/bin/perl -w
 
 # TODO: SCRIPT DESCRIPTION GOES HERE:
 
-# Import common perl modules:
 # ---------------------------------------------------------------------------- #
+# Import common perl modules:
+
 use Cwd qw(abs_path); # directory path...
 use Carp;   # advanced STDERR...
 use strict; # enables strict syntax...
@@ -17,13 +18,15 @@ use feature qq(switch); # advanced switch statement...
 # Precise time lapses:
 use Time::HiRes qw(gettimeofday tv_interval);
 
-# Load bash enviroments:
 # ---------------------------------------------------------------------------- #
+# Load bash enviroments:
+
 use lib $ENV{ ENV_ROOT };
 use Enviroments qq(:CONSTANTS);
 
-# Load dedicated libraries:
 # ---------------------------------------------------------------------------- #
+# Load dedicated libraries:
+
 use lib $ENV{ LIB_ROOT };
 use MyUtil   qq(:ALL); # ancillary utilities...
 use MyMath   qq(:ALL); # dedicated math toolbox...
@@ -31,8 +34,9 @@ use MyPrint  qq(:ALL); # plain text print layouts...
 use TimeGNSS qq(:ALL); # GNSS time conversion tools...
 use Geodetic qq(:ALL); # dedicated geodesy utilities...
 
-# Load tool's modules:
 # ---------------------------------------------------------------------------- #
+# Load tool's modules:
+
 # Configuration:
 use lib $ENV{ SRC_ROOT };
 use GeneralConfiguration qq(:ALL);
@@ -59,28 +63,32 @@ use constant {
 # Init script clock:
 my $ini_script_time = [gettimeofday];
 
-# 1. Read script input arguments and check them
 # ---------------------------------------------------------------------------- #
+# 1. Read script input arguments and check them
+
   my ( $input_status,
        $inp_path,
        $out_path,
        $ref_gen_conf, $ref_obs_data, $cfg_file ) = CheckInputArguments(@ARGV);
 
-  # Exit script if inputs wer not correctly provided:
+  # Exit script if inputs were not correctly provided:
   unless ($input_status) { croak "Wrong provision of inputs"; }
 
-  # Open existing log file for appinding GSPA events log:
+  # Open existing log file for appending GSPA events log:
   my $fh_log; open($fh_log, '>>', $ref_gen_conf->{LOG_FILE_PATH}) or croak $!;
 
   # Welcome message:
   PrintWelcomeMessage($inp_path, $cfg_file, *STDOUT, $fh_log);
 
-
+# ---------------------------------------------------------------------------- #
 # 2. Data plotting routine:
-# ---------------------------------------------------------------------------- #
 
-# 3. Performance reporting routine:
+
+
 # ---------------------------------------------------------------------------- #
+# 3. Performance reporting routine:
+
+
 
 # Termination:
 # ---------------------------------------------------------------------------- #
@@ -91,8 +99,8 @@ PrintGoodbyeMessage( $ref_gen_conf, $out_path, $fh_log,
 # End of script
 # ============================================================================ #
 
-# Script subroutines:
 # ---------------------------------------------------------------------------- #
+# Script subroutines:
 
 # Script management subs:
 sub CheckInputArguments {
@@ -113,6 +121,7 @@ sub CheckInputArguments {
   given (scalar(@script_inputs))
   {
     when ($_ == 2) {
+
       # Input and output are directly read:
       ($inp_path, $out_path) = @script_inputs;
 
@@ -129,9 +138,11 @@ sub CheckInputArguments {
 
       # Update sub status:
       $status *= TRUE;
+
     }
 
-    when ($_ == 3) {
+    when ($_ == 3)
+    {
       # Input and output are directly read:
       ($inp_path, $out_path, $cfg_file) = @script_inputs;
 
@@ -150,14 +161,17 @@ sub CheckInputArguments {
 
       # Update sub's status:
       $status *= ($ref_gen_conf != KILLED) ? TRUE : FALSE;
+
     } # end when 3
 
     default {
+
       RaiseError(*STDOUT, ERR_WRONG_INPUTS,
         "Script was fed with an invalid number of inputs.",
         "Number of inputs should be among 2 and 3.",
         "Number of inputs = $_ : '".join(', ', @script_inputs)."'");
       $status *= FALSE;
+
     } # end default
 
   } # end given
