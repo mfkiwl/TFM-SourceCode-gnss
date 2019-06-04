@@ -67,7 +67,7 @@ use Enviroments qq(:CONSTANTS);
 # ---------------------------------------------------------------------------- #
 # Load dedicated libraries:
 
-use lib $ENV{ LIB_ROOT };
+use lib LIB_ROOT_PATH;
 use MyUtil   qq(:ALL); # ancillary utilities...
 use MyMath   qq(:ALL); # dedicated math toolbox...
 use MyPrint  qq(:ALL); # plain text print layouts...
@@ -75,7 +75,7 @@ use TimeGNSS qq(:ALL); # GNSS time conversion tools...
 use Geodetic qq(:ALL); # dedicated geodesy utilities...
 
 # Load general configuration and interfaces module:
-use lib $ENV{ SRC_ROOT };
+use lib SRC_ROOT_PATH;
 use GeneralConfiguration qq(:ALL);
 
 # ---------------------------------------------------------------------------- #
@@ -158,7 +158,7 @@ sub PlotLSQEpochEstimation {
     my $t_1 = $num_epochs - 1;
 
   # Set's chart titles:
-  # Get initial epoch date in yyyy/mo/dd format:
+  # Get initial epoch date in 'yyyy/mo/dd' format:
   my $date = ( split(' ', BuildDateString(GPS2Date($ini_epoch))) )[0];
   my $chart_lsq_rpt_title = "LSQ routine report from $marker_name on $date";
   my $chart_x_title  = "LSQ ECEF X parameter report from $marker_name on $date";
