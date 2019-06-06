@@ -290,7 +290,14 @@ sub DataDumpingRoutine {
 
   my $ini_err_mod = [gettimeofday];
 
-  $sub_status = DumpIonoCorrBySat( $ref_gen_conf,
+    $sub_status = DumpClockBiasBySat( $ref_gen_conf,
+                                      $ref_obs_data,
+                                      $ref_gen_conf->{OUTPUT_PATH}, $fh_log );
+
+    # Update status:
+    $status *= ($sub_status != KILLED) ? TRUE : FALSE;
+
+    $sub_status = DumpIonoCorrBySat( $ref_gen_conf,
                                      $ref_obs_data,
                                      $ref_gen_conf->{OUTPUT_PATH}, $fh_log );
     # Update status:
