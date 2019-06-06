@@ -227,7 +227,6 @@ use constant {
 };
 
 use constant SUPPORTED_IONO_MODELS  => ( NONE_IONO_MODEL,
-                                         NEQUICK_IONO_MODEL,
                                          KLOBUCHAR_IONO_MODEL );
 
 use constant SUPPORTED_TROPO_MODELS => ( NONE_TROPO_MODEL,
