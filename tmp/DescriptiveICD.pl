@@ -202,7 +202,10 @@
                            NAV => ( STATUS => $boolean_status,
                                     XYZ_TC => \@sat_position_parameters ),
                            # reception coordinates at observation epoch
-                           RECEP => \@sat_position_parameters  ),
+                           RECEP => \@sat_position_parameters,
+                           EPOCH => $selected_eph_epoch,
+                           SOURCE => $selected_eph_source,
+                          ),
                '[...]' ); # not fixed length
 
 @sat_position_parameters = ( $x_ecef, $y_ecef, $z_ecef, $sat_clk_bias );
@@ -321,11 +324,11 @@
                            A0 => -9.31322574616e-10 );
 
 # Ephemerids information:
-%sat_ephemerids  = ( $epoch => (
+%sat_ephemerids  = (  $epoch => (
                         $source => \%ephemerids_data, '[...]',
                         $source => \%ephemerids_data, '[...]',
-                     ),
-                     '[...]',
+                      ),
+                      '[...]',
                     ); # not fixed length
 %ephemerids_data = (
   # Satellite's cock parameters:
