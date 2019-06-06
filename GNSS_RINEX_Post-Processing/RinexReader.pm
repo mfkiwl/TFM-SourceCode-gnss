@@ -1132,12 +1132,12 @@ sub ReadGALNavigationBlock {
   my ($cuc, $ecc, $cus, $sqrt_a)         = unpack($line_temp, $line_buffer[2]);
   my ($toe, $cic, $omega_0, $cis)        = unpack($line_temp, $line_buffer[3]);
   my ($cio, $crc, $omega, $omega_dot)    = unpack($line_temp, $line_buffer[4]);
-  my ($idot, $dat_src, $week, undef)     = unpack($line_temp, $line_buffer[5]);
+  my ($idot, $dat_src_int, $week, undef) = unpack($line_temp, $line_buffer[5]);
   my ($sisa, $sv_health, $bdg_1, $bdg_2) = unpack($line_temp, $line_buffer[6]);
   my ($trans_time, $fit_inter, @empty)   = unpack($line_temp, $line_buffer[7]);
 
   # Decode data source information:
-  my $ref_dat_src = DecodeGALDataSources($dat_src*1);
+  my $ref_dat_src = DecodeGALDataSources($dat_src_int*1);
 
   # Fill hash:
   my %nav_prm_hash;
@@ -1204,9 +1204,9 @@ sub DecodeGALDataSources {
   $ref_data_source->{CORRECTION}{ E5B_E1 } = $bit_array[9];
 
   # Add RINEX signal active service info:
-  # NOTE: service is available as long as the corrections
-  #       are flaged for the relevant signal
-  $ref_data_source->{SERVICE}{C1} = ( $bit_array[9] | $bit_array[8] ); # E1
+  # NOTE: service is available depending on source corrections
+  #       see GAL-OS-SIS document.
+  $ref_data_source->{SERVICE}{C1} = ( $bit_array[9] ); # E1
   $ref_data_source->{SERVICE}{C5} = ( $bit_array[8] ); # E5a
   $ref_data_source->{SERVICE}{C7} = ( $bit_array[9] ); # E5b
 
