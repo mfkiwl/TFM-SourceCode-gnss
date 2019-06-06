@@ -1,50 +1,13 @@
 #!/usr/bin/perl -w
 
+# TODO: SCRIPT DESCRIPTION GOES HERE:
+
 # Package declaration:
 package RecPosition;
 
-
-# NOTE: SCRIPT DESCRIPTION GOES HERE:
-
-# Load bash enviroments:
 # ---------------------------------------------------------------------------- #
-use lib $ENV{ ENV_ROOT };
-use Enviroments qq(:CONSTANTS);
-
-# Import Modules:
-# ---------------------------------------------------------------------------- #
-use strict;   # enables strict syntax...
-
-use PDL::Core;  # loads Perl Data Language extension...
-use PDL::Basic;
-use Math::Trig;
-
-use Scalar::Util qq(looks_like_number); # scalar utility...
-
-use feature qq(say);    # print adding carriage return...
-use feature qq(switch); # switch functionality...
-use Data::Dumper;       # enables pretty...
-
-# Import configuration and common interface module:
-use lib SRC_ROOT_PATH;
-use GeneralConfiguration qq(:ALL);
-
-# Import dedicated libraries:
-use lib LIB_ROOT_PATH;
-use MyUtil   qq(:ALL); # useful subs and constants...
-use MyMath   qq(:ALL); # useful mathematical methods...
-use MyPrint  qq(:ALL); # print error and warning methods...
-use TimeGNSS qq(:ALL); # GNSS time transforming utilities...
-use Geodetic qq(:ALL); # geodetic toolbox for coordinate transformation...
-
-# Import dependent modules:
-use lib GRPP_ROOT_PATH;
-use RinexReader qq(:ALL); # observation & navigation rinex parser...
-use ErrorSource qq(:ALL); # ionosphere & troposphere correction models...
-
-
 # Set package exportation properties:
-# ---------------------------------------------------------------------------- #
+
 BEGIN {
   # Load export module:
   require Exporter;
@@ -74,10 +37,47 @@ BEGIN {
                        SUBROUTINES => \@EXPORT_SUB );
 }
 
+# ---------------------------------------------------------------------------- #
+# Load bash enviroments:
+
+use lib $ENV{ ENV_ROOT };
+use Enviroments qq(:CONSTANTS);
 
 # ---------------------------------------------------------------------------- #
-# GLobal contants:
+# Import Modules:
+
+use strict; # enables strict syntax...
+use Data::Dumper; # enables pretty...
+use feature qq(say); # print adding carriage return...
+use feature qq(switch); # switch functionality...
+
+use Math::Trig;
+use Scalar::Util qq(looks_like_number); # scalar utility...
+
+# Load perl data language modules:
+use PDL::Core;
+use PDL::Basic;
+
+# Import configuration and common interface module:
+use lib SRC_ROOT_PATH;
+use GeneralConfiguration qq(:ALL);
+
+# Import dedicated libraries:
+use lib LIB_ROOT_PATH;
+use MyUtil   qq(:ALL); # useful subs and constants...
+use MyMath   qq(:ALL); # useful mathematical methods...
+use MyPrint  qq(:ALL); # print error and warning methods...
+use TimeGNSS qq(:ALL); # GNSS time transforming utilities...
+use Geodetic qq(:ALL); # geodetic toolbox for coordinate transformation...
+
+# Import dependent modules:
+use lib GRPP_ROOT_PATH;
+use RinexReader qq(:ALL); # observation & navigation rinex parser...
+use ErrorSource qq(:ALL); # ionosphere & troposphere correction models...
+
+
 # ---------------------------------------------------------------------------- #
+# Constants:
 
 # Number of position parameters to estimate with LSQ algorithm:
 use constant NUM_PARAMETERS_TO_ESTIMATE => 4;
@@ -90,11 +90,8 @@ use constant {
 };
 
 # ---------------------------------------------------------------------------- #
-# Subroutines:
-# ---------------------------------------------------------------------------- #
+# Public Subroutines:
 
-# Public Subroutines:                                                          #
-# ............................................................................ #
 sub ComputeRecPosition {
   my ($ref_gen_conf, $ref_rinex_obs, $ref_sat_sys_nav, $fh_log) = @_;
 
@@ -364,8 +361,8 @@ sub ComputeRecPosition {
   return TRUE;
 }
 
-# Private Subroutines:                                                         #
-# ............................................................................ #
+# ---------------------------------------------------------------------------- #
+# Private Subroutines:
 
 # ************************************************************** #
 # First Level Subroutines:                                       #

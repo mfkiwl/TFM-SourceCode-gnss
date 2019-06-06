@@ -5,8 +5,9 @@
 # Package declaration:
 package SatPosition;
 
-# Set package exportation properties:
 # ---------------------------------------------------------------------------- #
+# Set package exportation properties:
+
 BEGIN {
   # Load export module:
   require Exporter;
@@ -36,21 +37,23 @@ BEGIN {
                        SUBROUTINES => \@EXPORT_SUB );
 }
 
-# Load bash enviroments:
 # ---------------------------------------------------------------------------- #
+# Load bash enviroments:
+
 use lib $ENV{ ENV_ROOT };
 use Enviroments qq(:CONSTANTS);
 
-# Import Modules:
 # ---------------------------------------------------------------------------- #
-use strict;   # enables strict syntax...
+# Import Modules:
 
-use Math::Trig;                         # load trigonometry methods...
+use strict; # enables strict syntax...
+
+use Math::Trig; # load trigonometry methods...
 use Scalar::Util qq(looks_like_number); # scalar utility...
 
-use Data::Dumper;       # enables pretty print...
-use feature qq(say);    # print adding carriage return...
-use feature qq(switch); # switch case...
+use Data::Dumper; # enables pretty print...
+use feature qq(say); # print adding carriage return...
+use feature qq(switch); # switch method...
 
 # Import configuration and common interface module:
 use lib SRC_ROOT_PATH;
@@ -69,11 +72,8 @@ use lib GRPP_ROOT_PATH;
 use RinexReader qq(:ALL); # observation & navigation rinex parser...
 use ErrorSource qq(:ALL); # ionosphere & troposphere correction models...
 
-
-
 # ---------------------------------------------------------------------------- #
-# GLobal contants:
-# ---------------------------------------------------------------------------- #
+# Contants:
 
 use constant INVALID_EPH_EPOCH => -1;
 
@@ -97,17 +97,14 @@ use constant {
   WARN_NO_SAT_NAVIGATION => 90303,
   WARN_NO_SAT_EPH_FOUND  => 90304,
   WARN_SAT_POSITION_NOT_AVAILABLE => 90306,
-  ERR_BAD_SAT_POSITION => 90305,
   ERR_WRONG_SAT_POSITION_CODE => 30301,
+  ERR_BAD_SAT_POSITION => 90305,
 };
 
 
 # ---------------------------------------------------------------------------- #
-# Subroutines:
-# ---------------------------------------------------------------------------- #
+# Public Subroutines:
 
-# Public Subroutines:                                                          #
-# ............................................................................ #
 sub ComputeSatPosition {
   my ($ref_gen_conf, $ref_rinex_obs, $fh_log) = @_;
 
@@ -307,8 +304,9 @@ sub ComputeSatPosition {
   return $ref_sat_sys_nav;
 }
 
-# Private Subroutines:                                                         #
-# ............................................................................ #
+# ---------------------------------------------------------------------------- #
+# Private Subroutines:
+
 sub InitValidNavSatCounter {
   my ($ref_epoch_info, $ref_selected_sat_sys) = @_;
 

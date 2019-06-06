@@ -1,37 +1,13 @@
 #!/usr/bin/perl -w
 
+# SCRIPT DESCRIPTION GOES HERE:
+
 # Package declaration:
 package RinexReader;
 
-
-# SCRIPT DESCRIPTION GOES HERE:
-
-# Load bash enviroments:
 # ---------------------------------------------------------------------------- #
-use lib $ENV{ ENV_ROOT };
-use Enviroments qq(:CONSTANTS);
-
-# Import Modules:
-# ---------------------------------------------------------------------------- #
-use strict;      # enables strict syntax...
-
-use feature      qq(say);               # same as print.$text.'\n'...
-use Scalar::Util qq(looks_like_number); # scalar utility...
-use Data::Dumper;                       # enables pretty print...
-
-# Import configuration and common interface module:
-use lib SRC_ROOT_PATH;
-use GeneralConfiguration qq(:ALL);
-
-# Import dedicated libraries:
-use lib LIB_ROOT_PATH;
-use MyUtil   qq(:ALL); # useful subs and constants...
-use MyPrint  qq(:ALL); # error and warning utilities...
-use TimeGNSS qq(:ALL); # GNSS time transforming utilities...
-
-
 # Set package exportation properties:
-# ---------------------------------------------------------------------------- #
+
 BEGIN {
   # Load export module:
   require Exporter;
@@ -80,10 +56,33 @@ BEGIN {
                        SUBROUTINES => \@EXPORT_SUB );
 }
 
+# ---------------------------------------------------------------------------- #
+# Load bash enviroments:
+
+use lib $ENV{ ENV_ROOT };
+use Enviroments qq(:CONSTANTS);
+
+# ---------------------------------------------------------------------------- #
+# Import Modules:
+
+use strict; # enables strict syntax...
+use feature qq(say);               # same as print.$text.'\n'...
+use Scalar::Util qq(looks_like_number); # scalar utility...
+use Data::Dumper;                       # enables pretty print...
+
+# Import configuration and common interface module:
+use lib SRC_ROOT_PATH;
+use GeneralConfiguration qq(:ALL);
+
+# Import dedicated libraries:
+use lib LIB_ROOT_PATH;
+use MyUtil   qq(:ALL); # useful subs and constants...
+use MyPrint  qq(:ALL); # error and warning utilities...
+use TimeGNSS qq(:ALL); # GNSS time transforming utilities...
 
 # ---------------------------------------------------------------------------- #
 # Constants
-# ---------------------------------------------------------------------------- #
+
 # RINEX file types:
 use constant {
   OBSERVATION_RINEX => 'O',
@@ -244,11 +243,8 @@ use constant {
 
 
 # ---------------------------------------------------------------------------- #
-# Subroutines:
-# ---------------------------------------------------------------------------- #
-
 # Public Subroutines: #
-# ............................................................................ #
+
 sub ReadObservationRinexHeader {
   my ($file_path, $fh_log) = @_;
 
@@ -937,9 +933,9 @@ sub CheckRinexHeaderOptional {
   return $status;
 }
 
-
+# ---------------------------------------------------------------------------- #
 # Private Subrutines: #
-# ............................................................................ #
+
 sub InitObservedSatSysCounter {
   my ($num_all_sat, $ref_num_sat_info) = @_;
 

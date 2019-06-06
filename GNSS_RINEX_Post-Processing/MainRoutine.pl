@@ -3,16 +3,16 @@
 # TODO: SCRIPT DESCRIPTION GOES HERE:
 
 # ---------------------------------------------------------------------------- #
-# Import common perl modules:
+# Import common modules:
 
-use Cwd qw(abs_path);    # directory path...
-use Carp;   # advanced STDERR...
+use Carp; # advanced STDERR...
 use strict; # enables strict syntax...
+use Cwd qw(abs_path); # directory path...
 
-use Storable;           # save vars...
-use File::Copy;         # copy files...
-use Data::Dumper;       # var pretty print...
-use feature qq(say);    # print adding line jump...
+use Storable; # save vars...
+use File::Copy; # copy files...
+use Data::Dumper; # var pretty print...
+use feature qq(say); # print adding line jump...
 use feature qq(switch); # advanced switch statement...
 
 # Precise time lapses:
@@ -24,25 +24,20 @@ use Time::HiRes qw(gettimeofday tv_interval);
 use lib $ENV{ ENV_ROOT };
 use Enviroments qq(:CONSTANTS);
 
-# ---------------------------------------------------------------------------- #
 # Load dedicated libraries:
-
-use lib $ENV{ LIB_ROOT };
+use lib LIB_ROOT_PATH;
 use MyUtil   qq(:ALL); # ancillary utilities...
 use MyMath   qq(:ALL); # dedicated math toolbox...
 use MyPrint  qq(:ALL); # plain text print layouts...
 use TimeGNSS qq(:ALL); # GNSS time conversion tools...
 use Geodetic qq(:ALL); # dedicated geodesy utilities...
 
-# ---------------------------------------------------------------------------- #
-# Load tool's modules:
-
-# Configuration:
-use lib $ENV{ SRC_ROOT };
+# Load general configuration module:
+use lib SRC_ROOT_PATH;
 use GeneralConfiguration qq(:ALL);
 
-# GRPP packages:
-use lib $ENV{ GRPP_ROOT };
+# Load GRPP packages:
+use lib GRPP_ROOT_PATH;
 use RinexReader qq(:ALL);
 use SatPosition qq(:ALL);
 use ErrorSource qq(:ALL);
@@ -126,11 +121,11 @@ my $ini_script_time = [gettimeofday];
   PrintGoodbyeMessage($ref_gen_conf, $fh_log, $ini_script_time, [gettimeofday]);
 
 
-# END OF SCRIPT #
+# End of main routine
 # ============================================================================ #
 
-# Script subroutines:
 # ---------------------------------------------------------------------------- #
+# Script subroutines:
 
 # Script management subs:
 sub DataProcessingRoutine {
@@ -162,9 +157,6 @@ sub DataProcessingRoutine {
     print $_ "\n" x 1;
     PrintTitle3($_, "Computing satellite positions...");
   }
-
-  # Set compute satellite coordinates code for algorithm selection:
-  my $compute_sat_coord_code = 1;
 
   # Compute satellite positions:
   my $ini_sat_position = [gettimeofday];
@@ -722,5 +714,4 @@ sub ReportElapsedTime {
   return TRUE;
 }
 
-# ============================================================================ #
 # END OF SCRIPT

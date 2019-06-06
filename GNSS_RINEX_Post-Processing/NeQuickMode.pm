@@ -1,41 +1,13 @@
 #!/usr/bin/perl -w
 
+# TODO: SCRIPT DESCRIPTION GOES HERE:
+
 # Package declaration:
 package NeQuickMode;
 
-
-# SCRIPT DESCRIPTION GOES HERE:
-
-# Load bash enviroments:
 # ---------------------------------------------------------------------------- #
-use lib $ENV{ ENV_ROOT };
-use Enviroments qq(:CONSTANTS);
-
-# Import Modules:
-# ---------------------------------------------------------------------------- #
-use Carp;
-use strict; # enables strict syntax...
-
-use Math::Trig;
-use Scalar::Util qq(looks_like_number); # scalar utility...
-
-use feature qq(say); # print adding carriage return...
-use Data::Dumper;    # enables pretty print...
-
-# Import configuration and common interface module:
-use lib SRC_ROOT_PATH;
-use GeneralConfiguration qq(:ALL);
-
-# Import dedicated libraries:
-use lib LIB_ROOT_PATH;
-use MyUtil   qq(:ALL); # useful subs and constants...
-use MyMath   qq(:ALL); # useful mathematical methods...
-use MyPrint  qq(:ALL); # error and warning utilities...
-use Geodetic qq(:ALL); # geodesy methods and constants...
-use TimeGNSS qq(:ALL); # GNSS time transforming utilities...
-
 # Set package exportation properties:
-# ---------------------------------------------------------------------------- #
+
 BEGIN {
   # Load export module:
   require Exporter;
@@ -72,8 +44,37 @@ BEGIN {
 }
 
 # ---------------------------------------------------------------------------- #
-# Preliminary MODIP & CCIR file mapping:
+# Load bash enviroments:
+
+use lib $ENV{ ENV_ROOT };
+use Enviroments qq(:CONSTANTS);
+
 # ---------------------------------------------------------------------------- #
+# Import Modules:
+
+use Carp;
+use strict; # enables strict syntax...
+
+use Math::Trig;
+use Scalar::Util qq(looks_like_number); # scalar utility...
+
+use Data::Dumper; # enables pretty print...
+use feature qq(say); # print adding carriage return...
+
+# Import configuration and common interface module:
+use lib SRC_ROOT_PATH;
+use GeneralConfiguration qq(:ALL);
+
+# Import dedicated libraries:
+use lib LIB_ROOT_PATH;
+use MyUtil   qq(:ALL); # useful subs and constants...
+use MyMath   qq(:ALL); # useful mathematical methods...
+use MyPrint  qq(:ALL); # error and warning utilities...
+use Geodetic qq(:ALL); # geodesy methods and constants...
+use TimeGNSS qq(:ALL); # GNSS time transforming utilities...
+
+# ---------------------------------------------------------------------------- #
+# Preliminary MODIP & CCIR file mapping:
 
 # File configuration:
 use constant MODIP_FILE_PATH     => NEQUICK_DAT_PATH.qq(modipNeQG_wrapped.txt);
@@ -184,7 +185,7 @@ sub LoadCCIRFiles {
 
 # ---------------------------------------------------------------------------- #
 # Constants:
-# ---------------------------------------------------------------------------- #
+
 use constant {
   MIN_EFF_IONO_LEVEL => 0,
   MAX_EFF_IONO_LEVEL => 400,
@@ -197,11 +198,7 @@ use constant REF_CCIR_HASH => LoadCCIRFiles( DAT_ROOT_PATH   );
 use constant REF_MODIP_MAP => LoadMODIPFile( MODIP_FILE_PATH );
 
 # ---------------------------------------------------------------------------- #
-# Subroutines:
-# ---------------------------------------------------------------------------- #
-
 # Public Subroutines: #
-# ............................................................................ #
 
 sub ComputeMODIP {
   my ($lat, $lon) = @_;
@@ -389,9 +386,8 @@ sub IntegrateNeQuickSlantTEC {}
 
 sub IntegrateNeQuickVerticalTEC {}
 
-
+# ---------------------------------------------------------------------------- #
 # Private Subroutines: #
-# ............................................................................ #
 
 # ************************************************** #
 # First Level Subroutines:                           #

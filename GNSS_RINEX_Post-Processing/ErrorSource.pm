@@ -1,43 +1,13 @@
 #!/usr/bin/perl -w
 
+# TODO: SCRIPT DESCRIPTION GOES HERE:
+
 # Package declaration:
 package ErrorSource;
 
-
-# SCRIPT DESCRIPTION GOES HERE:
-
-# Load bash enviroments:
 # ---------------------------------------------------------------------------- #
-use lib $ENV{ ENV_ROOT };
-use Enviroments qq(:CONSTANTS);
-
-# Import Modules:
-# ---------------------------------------------------------------------------- #
-use strict;   # enables strict syntax...
-
-use Math::Trig qq(pi);
-use Scalar::Util qq(looks_like_number); # scalar utility...
-
-use PDL;
-use PDL::GSL::INTERP;
-
-use feature qq(say); # print adding carriage return...
-use Data::Dumper;    # enables pretty print...
-
-# Import configuration and common interface module:
-use lib SRC_ROOT_PATH;
-use GeneralConfiguration qq(:ALL);
-
-# Import dedicated libraries:
-use lib LIB_ROOT_PATH;
-use MyUtil   qq(:ALL); # useful subs and constants...
-use MyMath   qq(:ALL); # useful mathematical methods...
-use MyPrint  qq(:ALL); # error and warning utilities...
-use Geodetic qq(:ALL); # geodesy methods and constants...
-use TimeGNSS qq(:ALL); # GNSS time transforming utilities...
-
 # Set package exportation properties:
-# ---------------------------------------------------------------------------- #
+
 BEGIN {
   # Load export module:
   require Exporter;
@@ -72,10 +42,40 @@ BEGIN {
 
 }
 
+# ---------------------------------------------------------------------------- #
+# Load bash enviroments:
+
+use lib $ENV{ ENV_ROOT };
+use Enviroments qq(:CONSTANTS);
+
+# ---------------------------------------------------------------------------- #
+# Import Modules:
+
+use strict; # enables strict syntax...
+use Data::Dumper; # enables pretty print...
+use feature qq(say); # print adding carriage return...
+
+use Math::Trig qq(pi); # import pi number...
+use Scalar::Util qq(looks_like_number); # scalar utility...
+
+# Import perl data language modules:
+use PDL;
+use PDL::GSL::INTERP;
+
+# Import configuration and common interface module:
+use lib SRC_ROOT_PATH;
+use GeneralConfiguration qq(:ALL);
+
+# Import dedicated libraries:
+use lib LIB_ROOT_PATH;
+use MyUtil   qq(:ALL); # useful subs and constants...
+use MyMath   qq(:ALL); # useful mathematical methods...
+use MyPrint  qq(:ALL); # error and warning utilities...
+use Geodetic qq(:ALL); # geodesy methods and constants...
+use TimeGNSS qq(:ALL); # GNSS time transforming utilities...
 
 # ---------------------------------------------------------------------------- #
 # Constants:
-# ---------------------------------------------------------------------------- #
 
 # Saastamoinen's B values:
 use constant SAASTAMOINEN_B_DOMAIN =>
@@ -88,11 +88,8 @@ use constant SAASTAMOINEN_B_RANGE  =>
 use constant NEQUICK_SLANT_VERTICAL_THRESHOLD => 0.1e3; # [m]
 
 # ---------------------------------------------------------------------------- #
-# Subroutines:
-# ---------------------------------------------------------------------------- #
-
 # Public Subroutines: #
-# ............................................................................ #
+
 sub NullTropoDelay { return 0;      }
 
 sub NullIonoDelay  { return (0, 0); }
@@ -325,10 +322,6 @@ sub ComputeIonoNeQuickDelay {
 
   return ($nequick_iono_delay_f1, $nequick_iono_delay_f2);
 } # end sub ComputeIonoNeQuickDelay
-
-
-# Private Subroutines: #
-# ............................................................................ #
 
 
 TRUE;

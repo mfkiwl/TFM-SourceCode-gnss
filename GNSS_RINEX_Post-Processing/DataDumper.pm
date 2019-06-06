@@ -1,52 +1,13 @@
 #!/usr/bin/perl -w
 
+# TODO: SCRIPT DESCRIPTION GOES HERE:
+
 # Package declaration:
 package DataDumper;
 
-
-# TODO: SCRIPT DESCRIPTION GOES HERE:
-# TODO: Simple dumper subroutines for dumping raw hashes in binary format
-
-# Load bash enviroments:
 # ---------------------------------------------------------------------------- #
-use lib $ENV{ ENV_ROOT };
-use Enviroments qq(:CONSTANTS);
-
-# Import modules:
-# ---------------------------------------------------------------------------- #
-use Carp;         # enables advanced warning and failure raise...
-use strict;       # enables strict syntax and common mistakes advisory...
-use Data::Dumper; # enables nested struct pretty print...
-
-use PDL::Core;
-use PDL::Basic;
-
-use feature      qq(say);               # same as print.$text.'\n'...
-use feature      qq(switch);            # switch functionality...
-use Scalar::Util qq(looks_like_number); # scalar utility...
-
-# Import configuration and common interfaces module:
-use lib SRC_ROOT_PATH;
-use GeneralConfiguration qq(:ALL);
-
-# Import dedicated libraries:
-use lib LIB_ROOT_PATH;
-# Common tools:
-use MyUtil   qq(:ALL); # useful subs and constants...
-use MyPrint  qq(:ALL); # print and warning/failure utilities...
-# GNSS dedicated tools:
-use Geodetic qq(:ALL); # geodetic toolbox...
-use TimeGNSS qq(:ALL); # GNSS time transforming utilities...
-
-# Import dependent modules:
-use lib GRPP_ROOT_PATH;
-use RinexReader qq(:ALL);
-use ErrorSource qq(:ALL);
-use SatPosition qq(:ALL);
-use RecPosition qq(:ALL);
-
 # Set package exportation properties:
-# ---------------------------------------------------------------------------- #
+
 BEGIN {
   # Load export module:
   require Exporter;
@@ -91,20 +52,54 @@ BEGIN {
                        SUBROUTINES => \@EXPORT_SUB );
 }
 
+# ---------------------------------------------------------------------------- #
+# Load bash enviroments:
+
+use lib $ENV{ ENV_ROOT };
+use Enviroments qq(:CONSTANTS);
+
+# ---------------------------------------------------------------------------- #
+# Import modules:
+
+use Carp;
+use strict;
+use Data::Dumper;
+use feature qq(say);
+use feature qq(switch);
+use Scalar::Util qq(looks_like_number);
+
+# Load perl data languages modules:
+use PDL::Core;
+use PDL::Basic;
+
+# Import configuration and common interfaces module:
+use lib SRC_ROOT_PATH;
+use GeneralConfiguration qq(:ALL);
+
+# Import dedicated libraries:
+use lib LIB_ROOT_PATH;
+use MyUtil   qq(:ALL); # useful subs and constants...
+use MyPrint  qq(:ALL); # print and warning/failure utilities...
+use Geodetic qq(:ALL); # geodetic toolbox...
+use TimeGNSS qq(:ALL); # GNSS time transforming utilities...
+
+# Import dependent modules:
+use lib GRPP_ROOT_PATH;
+use RinexReader qq(:ALL);
+use ErrorSource qq(:ALL);
+use SatPosition qq(:ALL);
+use RecPosition qq(:ALL);
 
 # ---------------------------------------------------------------------------- #
 # Constants:
-# ---------------------------------------------------------------------------- #
+
 use constant {
   WARN_NO_SELECTED_OBS => 90101,
 };
 
 # ---------------------------------------------------------------------------- #
-# Subroutines:
-# ---------------------------------------------------------------------------- #
-
 # Public Subroutines: #
-# ............................................................................ #
+
 sub DumpSatObsData {
   my ( $ref_gen_conf, $ref_obs_data,
        $ref_selected_obs, $output_path, $fh_log ) = @_;
@@ -2067,8 +2062,9 @@ sub DumpVerticalIntegrityInfo {
   return TRUE;
 }
 
+# ---------------------------------------------------------------------------- #
 # Private Subrutines:
-# ............................................................................ #
+
 sub SetEpochHeaderItems {
   my ($epoch_format) = @_;
 
@@ -2210,5 +2206,6 @@ sub WriteSelecetedObsInfo {
 
   return $selected_obs_info;
 }
+
 
 TRUE;
