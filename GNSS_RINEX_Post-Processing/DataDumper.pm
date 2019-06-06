@@ -35,6 +35,7 @@ BEGIN {
                           &DumpEpochDOP
                           &DumpAzimutBySat
                           &DumpElevationBySat
+                          &DumpClockBiasBySat
                           &DumpIonoCorrBySat
                           &DumpTropoCorrBySat
                           &DumpResidualsBySat
@@ -297,7 +298,8 @@ sub DumpSatPosition {
 
     # 3. Write header line:
       my @header_items = ( SetEpochHeaderItems( $epoch_format ),
-                           qw( NumSatValidNav SatID SatNavStatus
+                           qw( NumSatValidNav SatNavStatus
+                               SatID EphEpoch EphSource
                                NavX NavY NavZ SatClockBias
                                RecepX RecepY RecepZ
                                NavLat NavLon NavElipHeight
@@ -325,6 +327,10 @@ sub DumpSatPosition {
           # Retrieve satellite navigation status:
           my $sat_status = $ref_sat_position->{NAV}{STATUS};
 
+          # Retrieve ephemerids epoch and data source:
+          my $eph_epoch  = $ref_sat_position->{ EPOCH  };
+          my $eph_source = $ref_sat_position->{ SOURCE };
+
           # Satellite ECEF coordinates and clock bias:
           my @sat_xyz_clkbias = @{ $ref_sat_position->{NAV}{XYZ_TC} };
 
@@ -350,9 +356,12 @@ sub DumpSatPosition {
 
           } else {
             # Set null information for invalid navigation status:
-            @sat_recep_xyz = (0, 0, 0);
-            ($sat_lat, $sat_lon, $sat_helip) = (0, 0, 0);
-            ($recep_lat, $recep_lon, $recep_helip) = (0, 0, 0);
+            @sat_recep_xyz =
+              (NULL_DATA, NULL_DATA, NULL_DATA);
+            ($sat_lat, $sat_lon, $sat_helip) =
+              (NULL_DATA, NULL_DATA, NULL_DATA);
+            ($recep_lat, $recep_lon, $recep_helip) =
+              (NULL_DATA, NULL_DATA, NULL_DATA);
           }
 
           # Latitude and longitude are transformed according to configuration:
@@ -362,7 +371,8 @@ sub DumpSatPosition {
 
           # Save line items:
           my @line_items = (@epoch,
-                            $num_sat, $sat, $sat_status,
+                            $num_sat, $sat_status,
+                            $sat, $eph_epoch, $eph_source,
                             @sat_xyz_clkbias, @sat_recep_xyz,
                             $sat_lat, $sat_lon, $sat_helip,
                             $recep_lat, $recep_lon, $recep_helip );
@@ -1380,6 +1390,121 @@ sub DumpElevationBySat {
 
         # Set line items and write them in dumper:
         my @line_items = (@epoch, $status, $sat_mask, @elevation_by_sat);
+        say $fh join($delimiter, @line_items);
+
+      } # end for $i
+
+    # 5. Close file:
+      close($fh);
+  }
+
+  # Subroutine's answer is true
+  # if the data has been successfully dumped:
+  return TRUE;
+}
+
+sub DumpClockBiasBySat {
+  my ($ref_gen_conf, $ref_obs_data, $output_path, $fh_log) = @_;
+
+  # Default input values if not defined:
+  $fh_log = *STDOUT unless $fh_log;
+
+  # ************************* #
+  # Input consistency cehcks: #
+  # ************************* #
+
+  # Output path must exist and have write permissions:
+  unless (-w $output_path) {
+   RaiseError($fh_log, ERR_WRITE_PERMISSION_DENIED,
+     "User '".$ENV{USER}."' does not have write permissions at $output_path");
+   return KILLED;
+  }
+
+  # General configuration must be hash type:
+  unless (ref($ref_gen_conf) eq 'HASH') {
+   RaiseError($fh_log, ERR_WRONG_HASH_REF,
+     "Input argument \'$ref_gen_conf\' is not HASH type");
+   return KILLED;
+  }
+
+  # Observation data must be hash type:
+  unless (ref($ref_obs_data) eq 'HASH') {
+   RaiseError($fh_log, ERR_WRONG_HASH_REF,
+     "Input argument \'$ref_obs_data\' is not HASH type");
+   return KILLED;
+  }
+
+  # *************** #
+  # Dumper routine: #
+  # *************** #
+
+  # Retrieve dumper configuration:
+  my $delimiter    = $ref_gen_conf->{DATA_DUMPER}{ DELIMITER      };
+  my $epoch_format = $ref_gen_conf->{DATA_DUMPER}{ EPOCH_FORMAT   };
+
+  # Set epoch and angle subroutine references:
+  my $ref_epoch_sub = REF_EPOCH_SUB_CONF->{$epoch_format};
+
+  # Iterate over selected constellations:
+  for my $sat_sys (@{ $ref_gen_conf->{SELECTED_SAT_SYS} })
+  {
+    # 1. Open dumper file at output path:
+      my $file_path = join('/', ($output_path, "$sat_sys-sat-clk-bias.out"));
+      my $fh; open($fh, '>', $file_path) or die "Could not create $!";
+
+    # 2. Write title line:
+      say $fh sprintf("# > '$sat_sys' computed clock bias.\n".
+                      "# > 'Status' refers to receiver position estimation\n".
+                      "# > Created : %s ",
+                      GetPrettyLocalDate());
+
+    # 3. Write header line:
+      # Retrieve all observed satellites:
+      my @all_obs_sat = GetAllObservedSats( $sat_sys, $ref_obs_data );
+
+      # Retrieve configured satellite mask:
+
+      my @header_items = ( SetEpochHeaderItems($epoch_format),
+                           'Status', @all_obs_sat);
+
+      say $fh join($delimiter, @header_items);
+
+    # 4. Write data:
+      # Iterate over observation epoch:
+      for (my $i = 0; $i < scalar(@{ $ref_obs_data->{BODY} }); $i += 1) {
+
+        # Set references to receiver position and LineOfSight info:
+        my $ref_rec_position = $ref_obs_data->{BODY}[$i]{REC_POSITION};
+        my $ref_sat_position = $ref_obs_data->{BODY}[$i]{SAT_POSITION};
+
+        # Get epoch:
+        my @epoch = &{ $ref_epoch_sub }($ref_obs_data->{BODY}[$i]{EPOCH});
+
+        # Get receiver position estimation status:
+        my $status = $ref_rec_position->{STATUS};
+
+        # Init array to store clock bias per sat:
+        my @clk_bias_by_sat;
+
+        # Iterate over available satellites:
+        for my $sat (@all_obs_sat) {
+
+          # Init elevation value:
+          my $sat_clk_bias;
+
+          if (defined $ref_sat_position->{$sat}) {
+            $sat_clk_bias = $ref_sat_position->{$sat}{NAV}{XYZ_TC}[3];
+          } else {
+            $sat_clk_bias = NULL_DATA;
+          }
+
+          # Push elevation value:
+          push(@clk_bias_by_sat, $sat_clk_bias);
+
+        } # end for $sat
+
+        # Set line items and write them in dumper:
+        my @line_items = (@epoch, $status, @clk_bias_by_sat);
         say $fh join($delimiter, @line_items);
 
       } # end for $i
