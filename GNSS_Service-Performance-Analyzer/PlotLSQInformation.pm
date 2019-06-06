@@ -47,9 +47,6 @@ use Data::Dumper;       # var pretty print...
 use feature qq(say);    # print adding line jump...
 use feature qq(switch); # advanced switch statement...
 
-# ---------------------------------------------------------------------------- #
-# Load special tool modules:
-
 # Perl Data Language (PDL) modules:
 use PDL;
 use PDL::NiceSlice;
@@ -77,6 +74,10 @@ use Geodetic qq(:ALL); # dedicated geodesy utilities...
 # Load general configuration and interfaces module:
 use lib SRC_ROOT_PATH;
 use GeneralConfiguration qq(:ALL);
+
+# Load common GSPA utils:
+use lib GSPA_ROOT_PATH;
+use CommonUtil qq(:ALL);
 
 # ---------------------------------------------------------------------------- #
 # Public Subroutines: #

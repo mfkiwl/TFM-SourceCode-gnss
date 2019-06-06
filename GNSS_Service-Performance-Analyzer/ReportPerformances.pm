@@ -49,9 +49,6 @@ use Data::Dumper;       # var pretty print...
 use feature qq(say);    # print adding line jump...
 use feature qq(switch); # advanced switch statement...
 
-# ---------------------------------------------------------------------------- #
-# Load special tool modules:
-
 # Perl Data Language (PDL) modules:
 use PDL;
 use PDL::NiceSlice;
@@ -73,11 +70,13 @@ use MyPrint  qq(:ALL); # plain text print layouts...
 use TimeGNSS qq(:ALL); # GNSS time conversion tools...
 use Geodetic qq(:ALL); # dedicated geodesy utilities...
 
-# ---------------------------------------------------------------------------- #
 # Load general configuration and interfaces module:
-
 use lib SRC_ROOT_PATH;
 use GeneralConfiguration qq(:ALL);
+
+# Load common GSPA utils:
+use lib GSPA_ROOT_PATH;
+use CommonUtil qq(:ALL);
 
 # ---------------------------------------------------------------------------- #
 # Public Subroutines: #
@@ -156,30 +155,9 @@ sub ReportPositionAccuracy {
   };
 
   # Report on dedicated file:
-
-
-  # Retrieve date in 'yyyy/mo/dd' format:
-  my $date    = ( split(' ', BuildDateString(GPS2Date(min($pdl_epochs)))) )[0];
-
-  # Retrieve satellite system used:
-  my @sat_sys = @{ $ref_gen_conf->{SELECTED_SAT_SYS} };
-
-  my @signal_used;
-  for (@sat_sys) {
-    my $signal_id = substr($ref_gen_conf->{SELECTED_SIGNALS}{$_}, 0, 2);
-    push(@signal_used,
-      join('-', SAT_SYS_ID_TO_NAME->{$_},
-                SAT_SYS_OBS_TO_NAME->{$_}{$signal_id})
-    );
-  }
-
-  my $signal_used_string = join(' + ', @signal_used);
-
   # Set title:
-  my $title =
-    "Position accuracy report from $marker_name on $date ".
-    "using $signal_used_string";
-
+  my $title = SetReportTitle("Position accuracy report",
+                             $ref_gen_conf, $marker_name, min($pdl_epochs));
   say $title;
 
   # Open file in output directory:
