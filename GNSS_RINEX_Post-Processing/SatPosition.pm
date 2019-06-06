@@ -176,8 +176,11 @@ sub ComputeSatPosition {
       # Save constellation:
       my $sat_sys = substr($sat, 0, 1);
 
-      # Init satelite navigation data status and coordinate array:
-      my $sat_status; my @sat_coord;
+      # Init satelite navigation data to fill in hash:
+      my $sat_status     = FALSE;
+      my $sat_eph_source = FALSE;
+      my $sat_eph_epoch  = INVALID_EPH_EPOCH;
+      my @sat_coord      = (NULL_DATA, NULL_DATA, NULL_DATA, NULL_DATA);
 
       # Look for this constellation in the navigation hash:
       if (grep(/^$sat_sys$/, keys %{$ref_sat_sys_nav}))
@@ -190,10 +193,6 @@ sub ComputeSatPosition {
         # satellite:
         unless (exists $ref_nav_body->{$sat}) {
 
-          # Set invalid data for satellite:
-          $sat_status = FALSE;
-          @sat_coord  = (NULL_DATA, NULL_DATA, NULL_DATA, NULL_DATA);
-
           # Raise warning and skip code to next satellite:
           RaiseWarning($fh_log, WARN_NO_SAT_NAVIGATION,
             "Navigation ephemerids for satellite \'$sat\' could not be found");
@@ -201,16 +200,12 @@ sub ComputeSatPosition {
         } else { # If satellite navigation data is available:
 
           # Determine best ephemerids to compute satellite coordinates:
-          my ($sat_eph_epoch, $sat_eph_source) =
+          ($sat_eph_epoch, $sat_eph_source) =
              &{ REF_SUB_SELECT_EPHEMERIDS->{$sat_sys} }
               ( $ref_gen_conf, $obs_epoch, $sat, $ref_nav_body);
 
           # Check that the ephemerids have been selected:
           if ($sat_eph_epoch == INVALID_EPH_EPOCH) {
-
-            # Set invalid data for satellite:
-            $sat_status = FALSE;
-            @sat_coord  = (NULL_DATA, NULL_DATA, NULL_DATA, NULL_DATA);
 
             # Raise a warning and go to the next satellite:
             RaiseWarning($fh_log, WARN_NO_SAT_EPH_FOUND,
@@ -269,10 +264,6 @@ sub ComputeSatPosition {
 
             } else {
 
-              # Satellite coordintes cannot be computed:
-              $sat_status = FALSE;
-              @sat_coord  = (NULL_DATA, NULL_DATA, NULL_DATA, NULL_DATA);
-
               RaiseWarning($fh_log, WARN_SAT_POSITION_NOT_AVAILABLE,
                 "On $obs_epoch --> ".BuildDateString(GPS2Date($obs_epoch)),
                 "Satellite position for sat ID '$sat', could not be computed ".
@@ -285,7 +276,6 @@ sub ComputeSatPosition {
 
         # If the navigation status is valid, account for valid navgation
         # number of satellites:
-
         if ( $sat_status ) {
           CountValidNavigationSat( $sat_sys, $sat,
                                    $ref_epoch_data->{NUM_SAT_INFO} );
@@ -294,6 +284,8 @@ sub ComputeSatPosition {
         # Save the satellite position in the observation hash:
         $ref_epoch_data->{SAT_POSITION}{$sat}{NAV}{STATUS} = $sat_status;
         $ref_epoch_data->{SAT_POSITION}{$sat}{NAV}{XYZ_TC} = \@sat_coord;
+        $ref_epoch_data->{SAT_POSITION}{$sat}{ EPOCH  } = $sat_eph_epoch;
+        $ref_epoch_data->{SAT_POSITION}{$sat}{ SOURCE } = $sat_eph_source;
 
       } # end if grep($sat, SUPPORTED_SAT_SYS)
 
@@ -366,12 +358,14 @@ sub SelectGALEphemerids {
   # Retrieve from configuration: ephemerids time threshold and selected GAL
   # signal:
   # NOTE: signal obs is trimmed until second character
-  my $time_threshold = $ref_gen_conf->{EPH_TIME_THRESHOLD};
-  my $target_signal = substr($ref_gen_conf->{SELECTED_SIGNALS}{&RINEX_GAL_ID}, 0, 2);
+  my $time_threshold =
+     $ref_gen_conf->{EPH_TIME_THRESHOLD};
+  my $target_signal =
+     substr($ref_gen_conf->{SELECTED_SIGNALS}{&RINEX_GAL_ID}, 0, 2);
 
   # Iterate over the available ephemerid epochs and its different sources:
-  for my $nav_epoch ( sort(keys(%{ $ref_nav_body->{$sat} })) ) {
-    for my $nav_source ( keys(%{ $ref_nav_body->{$sat}{$nav_epoch} }) ) {
+  for my $nav_epoch (sort(keys(%{$ref_nav_body->{$sat}}))) { NAV_EPOCH_FOR: {
+    for my $nav_source (keys(%{$ref_nav_body->{$sat}{$nav_epoch}})) {
 
       # Retrieve ephemerids signal service boolean:
       my $signal_service =
@@ -379,14 +373,16 @@ sub SelectGALEphemerids {
                         {DATA_SOURCE}{SERVICE}{$target_signal};
 
       # Check for time threshold criteria and GAL data source:
-      if ( abs($obs_epoch - $nav_epoch) < $time_threshold && $signal_service ) {
+      if ( $signal_service &&
+          (abs($obs_epoch - $nav_epoch) < $time_threshold) ) {
         $eph_epoch  = $nav_epoch;
         $eph_source = $nav_source;
-        last; # once valid ephemerids are found, the loop is broken...
+        # Once valid ephemerids are found, the outerloop is broken...
+        last NAV_EPOCH_FOR;
       }
 
     } # end for $nav_source
-  } # end for $nav_epoch
+  }} # end for $nav_epoch
 
   return ($eph_epoch, $eph_source);
 }
