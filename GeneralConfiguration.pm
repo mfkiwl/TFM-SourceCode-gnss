@@ -1,43 +1,15 @@
 #!/usr/bin/perl -w
 
+# TODO: SCRIPT DESCRIPTION GOES HERE:
+
 # Package declaration:
 package GeneralConfiguration;
 
-
-# SCRIPT DESCRIPTION GOES HERE:
-
-# TODO: set null ionosphere and tropsphere model configuration
-#       Possibility of not computing these corrections
-
-# Load bash enviroments:
 # ---------------------------------------------------------------------------- #
-use lib $ENV{ ENV_ROOT };
-use Enviroments qq(:CONSTANTS);
-
-# Import Modules:
-# ---------------------------------------------------------------------------- #
-use Carp;
-use strict; # enables strict syntax...
-
-use feature qq(say);    # same as print.$text.'\n'...
-use feature qq(switch); # load perl switch method...
-
-use Math::Trig;   # loads trigonometry methods...
-use Data::Dumper; # enables pretty print...
-use Scalar::Util qq(looks_like_number); # scalar utility...
-
-# Import dedicated libraries:
-use lib LIB_ROOT_PATH;
-use MyUtil   qq(:ALL); # useful subs and constants...
-use MyMath   qq(:ALL);
-use MyPrint  qq(:ALL); # error and warning utilities...
-use TimeGNSS qq(:ALL); # GNSS time transforming utilities...
-use Geodetic qq(:ALL);
-
 # Set package exportation properties:
-# ---------------------------------------------------------------------------- #
+
 BEGIN {
-  # Load export module:
+  # Load export package:
   require Exporter;
 
   # Set package version:
@@ -98,8 +70,34 @@ BEGIN {
 }
 
 # ---------------------------------------------------------------------------- #
-# Prelimnary Subroutine --> Load IGS reference station coordinates
+# Load bash enviroments:
+
+use lib $ENV{ ENV_ROOT };
+use Enviroments qq(:CONSTANTS);
+
 # ---------------------------------------------------------------------------- #
+# Import Modules:
+
+use Carp;
+use strict; # enables strict syntax...
+
+use feature qq(say);    # same as print.$text.'\n'...
+use feature qq(switch); # load perl switch method...
+
+use Math::Trig;   # loads trigonometry methods...
+use Data::Dumper; # enables pretty print...
+use Scalar::Util qq(looks_like_number); # scalar utility...
+
+# Import dedicated libraries:
+use lib LIB_ROOT_PATH;
+use MyUtil   qq(:ALL); # useful subs and constants...
+use MyMath   qq(:ALL);
+use MyPrint  qq(:ALL); # error and warning utilities...
+use TimeGNSS qq(:ALL); # GNSS time transforming utilities...
+use Geodetic qq(:ALL);
+
+# ---------------------------------------------------------------------------- #
+# Prelimnary Subroutine --> Load IGS reference station coordinates
 
 use constant IGS_REF_STATIONS_FILE_NAME     => qq(ITRF2008-2014_R.CRD);
 use constant IGS_REF_STATIONS_LINE_TEMPLATE => 'A3A6A10x4A13x2A13x2A13x4A5';
@@ -142,10 +140,9 @@ sub LoadIGSReferenceStations {
   return $ref_igs_stations;
 }
 
-
 # ---------------------------------------------------------------------------- #
 # Constants
-# ---------------------------------------------------------------------------- #
+
 # Satellite systems IDs:
 use constant {
   RINEX_GPS_ID   => 'G',
@@ -309,14 +306,7 @@ use constant {
 
 
 # ---------------------------------------------------------------------------- #
-# Subroutines:
-# ---------------------------------------------------------------------------- #
-
-# Public Subroutines: #
-# ............................................................................ #
-
-# TODO: Read for the following configuration items
-#       - Integrity configuration
+# Public Subroutines:
 
 sub LoadConfiguration {
   my ($file_path, $fh_log) = @_;
@@ -1052,6 +1042,9 @@ sub CheckConfigurationFile {
 
   return TRUE;
 }
+
+# ---------------------------------------------------------------------------- #
+# Private Subroutines:
 
 sub GetCarrierFrequency {
   my ($sat_sys, $obs_code) = @_;
