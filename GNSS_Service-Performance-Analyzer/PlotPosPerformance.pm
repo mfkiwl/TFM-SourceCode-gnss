@@ -68,7 +68,7 @@ use Enviroments qq(:CONSTANTS);
 # ---------------------------------------------------------------------------- #
 # Load dedicated libraries:
 
-use lib $ENV{ LIB_ROOT };
+use lib LIB_ROOT_PATH;
 use MyUtil   qq(:ALL); # ancillary utilities...
 use MyMath   qq(:ALL); # dedicated math toolbox...
 use MyPrint  qq(:ALL); # plain text print layouts...
@@ -76,7 +76,7 @@ use TimeGNSS qq(:ALL); # GNSS time conversion tools...
 use Geodetic qq(:ALL); # dedicated geodesy utilities...
 
 # Load general configuration and interfaces module:
-use lib $ENV{ SRC_ROOT };
+use lib SRC_ROOT_PATH;
 use GeneralConfiguration qq(:ALL);
 
 # ---------------------------------------------------------------------------- #
@@ -99,6 +99,10 @@ sub PlotReceiverPosition {
   # Get first and last observation epochs:
   my $ini_epoch = min($pdl_epochs);
   my $end_epoch = max($pdl_epochs);
+
+  # Retrieve days's 00:00:00 in GPS epoch format:
+  my $ini_day_epoch = Date2GPS( (GPS2Date($ini_epoch))[0..2], 0, 0, 0 );
+  my $pdl_epoch_day_hour = ($pdl_epochs - $ini_day_epoch)/SECONDS_IN_HOUR;
 
   # Retrieve Easting and Northing values:
   my $pdl_rec_easting =
@@ -132,9 +136,8 @@ sub PlotReceiverPosition {
      $pdl_rec_xyz($ref_file_layout->{ITEMS}{Sigma_ClkBias}{INDEX});
 
   # Build polar coordinates from easting and northing components:
-  # TODO: compute properly azimut by adding + pi*K!
-  my $pdl_rec_azimut = pi/2 - atan2($pdl_rec_northing, $pdl_rec_easting);
-  my $pdl_rec_distance = ($pdl_rec_easting**2 + $pdl_rec_northing**2)**.5;
+  my ($pdl_rec_azimut, $pdl_rec_distance) =
+    RecPolarCoordinates($pdl_rec_easting, $pdl_rec_northing);
 
   # Compute max rec distance for polar plot and add 1 meter.
   # This is for setting the polar plot bound on the ro domain:
@@ -143,32 +146,30 @@ sub PlotReceiverPosition {
   # Set EN polar title:
   # Get initial epoch date in 'yyyy/mo/dd' format:
   my $date = ( split(' ', BuildDateString(GPS2Date($ini_epoch))) )[0];
-  my $chart_en_polar_hdop_title =
-    "Receiver Easting, Northing and HDOP from $marker_name station on $date";
-
-  # Set palette label:
-  my $palette_label_cmm = 'cblabel "Horizontal DOP [m]"';
+  my $chart_en_polar_hsigma_title =
+    "Receiver Easting, Northing and Sigma(H) from $marker_name station on $date";
+  my $palette_label_sigmah_cmm = 'cblabel "Horizontal Sigma [m]"';
 
   # Create polar plot object for plotting EN components:
-  my $chart_en_polar_hdop =
+  my $chart_en_polar_hsigma =
     Chart::Gnuplot->new(
       terminal => 'pngcairo size 874,874',
-      output => $out_path."/$marker_name-rec-EN-HDOP-polar.png",
+      output => $out_path."/$marker_name-rec-EN-SigmaH-polar.png",
       title  => {
-        text => $chart_en_polar_hdop_title,
+        text => $chart_en_polar_hsigma_title,
         font => ':Bold',
       },
       border => undef,
       xtics  => undef,
       ytics  => undef,
-      $palette_label_cmm => '',
+      $palette_label_sigmah_cmm => '',
       timestamp =>  {
         fmt  => 'Created on %d/%m/%y %H:%M:%S',
         font => "Helvetica Italic, 10",
       },
     );
   # Set chart polar properties:
-    $chart_en_polar_hdop->set(
+    $chart_en_polar_hsigma->set(
       size   => "0.9, 0.9",
       origin => "0.085, 0.06",
       polar  => "",
@@ -184,31 +185,107 @@ sub PlotReceiverPosition {
       colorbox => "",
     );
   # Set point style properties:
-    $chart_en_polar_hdop->set(
+    $chart_en_polar_hsigma->set(
       style => "fill transparent solid 0.04 noborder",
       style => "circle radius 0.05",
     );
 
-  # Copy previous polar plot  plot Upping in the color domain:
-  # TODO: do not copy but init another polar plot...
-  my $chart_enu_polar = $chart_en_polar_hdop->copy();
+  # Set polar EN plot with epoch in the Z domain:
+  my $chart_en_epoch_polar_title =
+    "Receiver Easting, Northing and Epoch from $marker_name station on $date";
+  my $palette_label_epoch_cmm = 'cblabel "Epoch [h]"';
+  my $palette_color_epoch_cmm =
+    'palette defined (0 0 0 0, 1 0 0 1, 3 0 1 0, 4 1 0 0, 6 1 1 1)';
+
+  my $chart_en_epoch_polar =
+    Chart::Gnuplot->new(
+      terminal => 'pngcairo size 874,874',
+      output => $out_path."/$marker_name-rec-EN-Epoch-polar.png",
+      title  => {
+        text => $chart_en_epoch_polar_title,
+        font => ':Bold',
+      },
+      border => undef,
+      xtics  => undef,
+      ytics  => undef,
+      $palette_label_epoch_cmm => '',
+      $palette_color_epoch_cmm => '',
+      # $palette_range_epoch_cmm => '',
+      timestamp =>  {
+        fmt  => 'Created on %d/%m/%y %H:%M:%S',
+        font => "Helvetica Italic, 10",
+      },
+    );
+  # Set chart polar properties:
+    $chart_en_epoch_polar->set(
+      size   => "0.9, 0.9",
+      origin => "0.085, 0.06",
+      polar  => "",
+      grid   => "polar front",
+      'border polar' => '',
+      angle  => "radians",
+      theta  => "top clockwise",
+      trange => "[0:2*pi]",
+      rrange => "[0:$max_rec_distance]",
+      rtics  => "1",
+      ttics  => 'add ("N" 0, "NE" 45, "E" 90, "SE" 135, '.
+                     '"S" 180, "SW" 225, "W" 270, "NW" 315)',
+      cbtics => 0.25,
+      colorbox => "",
+    );
+  # Set point style properties:
+    $chart_en_epoch_polar->set(
+      style => "fill transparent solid 0.04 noborder",
+      style => "circle radius 0.05",
+    );
+
+  # Plor for polar EN and upping in Z domain:
   my $chart_enu_polar_title =
     "Receiver Easting, Northing and Upping from $marker_name station on $date";
   my $palette_label_upping_cmm = 'cblabel "Upping [m]"';
-  my $palette_color_cmm = 'palette rgb 33,13,10;';
-  my $palette_range_cmm = "cbrange [-$max_abs_upping:$max_abs_upping]";
-  $chart_enu_polar->set(
-    output => $out_path."/$marker_name-rec-ENU-polar.png",
-    title => {
-      text => $chart_enu_polar_title,
-      font => ':Bold',
-    },
-    $palette_label_upping_cmm => "",
-    $palette_color_cmm => "",
-    $palette_range_cmm => "",
-  );
+  my $palette_color_upping_cmm = 'palette rgb 33,13,10;';
+  my $palette_range_upping_cmm = "cbrange [-$max_abs_upping:$max_abs_upping]";
 
-  # TODO: Create new polar plot and color z domain with epochs.
+  my $chart_enu_polar =
+    Chart::Gnuplot->new(
+      terminal => 'pngcairo size 874,874',
+      output => $out_path."/$marker_name-rec-EN-Upping-polar.png",
+      title  => {
+        text => $chart_enu_polar_title,
+        font => ':Bold',
+      },
+      border => undef,
+      xtics  => undef,
+      ytics  => undef,
+      $palette_label_upping_cmm => '',
+      $palette_color_upping_cmm => '',
+      $palette_range_upping_cmm => '',
+      timestamp =>  {
+        fmt  => 'Created on %d/%m/%y %H:%M:%S',
+        font => "Helvetica Italic, 10",
+      },
+    );
+  # Set chart polar properties:
+    $chart_enu_polar->set(
+      size   => "0.9, 0.9",
+      origin => "0.085, 0.06",
+      polar  => "",
+      grid   => "polar front",
+      'border polar' => '',
+      angle  => "radians",
+      theta  => "top clockwise",
+      trange => "[0:2*pi]",
+      rrange => "[0:$max_rec_distance]",
+      rtics  => "1",
+      ttics  => 'add ("N" 0, "NE" 45, "E" 90, "SE" 135, '.
+                     '"S" 180, "SW" 225, "W" 270, "NW" 315)',
+      colorbox => "",
+    );
+  # Set point style properties:
+    $chart_enu_polar->set(
+      style => "fill transparent solid 0.04 noborder",
+      style => "circle radius 0.05",
+    );
 
   # Set ENU multiplot chart title:
   my $chart_enu_title =
@@ -300,6 +377,14 @@ sub PlotReceiverPosition {
       style => "circles linecolor pal z",
       fill => { density => 0.8 },
     );
+  my $rec_en_epoch_polar_dataset =
+    Chart::Gnuplot::DataSet->new(
+      xdata => unpdl($pdl_rec_azimut->flat),
+      ydata => unpdl($pdl_rec_distance->flat),
+      zdata => unpdl($pdl_epoch_day_hour->flat),
+      style => "circles linecolor pal z",
+      fill => { density => 0.8 },
+    );
 
   # Build receiver E positions dataset:
   my $rec_e_dataset =
@@ -370,7 +455,8 @@ sub PlotReceiverPosition {
                            ));
 
     # EN 2D polar plot:
-    $chart_en_polar_hdop->plot2d( $rec_en_hdop_polar_dataset );
+    $chart_en_polar_hsigma->plot2d( $rec_en_hdop_polar_dataset );
+    $chart_en_epoch_polar->plot2d( $rec_en_epoch_polar_dataset );
     $chart_enu_polar->plot2d( $rec_enu_polar_dataset );
 
   return TRUE;
@@ -511,5 +597,30 @@ sub PlotDilutionOfPrecission {
   return TRUE;
 }
 
+# ---------------------------------------------------------------------------- #
+# Private Subroutines: #
+
+sub RecPolarCoordinates {
+  my ($pdl_east, $pdl_north) = @_;
+
+  # Distance is computed as:
+  my $pdl_distance = ($pdl_east**2 + $pdl_north**2)**0.5;
+
+  # Get array lsit from piddles:
+  my @east  = list( $pdl_east  -> flat() );
+  my @north = list( $pdl_north -> flat() );
+
+  # Init azmiut array:
+  my @azimut;
+
+  for my $i (keys @east) {
+    my ($az, $ze, $dist) = Venu2AzZeDs($east[$i], $north[$i], 1);
+    push(@azimut, $az);
+  }
+
+  my $pdl_azimut = pdl(@azimut);
+
+  return ($pdl_azimut, $pdl_distance);
+}
 
 TRUE;
