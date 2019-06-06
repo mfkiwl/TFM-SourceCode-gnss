@@ -983,30 +983,6 @@ sub LoadConfiguration {
       }
     }
 
-    # TODO: Set configuration for data dumper base file names...
-
-    # Output file names:
-      # Satellite observation data:
-      if ($config_content =~ /^Satellite Observation +: +(.+)$/im) {
-      }
-
-      # Satellite navigation data:
-      if ($config_content =~ /^Satellite Navigation +: +(.+)$/im) {
-      }
-
-      # Line of sight data:
-      if ($config_content =~ /^Line of Sight Data +: +(.+)$/im) {
-      }
-
-      # Least Squares Report:
-      if ($config_content =~ /^Receiver Position +: +(.+)$/im) {
-      }
-
-      # Receiver position:
-      if ($config_content =~ /^Least Squares Report +: +(.+)$/im) {
-      }
-
-
   return $ref_config_hash;
 }
 
