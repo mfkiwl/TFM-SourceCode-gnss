@@ -399,27 +399,6 @@ sub LoadConfiguration {
         return KILLED;
       }
     }
-    if ( $config_content =~ /^IGS Precise Orbit SP3 path +: +(.+)$/im ) {
-      my $igs_sp3_path = $1;
-      if (-r $igs_sp3_path) {
-        $ref_config_hash->{IGS_PRECISE}{ORBIT_PATH} = $igs_sp3_path;
-      } else {
-        RaiseError(*STDOUT, ERR_CANNOT_READ_FILE,
-        "File \'$igs_sp3_path\' either cannot be read or does not exist");
-        return KILLED;
-      }
-    }
-    if ( $config_content =~ /^IGS Precise Clock CLK path +: +(.+)$/im ) {
-      my $igs_clk_path = $1;
-      if (-r $igs_clk_path) {
-        $ref_config_hash->{IGS_PRECISE}{CLOCK_PATH} = $igs_clk_path;
-      } else {
-        RaiseError(*STDOUT, ERR_CANNOT_READ_FILE,
-        "File \'$igs_clk_path\' either cannot be read or does not exist");
-        return KILLED;
-      }
-    }
-
 
     # Output sub-section:
     if ( $config_content =~ /^Output path +: +(.+)$/im ) {
@@ -689,6 +668,35 @@ sub LoadConfiguration {
       }
     }
 
+  # Accuracy configuration section:
+    # Vertical sigma scale factor:
+    if ($config_content =~ /^Vertical Sigma Scale Factor \(1D\) +: +(.+)$/im) {
+      my $vertical_sigma_factor = $1;
+      if (looks_like_number($vertical_sigma_factor)) {
+        $ref_config_hash->
+          {ACCURACY}{VERTICAL}{SIGMA_FACTOR} = $vertical_sigma_factor*1;
+      } else {
+        RaiseError(*STDOUT, ERR_OPTION_IS_NOT_NUMERIC,
+          "Vertical Sigma Scale Factor parameter '$vertical_sigma_factor' ".
+          "is not numeric type!");
+        return KILLED;
+      }
+    }
+
+    # Horizontal sigma scale factor:
+    if ($config_content =~ /^Horizontal Sigma Scale Factor \(2D\) +: +(.+)$/im) {
+      my $horizontal_sigma_factor = $1;
+      if (looks_like_number($horizontal_sigma_factor)) {
+        $ref_config_hash->
+          {ACCURACY}{HORIZONTAL}{SIGMA_FACTOR} = $horizontal_sigma_factor*1;
+      } else {
+        RaiseError(*STDOUT, ERR_OPTION_IS_NOT_NUMERIC,
+          "Horizontal Sigma Scale Factor parameter '$horizontal_sigma_factor' ".
+          "is not numeric type!");
+        return KILLED;
+      }
+    }
+
   # Static mode section:
     # Static mode activated?
     if ($config_content =~ /^Static Mode +: +(.+)$/im) {
@@ -781,7 +789,6 @@ sub LoadConfiguration {
   # Only if integrity mode activated:
   if ($ref_config_hash->{INTEGRITY}{STATUS}) {
 
-    # Vertical parameters:
     # Vertical alert limit:
     if ($config_content =~ /^Vertical Alert Limit +: +(.+)$/im) {
       my $vertical_alert = $1;
@@ -795,21 +802,7 @@ sub LoadConfiguration {
         return KILLED;
       }
     }
-    # Vertical sigma scale factor:
-    if ($config_content =~ /^Vertical Sigma Scale Factor \(1D\) +: +(.+)$/im) {
-      my $vertical_sigma_factor = $1;
-      if (looks_like_number($vertical_sigma_factor)) {
-        $ref_config_hash->
-          {INTEGRITY}{VERTICAL}{SIGMA_FACTOR} = $vertical_sigma_factor*1;
-      } else {
-        RaiseError(*STDOUT, ERR_OPTION_IS_NOT_NUMERIC,
-          "Vertical Sigma Scale Factor parameter '$vertical_sigma_factor' ".
-          "is not numeric type!");
-        return KILLED;
-      }
-    }
 
-    # Horizontal parameters:
     # Horizontal alert limit:
     if ($config_content =~ /^Horizontal Alert Limit +: +(.+)$/im) {
       my $horizontal_alert = $1;
@@ -823,117 +816,8 @@ sub LoadConfiguration {
         return KILLED;
       }
     }
-    # Horizontal sigma scale factor:
-    if ($config_content =~ /^Horizontal Sigma Scale Factor \(2D\) +: +(.+)$/im) {
-      my $horizontal_sigma_factor = $1;
-      if (looks_like_number($horizontal_sigma_factor)) {
-        $ref_config_hash->
-          {INTEGRITY}{HORIZONTAL}{SIGMA_FACTOR} = $horizontal_sigma_factor*1;
-      } else {
-        RaiseError(*STDOUT, ERR_OPTION_IS_NOT_NUMERIC,
-          "Horizontal Sigma Scale Factor parameter '$horizontal_sigma_factor' ".
-          "is not numeric type!");
-        return KILLED;
-      }
-    }
 
   }
-
-
-  # Plot diagrams section:
-    # Satellite information sub-section:
-    if ($config_content =~ /^Satellite Observations +: +(.+)$/im) {
-      my $plot_sat_obs = ReadBoolean($1);
-      if (defined $plot_sat_obs) {
-        $ref_config_hash->{PLOT}{SAT_OBSERVATIONS} = $plot_sat_obs;
-      } else {
-        RaiseError(*STDOUT, ERR_OPTION_IS_NOT_BOOLEAN,
-          "Unrecognized option for Plot Satellite Observations parameter",
-          "Please, indicate one of the following: \'TRUE\' or \'FALSE\'");
-        return KILLED;
-      }
-    }
-    if ($config_content =~ /^Satellite Positions +: +(.+)$/im) {
-      my $plot_sat_pos = ReadBoolean($1);
-      if (defined $plot_sat_pos) {
-        $ref_config_hash->{PLOT}{SAT_POSITIONS} = $plot_sat_pos;
-      } else {
-        RaiseError(*STDOUT, ERR_OPTION_IS_NOT_BOOLEAN,
-          "Unrecognized option for Plot Satellite Positions parameter",
-          "Please, indicate one of the following: \'TRUE\' or \'FALSE\'");
-        return KILLED;
-      }
-    }
-    if ($config_content =~ /^Satellite Clocks +: +(.+)$/im) {
-      my $plot_sat_clk = ReadBoolean($1);
-      if (defined $plot_sat_clk) {
-        $ref_config_hash->{PLOT}{SAT_CLOCK} = $plot_sat_clk;
-      } else {
-        RaiseError(*STDOUT, ERR_OPTION_IS_NOT_BOOLEAN,
-          "Unrecognized option for Plot Satellite Clock parameter",
-          "Please, indicate one of the following: \'TRUE\' or \'FALSE\'");
-        return KILLED;
-      }
-    }
-
-    # Signal error sub-section:
-    if ($config_content =~ /^Tropospheric Correction +: +(.+)$/im) {
-      my $plot_tropo_corr = ReadBoolean($1);
-      if (defined $plot_tropo_corr) {
-        $ref_config_hash->{PLOT}{TROPOSPHERE_CORRECTION} = $plot_tropo_corr;
-      } else {
-        RaiseError(*STDOUT, ERR_OPTION_IS_NOT_BOOLEAN,
-          "Unrecognized option for Plot Troposphere Correction parameter",
-          "Please, indicate one of the following: \'TRUE\' or \'FALSE\'");
-        return KILLED;
-      }
-    }
-    if ($config_content =~ /^Ionospheric Correction +: +(.+)$/im) {
-      my $plot_iono_corr = ReadBoolean($1);
-      if (defined $plot_iono_corr) {
-        $ref_config_hash->{PLOT}{IONOSPHERE_CORRECTION} = $plot_iono_corr;
-      } else {
-        RaiseError(*STDOUT, ERR_OPTION_IS_NOT_BOOLEAN,
-          "Unrecognized option for Plot Ionosphere Correction parameter",
-          "Please, indicate one of the following: \'TRUE\' or \'FALSE\'");
-        return KILLED;
-      }
-    }
-
-    # Receiver position sub-section:
-    if ($config_content =~ /^Receiver Position EN +: +(.+)$/im) {
-      my $plot_rec_pos_en = ReadBoolean($1);
-      if (defined $plot_rec_pos_en) {
-        $ref_config_hash->{PLOT}{REC_POSITION_EN} = $plot_rec_pos_en;
-      } else {
-        RaiseError(*STDOUT, ERR_OPTION_IS_NOT_BOOLEAN,
-          "Unrecognized option for Plot Receiver Position EN parameter",
-          "Please, indicate one of the following: \'TRUE\' or \'FALSE\'");
-        return KILLED;
-      }
-    }
-    if ($config_content =~ /^Receiver Position U +: +(.+)$/im) {
-      my $plot_rec_pos_u = ReadBoolean($1);
-      if (defined $plot_rec_pos_u) {
-        $ref_config_hash->{PLOT}{REC_POSITION_U} = $plot_rec_pos_u;
-      } else {
-        RaiseError(*STDOUT, ERR_OPTION_IS_NOT_BOOLEAN,
-          "Unrecognized option for Plot Receiver Position U parameter",
-          "Please, indicate one of the following: \'TRUE\' or \'FALSE\'");
-        return KILLED;
-      }
-    }
-    if ($config_content =~ /^Receiver Residuals +: +(.+)$/im) {
-      my $plot_rec_res = ReadBoolean($1);
-      if (defined $plot_rec_res) {
-        $ref_config_hash->{PLOT}{REC_RESIDUALS} = $plot_rec_res;
-      } else {
-        RaiseError(*STDOUT, ERR_OPTION_IS_NOT_BOOLEAN,
-          "Unrecognized option for Plot Receiver Residuals parameter",
-          "Please, indicate one of the following: \'TRUE\' or \'FALSE\'");
-        return KILLED;
-      }
-    }
 
   # Data Dumper configuration section:
     # File delimiter:
