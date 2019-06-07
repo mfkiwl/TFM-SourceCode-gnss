@@ -159,12 +159,21 @@ sub PlotLSQEpochEstimation {
 
   # Set's chart titles:
   # Get initial epoch date in 'yyyy/mo/dd' format:
-  my $date = ( split(' ', BuildDateString(GPS2Date($ini_epoch))) )[0];
-  my $chart_lsq_rpt_title = "LSQ routine report from $marker_name on $date";
-  my $chart_x_title  = "LSQ ECEF X parameter report from $marker_name on $date";
-  my $chart_y_title  = "LSQ ECEF Y parameter report from $marker_name on $date";
-  my $chart_z_title  = "LSQ ECEF Z parameter report from $marker_name on $date";
-  my $chart_dt_title = "LSQ DT parameter report from $marker_name on $date";
+  my $chart_lsq_rpt_title =
+    SetReportTitle("LSQ routine report",
+                   $ref_gen_conf, $marker_name, $ini_epoch);
+  my $chart_x_title  =
+    SetReportTitle("LSQ ECEF X parameter estimation",
+                   $ref_gen_conf, $marker_name, $ini_epoch);
+  my $chart_y_title  =
+    SetReportTitle("LSQ ECEF Y parameter estimation",
+                   $ref_gen_conf, $marker_name, $ini_epoch);
+  my $chart_z_title  =
+    SetReportTitle("LSQ ECEF Z parameter estimation",
+                   $ref_gen_conf, $marker_name, $ini_epoch);
+  my $chart_dt_title =
+    SetReportTitle("LSQ dTRec parameter estimation",
+                   $ref_gen_conf, $marker_name, $ini_epoch);
 
   # Set chart objects:
     # LSQ report:

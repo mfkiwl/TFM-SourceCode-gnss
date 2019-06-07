@@ -118,10 +118,10 @@ sub PlotSatelliteResiduals {
   my $sat_id_ytics_cmm = RetrieveSatYTicsCommand(@avail_sats);
 
   # Set chart's title:
-  my $date = ( split(' ', BuildDateString(GPS2Date($ini_epoch))) )[0];
   my $chart_title =
-    SAT_SYS_ID_TO_NAME->{$sat_sys}.
-    " Satellite Computed Residuals from $marker_name station on $date";
+    SetReportTitle(SAT_SYS_ID_TO_NAME->{$sat_sys}.
+                   " Satellite Computed Residuals",
+                   $ref_gen_conf, $marker_name, $ini_epoch);
 
   # Set commands for color palette:
   my $palette_color_cmm = 'palette rgb 33,13,10';
@@ -215,10 +215,10 @@ sub PlotSatelliteIonosphereDelay {
   my $sat_id_ytics_cmm = RetrieveSatYTicsCommand(@avail_sats);
 
   # Set chart's title:
-  my $date = ( split(' ', BuildDateString(GPS2Date($ini_epoch))) )[0];
   my $chart_title =
-    SAT_SYS_ID_TO_NAME->{$sat_sys}.
-    " Satellite Computed Ionosphere Delay from $marker_name station on $date";
+    SetReportTitle(SAT_SYS_ID_TO_NAME->{$sat_sys}.
+                   " Satellite Computed Ionosphere Delay",
+                   $ref_gen_conf, $marker_name, $ini_epoch);
 
   # Set commands for color palette:
   my $palette_color_cmm = 'palette rgb 30,31,32';
@@ -314,8 +314,9 @@ sub PlotSatelliteTroposphereDelay {
   # Set chart's title:
   my $date = ( split(' ', BuildDateString(GPS2Date($ini_epoch))) )[0];
   my $chart_title =
-    SAT_SYS_ID_TO_NAME->{$sat_sys}.
-    " Satellite Computed Troposphere Delay from $marker_name station on $date";
+    SetReportTitle(SAT_SYS_ID_TO_NAME->{$sat_sys}.
+                   " Satellite Computed Troposphere Delay",
+                   $ref_gen_conf, $marker_name, $ini_epoch);
 
   # Set chart object:
   my $chart =

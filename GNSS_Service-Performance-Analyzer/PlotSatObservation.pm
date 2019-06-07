@@ -122,10 +122,10 @@ sub PlotSatelliteAvailability {
   my $max_num_sat = max($pdl_num_avail_sat);
 
   # Chart's title:
-  my $date = ( split(' ', BuildDateString(GPS2Date($ini_epoch))) )[0];
   my $chart_title =
-    SAT_SYS_ID_TO_NAME->{$sat_sys}.
-    " Satellite Availability from $marker_name station on $date";
+    SetReportTitle( SAT_SYS_ID_TO_NAME->{$sat_sys}.
+                    " Satellite Availability",
+                    $ref_gen_conf, $marker_name, $ini_epoch);
 
   # Chart's grid:
   my $set_grid_cmm = "grid front";
@@ -231,10 +231,10 @@ sub PlotSatelliteElevation {
     grep( /^$sat_sys\d{2}$/, (keys %{ $ref_file_layout->{ITEMS} }) );
 
   # Chart's title:
-  my $date = ( split(' ', BuildDateString(GPS2Date($ini_epoch))) )[0];
   my $chart_title =
-    SAT_SYS_ID_TO_NAME->{$sat_sys}.
-    " Satellite Observed Elevation from $marker_name station on $date";
+    SetReportTitle( SAT_SYS_ID_TO_NAME->{$sat_sys}.
+                    " Satellite Observed Elevation",
+                    $ref_gen_conf, $marker_name, $ini_epoch);
 
   # Create plot object:
   my $chart =
@@ -339,10 +339,10 @@ sub PlotSatelliteSkyPath {
     grep( /^$sat_sys\d{2}$/, (keys %{ $ref_azimut_file_layout->{ITEMS} }) );
 
   # Chart's title:
-  my $date = ( split(' ', BuildDateString(GPS2Date($ini_epoch))) )[0];
   my $chart_title =
-    SAT_SYS_ID_TO_NAME->{$sat_sys}.
-    " Satellite Sky-Plot from $marker_name station on $date";
+    SetReportTitle(SAT_SYS_ID_TO_NAME->{$sat_sys}.
+                   " Satellite Sky-Path",
+                   $ref_gen_conf, $marker_name, $ini_epoch);
 
   # Palette configuration:
   my $palette_color_cmm =

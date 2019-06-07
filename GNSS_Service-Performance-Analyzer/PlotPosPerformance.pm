@@ -146,9 +146,9 @@ sub PlotReceiverPosition {
 
   # Set EN polar title:
   # Get initial epoch date in 'yyyy/mo/dd' format:
-  my $date = ( split(' ', BuildDateString(GPS2Date($ini_epoch))) )[0];
   my $chart_en_polar_hsigma_title =
-    "Receiver Easting, Northing and Sigma(H) from $marker_name station on $date";
+    SetReportTitle("Receiver Easting, Northing and Sigma(H)",
+                   $ref_gen_conf, $marker_name, $ini_epoch);
   my $palette_label_sigmah_cmm = 'cblabel "Horizontal Sigma [m]"';
 
   # Create polar plot object for plotting EN components:
@@ -193,7 +193,8 @@ sub PlotReceiverPosition {
 
   # Set polar EN plot with epoch in the Z domain:
   my $chart_en_epoch_polar_title =
-    "Receiver Easting, Northing and Epoch from $marker_name station on $date";
+    SetReportTitle("Receiver Easting, Northing and Epoch",
+                   $ref_gen_conf, $marker_name, $ini_epoch);
   my $palette_label_epoch_cmm = 'cblabel "Epoch [h]"';
   my $palette_color_epoch_cmm =
     'palette defined (0 0 0 0, 1 0 0 1, 3 0 1 0, 4 1 0 0, 6 1 1 1)';
@@ -242,7 +243,8 @@ sub PlotReceiverPosition {
 
   # Plor for polar EN and upping in Z domain:
   my $chart_enu_polar_title =
-    "Receiver Easting, Northing and Upping from $marker_name station on $date";
+    SetReportTitle("Receiver Easting, Northing and Upping",
+                   $ref_gen_conf, $marker_name, $ini_epoch);
   my $palette_label_upping_cmm = 'cblabel "Upping [m]"';
   my $palette_color_upping_cmm = 'palette rgb 33,13,10;';
   my $palette_range_upping_cmm = "cbrange [-$max_abs_upping:$max_abs_upping]";
@@ -290,7 +292,8 @@ sub PlotReceiverPosition {
 
   # Set ENU multiplot chart title:
   my $chart_enu_title =
-    "Receiver Easting, Northing and Upping from $marker_name station on $date";
+    SetReportTitle("Receiver Easting, Northing and Upping",
+                   $ref_gen_conf, $marker_name, $ini_epoch);
 
   # Create parent object for ENU multiplot:
   my $chart_enu =
@@ -333,7 +336,8 @@ sub PlotReceiverPosition {
    );
 
   my $chart_clk_bias_title =
-    "Receiver Clock Bias from $marker_name station on $date";
+    SetReportTitle("Receiver Clock Bias",
+                   $ref_gen_conf, $marker_name, $ini_epoch);
 
   # Create chart object for receiver clock bias:
   my $palette_label_std_cmm = 'cblabel "STD (1 sigma) [m]"';
@@ -423,7 +427,7 @@ sub PlotReceiverPosition {
       xdata => unpdl($pdl_epochs->flat),
       ydata => unpdl($pdl_rec_clk_bias->flat),
       zdata => unpdl($pdl_std_clk_bias->flat),
-      style => "lines linecolor pal z",
+      style => "points pointtype 7 ps 0.3 linecolor pal z",
       width => 3,
       timefmt => "%s",
     );
@@ -488,11 +492,12 @@ sub PlotDilutionOfPrecission {
   # TODO: consider adding sigma scale factor for standard deviations indicators
 
   # Set chart's titles:
-  my $date = ( split(' ', BuildDateString(GPS2Date($ini_epoch))) )[0];
   my $chart_ecef_title =
-    "ECEF Frame Ex-post DOP from $marker_name station on $date";
+    SetReportTitle("ECEF Frame Accuracy Performance",
+                   $ref_gen_conf, $marker_name, $ini_epoch);
   my $chart_enu_title =
-    "ENU Frame Ex-post DOP from $marker_name station on $date";
+    SetReportTitle("ENU Frame Accuracy Performance",
+                   $ref_gen_conf, $marker_name, $ini_epoch);
 
   # Create chart for ECEF frame DOP:
   my $chart_ecef =
@@ -505,7 +510,7 @@ sub PlotDilutionOfPrecission {
       },
       grid   => "on",
       xlabel => "Observation Epochs [HH::MM]",
-      ylabel => "DOP [m]",
+      ylabel => "Sigma [m]",
       xrange => [$ini_epoch, $end_epoch],
       timeaxis => "x",
       xtics => { labelfmt => "%H:%M" },
@@ -526,7 +531,7 @@ sub PlotDilutionOfPrecission {
       },
       grid   => "on",
       xlabel => "Observation Epochs [HH::MM]",
-      ylabel => "DOP [m]",
+      ylabel => "Sigma [m]",
       xrange => [$ini_epoch, $end_epoch],
       timeaxis => "x",
       xtics => { labelfmt => "%H:%M" },
@@ -544,7 +549,7 @@ sub PlotDilutionOfPrecission {
       style => "points pointtype 7 ps 0.3",
       width => 3,
       timefmt => "%s",
-      title => "Geometric DOP",
+      title => "Geometric Sigma",
     );
   my $pdop_dataset =
     Chart::Gnuplot::DataSet->new(
@@ -553,7 +558,7 @@ sub PlotDilutionOfPrecission {
       style => "points pointtype 7 ps 0.3",
       width => 3,
       timefmt => "%s",
-      title => "Position DOP",
+      title => "Position Sigma",
     );
   my $tdop_dataset =
     Chart::Gnuplot::DataSet->new(
@@ -562,7 +567,7 @@ sub PlotDilutionOfPrecission {
       style => "points pointtype 7 ps 0.3",
       width => 3,
       timefmt => "%s",
-      title => "Time DOP",
+      title => "Time Sigma",
     );
   my $hdop_dataset =
     Chart::Gnuplot::DataSet->new(
@@ -571,7 +576,7 @@ sub PlotDilutionOfPrecission {
       style => "points pointtype 7 ps 0.3",
       width => 3,
       timefmt => "%s",
-      title => "Horizontal DOP",
+      title => "Horizontal Sigma",
     );
   my $vdop_dataset =
     Chart::Gnuplot::DataSet->new(
@@ -580,7 +585,7 @@ sub PlotDilutionOfPrecission {
       style => "points pointtype 7 ps 0.3",
       width => 3,
       timefmt => "%s",
-      title => "Vertical DOP",
+      title => "Vertical Sigma",
     );
 
   # Plot datasets on their respective chart:
