@@ -39,6 +39,9 @@
   LSQ_MAX_NUM_ITER      => $max_num_of_iterations,
   CONVERGENCE_THRESHOLD => $convergence_threshold,
 
+  # Accuracy configuration:
+  ACCURACY => \%accuracy_conf,
+
   # Satic mode configuration:
   STATIC => \%static_mode,
 
@@ -82,6 +85,12 @@
 
 @reference_ecef_coordinates = ($x_ecef, $y_ecef, $z_ecef);
 
+# Accuracy configuration:
+%accuracy_conf = (
+  HORIZONTAL => ( SIGMA_FACTOR => $sigma_factor ),
+  VERTICAL   => ( SIGMA_FACTOR => $sigma_factor ),
+)
+
 # Integrity configuration parameters:
 %integrity_mode = (
   STATUS => $boolean_status,
@@ -91,7 +100,6 @@
 
 %integrity_parameter = (
   ALERT_LIMIT => $alert_bound,
-  SIGMA_FACTOR => $gaussian_dist_critical_value,
 );
 
 # Plot configuration:

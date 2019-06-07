@@ -950,8 +950,8 @@ sub GetIntegrityInfo {
   my $v_alert_limit = $ref_gen_conf->{INTEGRITY}{ VERTICAL    }{ALERT_LIMIT};
 
   # Retrieve configured precision (sigma) scale factors:
-  my $h_scale_factor = $ref_gen_conf->{INTEGRITY}{ HORIZONTAL }{SIGMA_FACTOR};
-  my $v_scale_factor = $ref_gen_conf->{INTEGRITY}{ VERTICAL   }{SIGMA_FACTOR};
+  my $h_scale_factor = $ref_gen_conf->{ACCURACY}{ HORIZONTAL }{SIGMA_FACTOR};
+  my $v_scale_factor = $ref_gen_conf->{ACCURACY}{ VERTICAL   }{SIGMA_FACTOR};
 
 
   # For horizontal component:

@@ -2059,8 +2059,8 @@ sub DumpHorizontalIntegrityInfo {
       # Retrieve integrity information:
       # Configured scale factor and alert limit:
       my ( $h_scale_factor, $h_alert_limit ) =
-         ( $ref_gen_conf->{INTEGRITY}{HORIZONTAL}{ SIGMA_FACTOR },
-           $ref_gen_conf->{INTEGRITY}{HORIZONTAL}{ ALERT_LIMIT  } );
+         ( $ref_gen_conf->{ ACCURACY  }{HORIZONTAL}{ SIGMA_FACTOR },
+           $ref_gen_conf->{ INTEGRITY }{HORIZONTAL}{ ALERT_LIMIT  } );
 
       # Computed info:
       my ( $h_error, $h_precision,
@@ -2159,8 +2159,8 @@ sub DumpVerticalIntegrityInfo {
       # Retrieve integrity information:
       # Configured scale factor and alert limit:
       my ( $v_scale_factor, $v_alert_limit ) =
-         ( $ref_gen_conf->{INTEGRITY}{VERTICAL}{ SIGMA_FACTOR },
-           $ref_gen_conf->{INTEGRITY}{VERTICAL}{ ALERT_LIMIT  } );
+         ( $ref_gen_conf->{ ACCURACY  }{VERTICAL}{ SIGMA_FACTOR },
+           $ref_gen_conf->{ INTEGRITY }{VERTICAL}{ ALERT_LIMIT  } );
 
       # Computed info:
       my ( $v_error, $v_precision,
