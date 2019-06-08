@@ -123,9 +123,8 @@ sub PlotSatelliteAvailability {
 
   # Chart's title:
   my $chart_title =
-    SetReportTitle( SAT_SYS_ID_TO_NAME->{$sat_sys}.
-                    " Satellite Availability",
-                    $ref_gen_conf, $marker_name, $ini_epoch);
+    SetReportTitle("Satellite Availability",
+                   $ref_gen_conf, $marker_name, $ini_epoch);
 
   # Chart's grid:
   my $set_grid_cmm = "grid front";
@@ -232,9 +231,8 @@ sub PlotSatelliteElevation {
 
   # Chart's title:
   my $chart_title =
-    SetReportTitle( SAT_SYS_ID_TO_NAME->{$sat_sys}.
-                    " Satellite Observed Elevation",
-                    $ref_gen_conf, $marker_name, $ini_epoch);
+    SetReportTitle("Satellite Observed Elevation",
+                   $ref_gen_conf, $marker_name, $ini_epoch);
 
   # Create plot object:
   my $chart =
@@ -340,8 +338,7 @@ sub PlotSatelliteSkyPath {
 
   # Chart's title:
   my $chart_title =
-    SetReportTitle(SAT_SYS_ID_TO_NAME->{$sat_sys}.
-                   " Satellite Sky-Path",
+    SetReportTitle("Satellite Sky-Path",
                    $ref_gen_conf, $marker_name, $ini_epoch);
 
   # Palette configuration:

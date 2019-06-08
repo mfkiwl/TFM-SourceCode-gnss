@@ -119,8 +119,7 @@ sub PlotSatelliteResiduals {
 
   # Set chart's title:
   my $chart_title =
-    SetReportTitle(SAT_SYS_ID_TO_NAME->{$sat_sys}.
-                   " Satellite Computed Residuals",
+    SetReportTitle("Satellite Computed Residuals",
                    $ref_gen_conf, $marker_name, $ini_epoch);
 
   # Set commands for color palette:
@@ -216,8 +215,7 @@ sub PlotSatelliteIonosphereDelay {
 
   # Set chart's title:
   my $chart_title =
-    SetReportTitle(SAT_SYS_ID_TO_NAME->{$sat_sys}.
-                   " Satellite Computed Ionosphere Delay",
+    SetReportTitle("Satellite Computed Ionosphere Delay",
                    $ref_gen_conf, $marker_name, $ini_epoch);
 
   # Set commands for color palette:
@@ -314,8 +312,7 @@ sub PlotSatelliteTroposphereDelay {
   # Set chart's title:
   my $date = ( split(' ', BuildDateString(GPS2Date($ini_epoch))) )[0];
   my $chart_title =
-    SetReportTitle(SAT_SYS_ID_TO_NAME->{$sat_sys}.
-                   " Satellite Computed Troposphere Delay",
+    SetReportTitle("Satellite Computed Troposphere Delay",
                    $ref_gen_conf, $marker_name, $ini_epoch);
 
   # Set chart object:
