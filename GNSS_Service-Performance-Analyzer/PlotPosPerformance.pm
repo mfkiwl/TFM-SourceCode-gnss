@@ -146,18 +146,18 @@ sub PlotReceiverPosition {
 
   # Set EN polar title:
   # Get initial epoch date in 'yyyy/mo/dd' format:
-  my $chart_en_polar_hsigma_title =
+  my $chart_en_polar_sigma_h_title =
     SetReportTitle("Receiver Easting, Northing and Sigma(H)",
                    $ref_gen_conf, $marker_name, $ini_epoch);
   my $palette_label_sigmah_cmm = 'cblabel "Horizontal Sigma [m]"';
 
   # Create polar plot object for plotting EN components:
-  my $chart_en_polar_hsigma =
+  my $chart_en_polar_sigma_h =
     Chart::Gnuplot->new(
       terminal => 'pngcairo size 874,874',
       output => $out_path."/$marker_name-rec-EN-SigmaH-polar.png",
       title  => {
-        text => $chart_en_polar_hsigma_title,
+        text => $chart_en_polar_sigma_h_title,
         font => ':Bold',
       },
       border => undef,
@@ -170,7 +170,7 @@ sub PlotReceiverPosition {
       },
     );
   # Set chart polar properties:
-    $chart_en_polar_hsigma->set(
+    $chart_en_polar_sigma_h->set(
       size   => "0.9, 0.9",
       origin => "0.085, 0.06",
       polar  => "",
@@ -186,7 +186,7 @@ sub PlotReceiverPosition {
       colorbox => "",
     );
   # Set point style properties:
-    $chart_en_polar_hsigma->set(
+    $chart_en_polar_sigma_h->set(
       style => "fill transparent solid 0.04 noborder",
       style => "circle radius 0.05",
     );
@@ -340,7 +340,7 @@ sub PlotReceiverPosition {
                    $ref_gen_conf, $marker_name, $ini_epoch);
 
   # Create chart object for receiver clock bias:
-  my $palette_label_std_cmm = 'cblabel "STD (1 sigma) [m]"';
+  my $palette_label_std_cmm = 'cblabel "Sigma Time [m]"';
   my $chart_clk_bias =
     Chart::Gnuplot->new(
       terminal => 'pngcairo size 874,540',
@@ -365,7 +365,7 @@ sub PlotReceiverPosition {
 
   # Build EN polar datasets:
   # EN polar dataset with horizontal accuracy:
-  my $rec_en_hdop_polar_dataset =
+  my $rec_en_sigma_h_polar_dataset =
     Chart::Gnuplot::DataSet->new(
       xdata => unpdl($pdl_rec_azimut->flat),
       ydata => unpdl($pdl_rec_distance->flat),
@@ -460,7 +460,7 @@ sub PlotReceiverPosition {
                            ));
 
     # EN 2D polar plot:
-    $chart_en_polar_hsigma->plot2d( $rec_en_hdop_polar_dataset );
+    $chart_en_polar_sigma_h->plot2d( $rec_en_sigma_h_polar_dataset );
     $chart_en_epoch_polar->plot2d( $rec_en_epoch_polar_dataset );
     $chart_enu_polar->plot2d( $rec_enu_polar_dataset );
 
@@ -472,22 +472,22 @@ sub PlotDilutionOfPrecission {
 
   # Load dumper file:
   my $ref_file_layout =
-    GetFileLayout( join('/', ($inp_path, "DOP-info.out")), 5,
+    GetFileLayout( join('/', ($inp_path, "sigma-info.out")), 5,
                    $ref_gen_conf->{DATA_DUMPER}{DELIMITER} );
 
-  my $pdl_dop_info = pdl( LoadFileByLayout($ref_file_layout) );
+  my $pdl_sigma_info = pdl( LoadFileByLayout($ref_file_layout) );
 
   my $pdl_epochs =
-     $pdl_dop_info($ref_file_layout->{ITEMS}{EpochGPS}{INDEX});
+     $pdl_sigma_info($ref_file_layout->{ITEMS}{EpochGPS}{INDEX});
 
   my $ini_epoch = min($pdl_epochs);
   my $end_epoch = max($pdl_epochs);
 
-  my $pdl_gdop = $pdl_dop_info( $ref_file_layout->{ITEMS}{GDOP}{INDEX} );
-  my $pdl_pdop = $pdl_dop_info( $ref_file_layout->{ITEMS}{PDOP}{INDEX} );
-  my $pdl_tdop = $pdl_dop_info( $ref_file_layout->{ITEMS}{TDOP}{INDEX} );
-  my $pdl_hdop = $pdl_dop_info( $ref_file_layout->{ITEMS}{HDOP}{INDEX} );
-  my $pdl_vdop = $pdl_dop_info( $ref_file_layout->{ITEMS}{VDOP}{INDEX} );
+  my $pdl_sigma_g = $pdl_sigma_info($ref_file_layout->{ITEMS}{SigmaG}{INDEX});
+  my $pdl_sigma_p = $pdl_sigma_info($ref_file_layout->{ITEMS}{SigmaP}{INDEX});
+  my $pdl_sigma_t = $pdl_sigma_info($ref_file_layout->{ITEMS}{SigmaT}{INDEX});
+  my $pdl_sigma_h = $pdl_sigma_info($ref_file_layout->{ITEMS}{SigmaH}{INDEX});
+  my $pdl_sigma_v = $pdl_sigma_info($ref_file_layout->{ITEMS}{SigmaV}{INDEX});
 
   # TODO: consider adding sigma scale factor for standard deviations indicators
 
@@ -499,11 +499,11 @@ sub PlotDilutionOfPrecission {
     SetReportTitle("ENU Frame Accuracy Performance",
                    $ref_gen_conf, $marker_name, $ini_epoch);
 
-  # Create chart for ECEF frame DOP:
+  # Create chart for ECEF frame sigma:
   my $chart_ecef =
     Chart::Gnuplot->new(
       terminal => 'pngcairo size 874,540',
-      output => $out_path."/DOP-ECEF-plot.png",
+      output => $out_path."/Sigma-ECEF-plot.png",
       title  => {
         text => $chart_ecef_title,
         font => ':Bold',
@@ -520,11 +520,11 @@ sub PlotDilutionOfPrecission {
       },
    );
 
-  # Create chart for ENU frame DOP:
+  # Create chart for ENU frame sigma:
   my $chart_enu =
     Chart::Gnuplot->new(
       terminal => 'pngcairo size 874,540',
-      output => $out_path."/DOP-ENU-plot.png",
+      output => $out_path."/Sigma-ENU-plot.png",
       title  => {
         text => $chart_enu_title,
         font => ':Bold',
@@ -541,47 +541,47 @@ sub PlotDilutionOfPrecission {
       },
    );
 
-  # Create DOP datasets:
-  my $gdop_dataset =
+  # Create sigma datasets:
+  my $sigma_g_dataset =
     Chart::Gnuplot::DataSet->new(
       xdata => unpdl($pdl_epochs->flat),
-      ydata => unpdl($pdl_gdop->flat),
+      ydata => unpdl($pdl_sigma_g->flat),
       style => "points pointtype 7 ps 0.3",
       width => 3,
       timefmt => "%s",
       title => "Geometric Sigma",
     );
-  my $pdop_dataset =
+  my $sigma_p_dataset =
     Chart::Gnuplot::DataSet->new(
       xdata => unpdl($pdl_epochs->flat),
-      ydata => unpdl($pdl_pdop->flat),
+      ydata => unpdl($pdl_sigma_p->flat),
       style => "points pointtype 7 ps 0.3",
       width => 3,
       timefmt => "%s",
       title => "Position Sigma",
     );
-  my $tdop_dataset =
+  my $sigma_t_dataset =
     Chart::Gnuplot::DataSet->new(
       xdata => unpdl($pdl_epochs->flat),
-      ydata => unpdl($pdl_tdop->flat),
+      ydata => unpdl($pdl_sigma_t->flat),
       style => "points pointtype 7 ps 0.3",
       width => 3,
       timefmt => "%s",
       title => "Time Sigma",
     );
-  my $hdop_dataset =
+  my $sigma_h_dataset =
     Chart::Gnuplot::DataSet->new(
       xdata => unpdl($pdl_epochs->flat),
-      ydata => unpdl($pdl_hdop->flat),
+      ydata => unpdl($pdl_sigma_h->flat),
       style => "points pointtype 7 ps 0.3",
       width => 3,
       timefmt => "%s",
       title => "Horizontal Sigma",
     );
-  my $vdop_dataset =
+  my $sigma_v_dataset =
     Chart::Gnuplot::DataSet->new(
       xdata => unpdl($pdl_epochs->flat),
-      ydata => unpdl($pdl_vdop->flat),
+      ydata => unpdl($pdl_sigma_v->flat),
       style => "points pointtype 7 ps 0.3",
       width => 3,
       timefmt => "%s",
@@ -590,14 +590,14 @@ sub PlotDilutionOfPrecission {
 
   # Plot datasets on their respective chart:
   $chart_ecef -> plot2d((
-                          $gdop_dataset,
-                          $pdop_dataset,
-                          $tdop_dataset
+                          $sigma_g_dataset,
+                          $sigma_p_dataset,
+                          $sigma_t_dataset
                         ));
   $chart_enu  -> plot2d((
-                          $hdop_dataset,
-                          $vdop_dataset,
-                          $tdop_dataset
+                          $sigma_h_dataset,
+                          $sigma_v_dataset,
+                          $sigma_t_dataset
                         ));
 
   return TRUE;
