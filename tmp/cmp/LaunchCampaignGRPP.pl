@@ -34,7 +34,7 @@ my $script_description = <<'EOF';
 # Script: LaunchCampaignGRPP.pl
 # ============================================================================ #
 # Purpose: Launches campaign GRPP commands. GRPP STDOUT of each command is
-#          stored in $cmp_root_path/rpt/grpp_stdout/
+#          stored in $cmp_root_path/rpt/stdout/
 #
 # ============================================================================ #
 # Usage:
