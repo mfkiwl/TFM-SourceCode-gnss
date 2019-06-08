@@ -32,7 +32,7 @@ BEGIN {
                           &DumpLSQReportByEpoch
                           &DumpRecPosition
                           &DumpNumValidSat
-                          &DumpEpochDOP
+                          &DumpEpochSigma
                           &DumpAzimutBySat
                           &DumpElevationBySat
                           &DumpClockBiasBySat
@@ -868,8 +868,8 @@ sub DumpRecPosition {
       my $rec_clk_sigma = ($ref_xyz_data->{VAR_CLK}**0.5)*$sigma_factor;
 
       # Geodetic receiver coordinates:
-      my ( $rec_lat, $rec_lon,  $rec_helip );
-      my ( $easting, $northing, $upping    );
+      my ($rec_lat, $rec_lon,  $rec_helip) = (NULL_DATA, NULL_DATA, NULL_DATA);
+      my ($easting, $northing, $upping)    = (NULL_DATA, NULL_DATA, NULL_DATA);
 
       if ($status) {
         ($rec_lat, $rec_lon, $rec_helip) =
@@ -878,9 +878,6 @@ sub DumpRecPosition {
           Vxyz2Venu( $rec_x - $ref_x,
                      $rec_y - $ref_y,
                      $rec_z - $ref_z, $ref_lat, $ref_lon ) if $static_mode;
-      } else {
-        ( $rec_lat, $rec_lon,  $rec_helip ) = (0, 0, 0);
-        ( $easting, $northing, $upping    ) = (0, 0, 0) if $static_mode;
       }
 
       # Trasform angle measurments accoring to configuration:
@@ -1039,7 +1036,7 @@ sub DumpNumValidSat {
   return TRUE;
 }
 
-sub DumpEpochDOP {
+sub DumpEpochSigma {
   my ( $ref_gen_conf, $ref_obs_data, $output_path, $fh_log ) = @_;
 
   # Default input values if not defined:
@@ -1082,11 +1079,11 @@ sub DumpEpochDOP {
   my $ref_epoch_sub = REF_EPOCH_SUB_CONF->{$epoch_format};
 
   # 1. Open dumper file:
-    my $file_path = join('/', ($output_path, "DOP-info.out"));
+    my $file_path = join('/', ($output_path, "sigma-info.out"));
     my $fh; open($fh, '>', $file_path) or die "Could not create $!";
 
   # 2. Write title line:
-    say $fh sprintf("# > Dilution of Precission report.\n".
+    say $fh sprintf("# > Accuracy (sigma) report.\n".
                     "# > Reference ECEF frame : %s\n".
                     "# > Reference ENU  frame : Local receiver position\n".
                     "# > Created : %s ",
@@ -1094,11 +1091,12 @@ sub DumpEpochDOP {
 
   # 3. Write header items:
     my @header_items = ( SetEpochHeaderItems($epoch_format),
-                         'Status', 'GDOP', 'PDOP', 'TDOP', 'HDOP', 'VDOP' );
+                         'Status', 'SigmaG', 'SigmaP',
+                         'SigmaT', 'SigmaH', 'SigmaV' );
 
     say $fh join($delimiter, @header_items);
 
-  # 4. Write DOP data:
+  # 4. Write Sigma data:
     # Ierate over observation epochs:
     for (my $i = 0; $i < scalar(@{ $ref_obs_data->{BODY} }); $i += 1) {
 
@@ -1111,10 +1109,12 @@ sub DumpEpochDOP {
       # Retrieve receiver position status:
       my $status = $ref_rec_position->{STATUS};
 
-      # Init DOP items:
-      my ($gdop, $pdop, $tdop, $hdop, $vdop);
+      # Init Sigma items:
+      my ($sigma_g, $sigma_p,
+          $sigma_t, $sigma_h, $sigma_v) = (NULL_DATA, NULL_DATA,
+                                           NULL_DATA, NULL_DATA, NULL_DATA);
 
-      # DOP info is computed for those epochs where the receiever position
+      # Sigma info is computed for those epochs where the receiever position
       # estimation routine has been successfull:
       if ($status) {
 
@@ -1126,25 +1126,22 @@ sub DumpEpochDOP {
         my $var_clk   = $ref_rec_position->{VAR_CLK};
         my $var_u     = $ref_rec_position->{VAR_ENU}[2];
 
-         ( $gdop,
-           $pdop,
-           $tdop,
-           $hdop,
-           $vdop ) = (( $sum_var_xyz + $var_clk )**0.5,  # GDOP
-                      ( $sum_var_xyz +        0 )**0.5,  # PDOP
-                      (            0 + $var_clk )**0.5,  # TDOP
-                      (  $sum_var_en +        0 )**0.5,  # HDOP
-                      (            0 +   $var_u )**0.5); # VDOP
-
-      } else {
-
-        # If receiver position status is not TRUE, set DOP info to 0:
-        ($gdop, $pdop, $tdop, $hdop, $vdop) = (0, 0, 0, 0, 0);
+         ( $sigma_g,
+           $sigma_p,
+           $sigma_t,
+           $sigma_h,
+           $sigma_v ) = (( $sum_var_xyz + $var_clk )**0.5,  # SigmaG
+                         ( $sum_var_xyz +        0 )**0.5,  # SigmaP
+                         (            0 + $var_clk )**0.5,  # SigmaT
+                         (  $sum_var_en +        0 )**0.5,  # SigmaH
+                         (            0 +   $var_u )**0.5); # SigmaV
 
       }
 
       # Set data line items:
-      my @line_items = (@epoch, $status, $gdop, $pdop, $tdop, $hdop, $vdop);
+      my @line_items = (@epoch, $status,
+                        $sigma_g, $sigma_p,
+                        $sigma_t, $sigma_h, $sigma_v);
 
       say $fh join($delimiter, @line_items);
 
@@ -1153,8 +1150,6 @@ sub DumpEpochDOP {
   # 5. Close dumper file:
     close($fh);
 
-  # Subroutine's answer is true
-  # if the DOP data has been successfully dumped:
   return TRUE;
 }
 
@@ -2035,19 +2030,19 @@ sub DumpHorizontalIntegrityInfo {
 
   # 2. Write title line:
     say $fh sprintf("# > Horizontal integrity information.\n".
+                    "# > 'Status' refers to receiver position estimation\n".
                     "# > Created : %s ", GetPrettyLocalDate());
 
   # 3. Write header line:
     # Retrieve configured satellite mask:
     my @header_items = ( SetEpochHeaderItems($epoch_format),
-                         'SigmaScaleFactor', 'AlertLimit',
+                         'Status', 'SigmaScaleFactor', 'AlertLimit',
                          'Error', 'Precision', 'MI', 'HMI', 'Available');
     say $fh join($delimiter, @header_items);
 
   # 4. Write data:
     # Iterate over observation epochs:
-    for (my $i = 0; $i < scalar(@{ $ref_obs_data->{BODY} }); $i += 1)
-    {
+    for (my $i = 0; $i < scalar(@{ $ref_obs_data->{BODY} }); $i += 1) {
 
       # Point to current epoch:
       my $ref_epoch_info = $ref_obs_data->{BODY}[$i];
@@ -2056,22 +2051,36 @@ sub DumpHorizontalIntegrityInfo {
       my $gps_epoch = $ref_epoch_info->{EPOCH};
       my @epoch = &{$ref_epoch_sub}( $ref_epoch_info->{EPOCH} );
 
-      # Retrieve integrity information:
-      # Configured scale factor and alert limit:
-      my ( $h_scale_factor, $h_alert_limit ) =
-         ( $ref_gen_conf->{ ACCURACY  }{HORIZONTAL}{ SIGMA_FACTOR },
-           $ref_gen_conf->{ INTEGRITY }{HORIZONTAL}{ ALERT_LIMIT  } );
+      # Retrieve observation epoch position status:
+      my $status = $ref_epoch_info->{REC_POSITION}{STATUS};
 
-      # Computed info:
-      my ( $h_error, $h_precision,
-           $h_mi_flag, $h_hmi_flag, $h_avail_flag ) =
-         ( $ref_epoch_info->{INTEGRITY_INFO}{HORIZONTAL}{ ERROR      },
-           $ref_epoch_info->{INTEGRITY_INFO}{HORIZONTAL}{ PRECISION  },
-           $ref_epoch_info->{INTEGRITY_INFO}{HORIZONTAL}{ MI_FLAG    },
-           $ref_epoch_info->{INTEGRITY_INFO}{HORIZONTAL}{ HMI_FLAG   },
-           $ref_epoch_info->{INTEGRITY_INFO}{HORIZONTAL}{ AVAIL_FLAG } );
+      # Init integrity info:
+      my ($h_scale_factor,
+          $h_alert_limit) = (NULL_DATA, NULL_DATA);
+      my ($h_error,
+          $h_precision) = (NULL_DATA, NULL_DATA);
+      my ($h_mi_flag,
+          $h_hmi_flag,
+          $h_avail_flag) = (NULL_DATA, NULL_DATA, NULL_DATA);
 
-      my @line_items = ( @epoch,
+      if ($status) {
+        # Retrieve integrity information:
+        # Configured scale factor and alert limit:
+        ( $h_scale_factor, $h_alert_limit ) =
+        ( $ref_gen_conf->{ ACCURACY  }{HORIZONTAL}{ SIGMA_FACTOR },
+          $ref_gen_conf->{ INTEGRITY }{HORIZONTAL}{ ALERT_LIMIT  } );
+
+        # Computed info:
+        ( $h_error, $h_precision,
+          $h_mi_flag, $h_hmi_flag, $h_avail_flag ) =
+        ( $ref_epoch_info->{INTEGRITY_INFO}{HORIZONTAL}{ ERROR      },
+          $ref_epoch_info->{INTEGRITY_INFO}{HORIZONTAL}{ PRECISION  },
+          $ref_epoch_info->{INTEGRITY_INFO}{HORIZONTAL}{ MI_FLAG    },
+          $ref_epoch_info->{INTEGRITY_INFO}{HORIZONTAL}{ HMI_FLAG   },
+          $ref_epoch_info->{INTEGRITY_INFO}{HORIZONTAL}{ AVAIL_FLAG } );
+      }
+
+      my @line_items = ( @epoch, $status,
                          $h_scale_factor, $h_alert_limit,
                          $h_error, $h_precision, $h_mi_flag,
                          $h_hmi_flag, $h_avail_flag );
@@ -2135,19 +2144,19 @@ sub DumpVerticalIntegrityInfo {
 
   # 2. Write title line:
     say $fh sprintf("# > Vertical integrity information.\n".
+                    "# > 'Status' refers to receiver position estimation\n".
                     "# > Created : %s ", GetPrettyLocalDate());
 
   # 3. Write header line:
     # Retrieve configured satellite mask:
     my @header_items = ( SetEpochHeaderItems($epoch_format),
-                         'SigmaScaleFactor', 'AlertLimit',
+                         'Status', 'SigmaScaleFactor', 'AlertLimit',
                          'Error', 'Precision', 'MI', 'HMI', 'Available');
     say $fh join($delimiter, @header_items);
 
   # 4. Write data:
     # Iterate over observation epochs:
-    for (my $i = 0; $i < scalar(@{ $ref_obs_data->{BODY} }); $i += 1)
-    {
+    for (my $i = 0; $i < scalar(@{ $ref_obs_data->{BODY} }); $i += 1) {
 
       # Point to current epoch:
       my $ref_epoch_info = $ref_obs_data->{BODY}[$i];
@@ -2156,22 +2165,36 @@ sub DumpVerticalIntegrityInfo {
       my $gps_epoch = $ref_epoch_info->{EPOCH};
       my @epoch = &{$ref_epoch_sub}( $ref_epoch_info->{EPOCH} );
 
-      # Retrieve integrity information:
-      # Configured scale factor and alert limit:
-      my ( $v_scale_factor, $v_alert_limit ) =
-         ( $ref_gen_conf->{ ACCURACY  }{VERTICAL}{ SIGMA_FACTOR },
-           $ref_gen_conf->{ INTEGRITY }{VERTICAL}{ ALERT_LIMIT  } );
+      # Retrieve observation epoch position status:
+      my $status = $ref_epoch_info->{REC_POSITION}{STATUS};
 
-      # Computed info:
-      my ( $v_error, $v_precision,
-           $v_mi_flag, $v_hmi_flag, $v_avail_flag ) =
-         ( $ref_epoch_info->{INTEGRITY_INFO}{VERTICAL}{ ERROR      },
-           $ref_epoch_info->{INTEGRITY_INFO}{VERTICAL}{ PRECISION  },
-           $ref_epoch_info->{INTEGRITY_INFO}{VERTICAL}{ MI_FLAG    },
-           $ref_epoch_info->{INTEGRITY_INFO}{VERTICAL}{ HMI_FLAG   },
-           $ref_epoch_info->{INTEGRITY_INFO}{VERTICAL}{ AVAIL_FLAG } );
+      # Init integrity info:
+      my ($v_scale_factor,
+          $v_alert_limit) = (NULL_DATA, NULL_DATA);
+      my ($v_error,
+          $v_precision) = (NULL_DATA, NULL_DATA);
+      my ($v_mi_flag,
+          $v_hmi_flag,
+          $v_avail_flag) = (NULL_DATA, NULL_DATA, NULL_DATA);
 
-      my @line_items = ( @epoch,
+      if ($status) {
+        # Retrieve integrity information:
+        # Configured scale factor and alert limit:
+        ( $v_scale_factor, $v_alert_limit ) =
+        ( $ref_gen_conf->{ ACCURACY  }{VERTICAL}{ SIGMA_FACTOR },
+          $ref_gen_conf->{ INTEGRITY }{VERTICAL}{ ALERT_LIMIT  } );
+
+        # Computed info:
+        ( $v_error, $v_precision,
+          $v_mi_flag, $v_hmi_flag, $v_avail_flag ) =
+        ( $ref_epoch_info->{INTEGRITY_INFO}{VERTICAL}{ ERROR      },
+          $ref_epoch_info->{INTEGRITY_INFO}{VERTICAL}{ PRECISION  },
+          $ref_epoch_info->{INTEGRITY_INFO}{VERTICAL}{ MI_FLAG    },
+          $ref_epoch_info->{INTEGRITY_INFO}{VERTICAL}{ HMI_FLAG   },
+          $ref_epoch_info->{INTEGRITY_INFO}{VERTICAL}{ AVAIL_FLAG } );
+      }
+
+      my @line_items = ( @epoch, $status,
                          $v_scale_factor, $v_alert_limit,
                          $v_error, $v_precision, $v_mi_flag,
                          $v_hmi_flag, $v_avail_flag );
