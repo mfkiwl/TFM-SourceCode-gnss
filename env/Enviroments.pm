@@ -2,15 +2,9 @@
 
 package Enviroments;
 
-# Built-in modules
 # ---------------------------------------------------------------------------- #
-use Carp;
-use strict;
-use Data::Dumper;
-use feature qq(say);
-
 # Package properties
-# ---------------------------------------------------------------------------- #
+
 BEGIN {
   # Load export module:
   require Exporter;
@@ -49,9 +43,17 @@ BEGIN {
                        SUBROUTINES => \@EXPORT_SUB );
 }
 
-
-# Define bash enviromets as perl constants:
 # ---------------------------------------------------------------------------- #
+# Built-in modules
+
+use Carp;
+use strict;
+use Data::Dumper;
+use feature qq(say);
+
+# ---------------------------------------------------------------------------- #
+# Define bash enviromets as perl constants:
+
 use constant {
   SRC_ROOT_PATH  => $ENV{ SRC_ROOT  },
   LIB_ROOT_PATH  => $ENV{ LIB_ROOT  },
