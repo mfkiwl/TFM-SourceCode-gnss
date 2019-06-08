@@ -358,9 +358,9 @@ sub DataDumpingRoutine {
     # Update status:
     $status *= ($sub_status != KILLED) ? TRUE : FALSE;
 
-    $sub_status = DumpEpochDOP( $ref_gen_conf,
-                                $ref_obs_data,
-                                $ref_gen_conf->{OUTPUT_PATH}, $fh_log );
+    $sub_status = DumpEpochSigma( $ref_gen_conf,
+                                  $ref_obs_data,
+                                  $ref_gen_conf->{OUTPUT_PATH}, $fh_log );
     # Update status:
     $status *= ($sub_status != KILLED) ? TRUE : FALSE;
 
