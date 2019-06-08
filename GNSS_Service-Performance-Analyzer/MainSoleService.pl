@@ -327,7 +327,7 @@ sub PlotReportingRoutine {
     }
 
     $status *=
-      PlotDilutionOfPrecission( $ref_gen_conf, $inp_path, $out_path, $marker );
+      PlotSigmaAccuracy( $ref_gen_conf, $inp_path, $out_path, $marker );
 
     for (@streams) {
       print $_ "\n" x 1;

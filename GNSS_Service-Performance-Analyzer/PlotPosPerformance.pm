@@ -467,7 +467,7 @@ sub PlotReceiverPosition {
   return TRUE;
 }
 
-sub PlotDilutionOfPrecission {
+sub PlotSigmaAccuracy {
   my ($ref_gen_conf, $inp_path, $out_path, $marker_name) = @_;
 
   # Load dumper file:
