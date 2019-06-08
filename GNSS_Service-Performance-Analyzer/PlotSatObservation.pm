@@ -142,7 +142,7 @@ sub PlotSatelliteAvailability {
       $set_grid_cmm  => "",
       ylabel => "Number of satellites",
       xrange => [$ini_epoch, $end_epoch],
-      yrange => [5, $max_num_sat + 2],
+      yrange => [3, $max_num_sat + 2],
       timeaxis => "x",
       xtics => { labelfmt => "%H:%M" },
       timestamp =>  {
