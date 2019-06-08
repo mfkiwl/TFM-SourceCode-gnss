@@ -25,7 +25,8 @@ BEGIN {
   our @EXPORT_CONST = qw(  );
 
   # Define subroutines to export:
-  our @EXPORT_SUB   = qw( &SetReportTitle );
+  our @EXPORT_SUB   = qw( &SetReportTitle
+                          &ClearNullDataPiddle );
 
   # Merge constants and subroutines:
   our @EXPORT_OK = (@EXPORT_CONST, @EXPORT_SUB);
@@ -46,6 +47,9 @@ use strict;       # strict syntax and common mistakes advisory...
 use Data::Dumper;       # var pretty print...
 use feature qq(say);    # print adding line jump...
 use feature qq(switch); # advanced switch statement...
+
+# Load perl data language:
+use PDL;
 
 # ---------------------------------------------------------------------------- #
 # Load bash enviroments:
@@ -109,6 +113,14 @@ sub SetReportTitle {
 
   # Return the title:
   return $title;
+}
+
+sub ClearNullDataPiddle {
+  my ($pdl_array) = @_;
+
+  $pdl_array = pdl(grep{ $_ ne NULL_DATA }( list($pdl_array) ));
+
+  return $pdl_array;
 }
 
 TRUE;
