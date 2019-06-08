@@ -167,7 +167,7 @@ use constant
   SAT_SYS_OBS_TO_NAME => {
     G => {
       C1 => 'C/A',
-      C2 => 'L2',
+      C2 => 'L2C',
       C5 => 'L5',
     },
     E => {
