@@ -453,7 +453,7 @@ sub PlotLSQEpochEstimation {
         style => "points pt 5 ps 0.2",
         width => 2,
         timefmt => "%s",
-        title => "Estimated DT",
+        title => "Estimated dTRec",
       );
     my $apx_dt_parameter_dataset =
       Chart::Gnuplot::DataSet->new(
@@ -464,7 +464,7 @@ sub PlotLSQEpochEstimation {
         style => "points pt 7 ps 0.2",
         width => 2,
         timefmt => "%s",
-        title => "Approximate DT",
+        title => "Approximate dTRec",
       );
     my $delta_dt_parameter_dataset =
       Chart::Gnuplot::DataSet->new(
