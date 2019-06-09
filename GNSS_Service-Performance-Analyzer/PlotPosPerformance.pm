@@ -26,7 +26,8 @@ BEGIN {
 
   # Define subroutines to export:
   our @EXPORT_SUB   = qw( &PlotReceiverPosition
-                          &PlotDilutionOfPrecission );
+                          &PlotAccuracyPerformance
+                          &PlotIntegrityPerformance );
 
   # Merge constants and subroutines:
   our @EXPORT_OK = (@EXPORT_CONST, @EXPORT_SUB);
@@ -467,7 +468,7 @@ sub PlotReceiverPosition {
   return TRUE;
 }
 
-sub PlotSigmaAccuracy {
+sub PlotAccuracyPerformance {
   my ($ref_gen_conf, $inp_path, $out_path, $marker_name) = @_;
 
   # Load dumper file:
@@ -599,6 +600,310 @@ sub PlotSigmaAccuracy {
                           $sigma_v_dataset,
                           $sigma_t_dataset
                         ));
+
+  return TRUE;
+}
+
+sub PlotIntegrityPerformance {
+  my ($ref_gen_conf, $inp_path, $out_path, $marker_name) = @_;
+
+  # Retrieve alert limits and sigma scale factors:
+  my $v_al  = $ref_gen_conf->{ INTEGRITY }{ VERTICAL   }{ ALERT_LIMIT  };
+  my $h_al  = $ref_gen_conf->{ INTEGRITY }{ HORIZONTAL }{ ALERT_LIMIT  };
+  my $v_ssf = $ref_gen_conf->{ ACCURACY  }{ VERTICAL   }{ SIGMA_FACTOR };
+  my $h_ssf = $ref_gen_conf->{ ACCURACY  }{ HORIZONTAL }{ SIGMA_FACTOR };
+
+  # Load dumper file:
+  my $ref_file_layout;
+
+  # Horizontal integrity:
+  $ref_file_layout =
+     GetFileLayout( join('/', ($inp_path, "integrity-horizontal.out")),
+                    4, $ref_gen_conf->{DATA_DUMPER}{DELIMITER} );
+
+  # Make piddle from loaded file:
+  my $pdl_int_h = pdl( LoadFileByLayout($ref_file_layout) );
+
+  # Vertical integrity:
+  $ref_file_layout =
+     GetFileLayout( join('/', ($inp_path, "integrity-vertical.out")),
+                    4, $ref_gen_conf->{DATA_DUMPER}{DELIMITER} );
+
+  # Make piddle from loaded file:
+  my $pdl_int_v = pdl( LoadFileByLayout($ref_file_layout) );
+
+  # Retrieve file information in piddles:
+  #   Epochs
+  #   Position status
+  my $pdl_epochs = $pdl_int_h($ref_file_layout->{ITEMS}{ EpochGPS }{INDEX});
+  my $pdl_status = $pdl_int_h($ref_file_layout->{ITEMS}{ Status   }{INDEX});
+
+  # Get first and last observation epochs:
+  my $ini_epoch = min($pdl_epochs);
+  my $end_epoch = max($pdl_epochs);
+
+  # Retrieve vertical info:
+  my $pdl_v_al  = $pdl_int_v($ref_file_layout->{ITEMS}{ AlertLimit }{INDEX});
+  my $pdl_v_err = $pdl_int_v($ref_file_layout->{ITEMS}{ Error      }{INDEX});
+  my $pdl_v_acc = $pdl_int_v($ref_file_layout->{ITEMS}{ Precision  }{INDEX});
+  my $pdl_v_mi  = $pdl_int_v($ref_file_layout->{ITEMS}{ MI         }{INDEX});
+  my $pdl_v_hmi = $pdl_int_v($ref_file_layout->{ITEMS}{ HMI        }{INDEX});
+  my $pdl_v_sa  = $pdl_int_v($ref_file_layout->{ITEMS}{ Available  }{INDEX});
+
+  # MI, HMI and SA are multiplied by the AL for a better plot display
+  $pdl_v_mi  *= $v_al;
+  $pdl_v_hmi *= $v_al;
+  $pdl_v_sa  *= $v_al;
+
+  # Retrieve horizontal info:
+  my $pdl_h_al  = $pdl_int_h($ref_file_layout->{ITEMS}{ AlertLimit }{INDEX});
+  my $pdl_h_err = $pdl_int_h($ref_file_layout->{ITEMS}{ Error      }{INDEX});
+  my $pdl_h_acc = $pdl_int_h($ref_file_layout->{ITEMS}{ Precision  }{INDEX});
+  my $pdl_h_mi  = $pdl_int_h($ref_file_layout->{ITEMS}{ MI         }{INDEX});
+  my $pdl_h_hmi = $pdl_int_h($ref_file_layout->{ITEMS}{ HMI        }{INDEX});
+  my $pdl_h_sa  = $pdl_int_h($ref_file_layout->{ITEMS}{ Available  }{INDEX});
+
+  # MI, HMI and SA are multiplied by the AL for a better plot display
+  $pdl_h_mi  *= $h_al;
+  $pdl_h_hmi *= $h_al;
+  $pdl_h_sa  *= $h_al;
+
+  # ************** #
+  # Chart objects: #
+  # ************** #
+
+  # Titles:
+  my $chart_v_title =
+    SetReportTitle("Integrity performance on vertical domain",
+                   $ref_gen_conf, $marker_name, $ini_epoch);
+
+  my $chart_h_title =
+    SetReportTitle("Integrity performance on horizontal domain",
+                   $ref_gen_conf, $marker_name, $ini_epoch);
+
+  # Vertical chart:
+  my $chart_v =
+    Chart::Gnuplot->new(
+      terminal => 'pngcairo size 874,540',
+      grid => "on",
+      output => $out_path."/Integrity-Vertical-plot.png",
+      title  => {
+        text => $chart_v_title,
+        font => ':Bold',
+      },
+      xlabel => "Observation Epochs [HH::MM]",
+      xrange => [$ini_epoch, $end_epoch],
+      timeaxis => "x",
+      xtics => { labelfmt => "%H:%M" },
+      legend => {
+        position => "inside top",
+        order => "horizontal",
+        align => "right",
+        sample   => {
+             length => 5,
+         },
+      },
+      timestamp =>  {
+        fmt  => 'Created on %d/%m/%y %H:%M:%S',
+        font => "Helvetica Italic, 10",
+      },
+    );
+
+  # Horizontal chart:
+  my $chart_h =
+    Chart::Gnuplot->new(
+      terminal => 'pngcairo size 874,540',
+      grid => "on",
+      output => $out_path."/Integrity-Horizontal-plot.png",
+      title  => {
+        text => $chart_h_title,
+        font => ':Bold',
+      },
+      xlabel => "Observation Epochs [HH::MM]",
+      xrange => [$ini_epoch, $end_epoch],
+      timeaxis => "x",
+      xtics => { labelfmt => "%H:%M" },
+      legend => {
+        position => "inside top",
+        order => "horizontal",
+        align => "center",
+        sample   => {
+             length => 5,
+         },
+      },
+      timestamp =>  {
+        fmt  => 'Created on %d/%m/%y %H:%M:%S',
+        font => "Helvetica Italic, 10",
+      },
+    );
+
+  # **************** #
+  # Dataset objects: #
+  # **************** #
+
+  # Vertical component:
+  my $v_st_dataset =
+    Chart::Gnuplot::DataSet->new(
+      xdata => unpdl($pdl_epochs->flat),
+      ydata => unpdl(($pdl_status*$v_al)->flat),
+      style => "filledcurve y=0",
+      color => "#CC729FCF",
+      timefmt => "%s",
+      title => "Position Status",
+    );
+
+  my $v_al_dataset =
+    Chart::Gnuplot::DataSet->new(
+      xdata => unpdl($pdl_epochs->flat),
+      ydata => unpdl($pdl_v_al->flat),
+      style => "lines",
+      color => "#555753",
+      width => 3,
+      timefmt => "%s",
+      title => "Alert Limit ($v_al)",
+    );
+
+  my $v_err_dataset =
+    Chart::Gnuplot::DataSet->new(
+      xdata => unpdl($pdl_epochs->flat),
+      ydata => unpdl($pdl_v_err->flat),
+      style => "lines",
+      color => "#EF2929",
+      timefmt => "%s",
+      title => "Error",
+    );
+
+  my $v_acc_dataset =
+    Chart::Gnuplot::DataSet->new(
+      xdata => unpdl($pdl_epochs->flat),
+      ydata => unpdl($pdl_v_acc->flat),
+      style => "lines",
+      color => "#EDD400",
+      timefmt => "%s",
+      title => "Precision*$v_ssf",
+    );
+
+  my $v_mi_dataset =
+    Chart::Gnuplot::DataSet->new(
+      xdata => unpdl($pdl_epochs->flat),
+      ydata => unpdl($pdl_v_mi->flat),
+      style => "filledcurve y=0",
+      color => "#88EF2929",
+      timefmt => "%s",
+      title => "MI",
+    );
+
+  my $v_hmi_dataset =
+    Chart::Gnuplot::DataSet->new(
+      xdata => unpdl($pdl_epochs->flat),
+      ydata => unpdl($pdl_v_hmi->flat),
+      style => "filledcurve y=0",
+      color => "#33A40000",
+      timefmt => "%s",
+      title => "HMI",
+    );
+
+  my $v_sa_dataset =
+    Chart::Gnuplot::DataSet->new(
+      xdata => unpdl($pdl_epochs->flat),
+      ydata => unpdl($pdl_v_sa->flat),
+      style => "filledcurve y=0",
+      color => "#DD4E9A06",
+      timefmt => "%s",
+      title => "Avail.",
+    );
+
+  # Horizontal component:
+  my $h_st_dataset =
+    Chart::Gnuplot::DataSet->new(
+      xdata => unpdl($pdl_epochs->flat),
+      ydata => unpdl(($pdl_status*$h_al)->flat),
+      style => "filledcurve y=0",
+      color => "#CC729FCF",
+      timefmt => "%s",
+      title => "Position Status",
+    );
+
+  my $h_al_dataset =
+    Chart::Gnuplot::DataSet->new(
+      xdata => unpdl($pdl_epochs->flat),
+      ydata => unpdl($pdl_h_al->flat),
+      style => "lines",
+      color => "#555753",
+      width => 3,
+      timefmt => "%s",
+      title => "Alert Limit ($h_al)",
+    );
+
+  my $h_err_dataset =
+    Chart::Gnuplot::DataSet->new(
+      xdata => unpdl($pdl_epochs->flat),
+      ydata => unpdl($pdl_h_err->flat),
+      style => "lines",
+      color => "#EF2929",
+      timefmt => "%s",
+      title => "Error",
+    );
+
+  my $h_acc_dataset =
+    Chart::Gnuplot::DataSet->new(
+      xdata => unpdl($pdl_epochs->flat),
+      ydata => unpdl($pdl_h_acc->flat),
+      style => "lines",
+      color => "#EDD400",
+      timefmt => "%s",
+      title => "Precision*$h_ssf",
+    );
+
+  my $h_mi_dataset =
+    Chart::Gnuplot::DataSet->new(
+      xdata => unpdl($pdl_epochs->flat),
+      ydata => unpdl($pdl_h_mi->flat),
+      style => "filledcurve y=0",
+      color => "#88EF2929",
+      timefmt => "%s",
+      title => "MI",
+    );
+
+  my $h_hmi_dataset =
+    Chart::Gnuplot::DataSet->new(
+      xdata => unpdl($pdl_epochs->flat),
+      ydata => unpdl($pdl_h_hmi->flat),
+      style => "filledcurve y=0",
+      color => "#33A40000",
+      timefmt => "%s",
+      title => "HMI",
+    );
+
+  my $h_sa_dataset =
+    Chart::Gnuplot::DataSet->new(
+      xdata => unpdl($pdl_epochs->flat),
+      ydata => unpdl($pdl_h_sa->flat),
+      style => "filledcurve y=0",
+      color => "#DD4E9A06",
+      timefmt => "%s",
+      title => "Avail.",
+    );
+
+  # ***************** #
+  # Plot arrangement: #
+  # ***************** #
+
+  $chart_v->plot2d( $v_st_dataset,
+                    $v_al_dataset,
+                    $v_err_dataset,
+                    $v_acc_dataset,
+                    $v_mi_dataset,
+                    $v_hmi_dataset,
+                    $v_sa_dataset );
+
+  $chart_h->plot2d( $h_st_dataset,
+                    $h_al_dataset,
+                    $h_err_dataset,
+                    $h_acc_dataset,
+                    $h_mi_dataset,
+                    $h_hmi_dataset,
+                    $h_sa_dataset );
 
   return TRUE;
 }
