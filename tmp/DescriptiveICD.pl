@@ -48,9 +48,6 @@
   # Integrity parameters:
   INTEGRITY => \%integrity_mode,
 
-  # Plot configuration:
-  PLOT => \%plot_configuration, # TODO: leave this here?
-
   # Dumper configuration:
   DATA_DUMPER => \%data_dumper_conf,
 );
@@ -102,8 +99,6 @@
   ALERT_LIMIT => $alert_bound,
 );
 
-# Plot configuration:
-%plot_configuration = 'TBD'; # TODO!
 
 
 # ---------------------------------------------------------------------------- #
