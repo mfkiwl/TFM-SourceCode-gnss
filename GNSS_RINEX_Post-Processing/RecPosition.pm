@@ -51,6 +51,7 @@ use Data::Dumper; # enables pretty...
 use feature qq(say); # print adding carriage return...
 use feature qq(switch); # switch functionality...
 
+# Math utilities:
 use Math::Trig;
 use Scalar::Util qq(looks_like_number); # scalar utility...
 
@@ -74,7 +75,6 @@ use Geodetic qq(:ALL); # geodetic toolbox for coordinate transformation...
 use lib GRPP_ROOT_PATH;
 use RinexReader qq(:ALL); # observation & navigation rinex parser...
 use ErrorSource qq(:ALL); # ionosphere & troposphere correction models...
-
 
 # ---------------------------------------------------------------------------- #
 # Constants:
@@ -196,9 +196,6 @@ sub ComputeRecPosition {
                                          \@iter_solution, $iteration );
 
           # Set number of observations and parameters to estimate:
-          # NOTE: as far as only one observation types is processed,
-          #       number of observations for LSQ is equal to the number
-          #       of satellites selected for the LSQ routine
           my ( $num_obs,
                $num_parameter ) = ( scalar(@sat_to_lsq),
                                     NUM_PARAMETERS_TO_ESTIMATE );
@@ -313,7 +310,7 @@ sub ComputeRecPosition {
                                 $ref_rec_var_xyz, $rec_var_clk,
                                 $ref_rec_enu, $ref_rec_var_enu );
 
-          # Compute and fill integrity info hash with null data:
+          # Compute and fill integrity info hash:
           # NOTE: integrity mode must be activated on configuration
           if ( $ref_gen_conf->{INTEGRITY}{STATUS} ) {
 
@@ -331,7 +328,7 @@ sub ComputeRecPosition {
                                    $h_precision, $v_precision,
                                    $ref_h_integ_flags, $ref_v_integ_flags );
 
-          }
+          } # end if integrity mode
 
         } else {
 
@@ -350,7 +347,7 @@ sub ComputeRecPosition {
                                    NULL_DATA, NULL_DATA,
                                    [NULL_DATA, NULL_DATA, NULL_DATA],
                                    [NULL_DATA, NULL_DATA, NULL_DATA] );
-          }
+          } # end if integrity mode
 
         } # end if $iter_status
 
@@ -953,7 +950,6 @@ sub GetIntegrityInfo {
   my $h_scale_factor = $ref_gen_conf->{ACCURACY}{ HORIZONTAL }{SIGMA_FACTOR};
   my $v_scale_factor = $ref_gen_conf->{ACCURACY}{ VERTICAL   }{SIGMA_FACTOR};
 
-
   # For horizontal component:
   my ($h_error, $h_precision);
   my ($h_mi_flag, $h_hmi_flag, $h_avail_flag);
@@ -984,7 +980,7 @@ sub GetIntegrityInfo {
   # NOTE: reference has 0 offset on upping component
   $v_error = ($up**2)**0.5;
 
-  # NOTE: the sigma scale factor is applied to the standard precision
+  # NOTE: the sigma scale factor is applied to the standard deviation
   $v_precision = ( ($var_u)**0.5 )*$v_scale_factor;
 
   $v_mi_flag  = ( ($v_error >  $v_precision) &&
