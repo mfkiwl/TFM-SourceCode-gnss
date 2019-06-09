@@ -244,6 +244,7 @@ sub ComputeRecPosition {
               $ref_rec_var_xyz, $rec_var_clk,
               $ref_rec_enu, $ref_rec_var_enu ) =
                 GetReceiverPositionSolution ( $ref_gen_conf,
+                                              $ref_rinex_obs->{HEAD},
                                               $pdl_rec_apx_xyzdt,
                                               $pdl_parameter_vector,
                                               $pdl_covariance_matrix );
@@ -865,6 +866,7 @@ sub FillLSQInfo {
 
 sub GetReceiverPositionSolution {
   my ($ref_gen_conf,
+      $ref_rinex_obs_head,
       $pdl_apx_parameters,
       $pdl_parameter_vector,
       $pdl_covar_matrix ) = @_;
@@ -877,19 +879,40 @@ sub GetReceiverPositionSolution {
   my @rec_est_xyz = @rec_est_xyzdt[0..2];
   my $rec_est_clk = $rec_est_xyzdt[3];
 
-  # Retrieve estimated parameter variances from covariance matrix:
-  my @rec_var_xyz = (sclr( $pdl_covar_matrix->slice('0,0') ),
-                     sclr( $pdl_covar_matrix->slice('1,1') ),
-                     sclr( $pdl_covar_matrix->slice('2,2') ));
-  my $rec_var_clk =  sclr( $pdl_covar_matrix->slice('3,3') );
-
-  # Compute local ENU variances:
+  # Compute receiver estimated position gedetic coordinates:
     # Retrieve elipsoid from configuration:
     my $elipsoid = $ref_gen_conf->{ELIPSOID};
 
     # Get receiver geodetic coordinates:
     my ($lat, $lon, $helip) = ECEF2Geodetic( @rec_est_xyz, $elipsoid );
 
+  # Apply antenna delta displacements:
+  # NOTE: antenna delta displacements are referred to its local frame
+    my ( $ant_de,
+         $ant_dn,
+         $ant_du ) = ( $ref_rinex_obs_head->{ANTENNA_HNE}[2],
+                       $ref_rinex_obs_head->{ANTENNA_HNE}[1],
+                       $ref_rinex_obs_head->{ANTENNA_HNE}[0] );
+
+    # Apply from local to ECEF vector transformation:
+    my ( $ant_dx, $ant_dy, $ant_dz ) =
+      Venu2Vxyz( $ant_de, $ant_dn, $ant_du, $lat, $lon );
+
+    # Apply ECEF antenna displacements to estimated recevier positon:
+    @rec_est_xyz = ( $rec_est_xyz[0] + $ant_dx,
+                     $rec_est_xyz[1] + $ant_dy,
+                     $rec_est_xyz[2] + $ant_dz );
+
+    # Compute again geodetic coordinates with applied displacements:
+    ($lat, $lon, $helip) = ECEF2Geodetic( @rec_est_xyz, $elipsoid );
+
+  # Retrieve estimated parameter variances from covariance matrix:
+    my @rec_var_xyz = (sclr( $pdl_covar_matrix->slice('0,0') ),
+                       sclr( $pdl_covar_matrix->slice('1,1') ),
+                       sclr( $pdl_covar_matrix->slice('2,2') ));
+    my $rec_var_clk =  sclr( $pdl_covar_matrix->slice('3,3') );
+
+  # Compute local ENU variances:
     # Slice Covaraicne matrix in order to trim the clock elements:
     my $pdl_ecef_covar_matrix = $pdl_covar_matrix->slice('0:2', '0:2');
 
