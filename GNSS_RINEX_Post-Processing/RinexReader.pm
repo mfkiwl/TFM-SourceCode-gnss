@@ -128,6 +128,22 @@ use constant {
   ION_BETA_V3  => 'GPSB',
 };
 
+# RINEX hash parameters constants:
+use constant
+  OBS_MANDATORY_HEADER_PARAMETERS => qw( VERSION
+                                         TYPE
+                                         MARKER_NAME
+                                         APX_POSITION
+                                         ANTENNA_HNE
+                                         SYS_OBS_TYPES
+                                         TIME_FIRST_OBS
+                                         END_OF_HEADER );
+
+use constant
+  NAV_MANDATORY_HEADER_PARAMETERS => qw( VERSION
+                                         TYPE
+                                         END_OF_HEADER );
+
 # Observation properties:
 use constant {
   OBSERVATION_ID_LENGTH     =>   4,
