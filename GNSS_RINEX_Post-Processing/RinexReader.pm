@@ -30,21 +30,13 @@ BEGIN {
                           &ION_BETA_V3
                           &ION_ALPHA_V2
                           &ION_ALPHA_V3
-                          &HEALTHY_OBSERVATION_BLOCK
-                          &OBS_MANDATORY_HEADER_PARAMETERS
-                          &NAV_MANDATORY_HEADER_PARAMETERS
-                          &OBS_OPTIONAL_HEADER_PARAMETERS
-                          &NAV_OPTIONAL_HEADER_PARAMETERS );
+                          &HEALTHY_OBSERVATION_BLOCK );
 
   # Define subroutines to export:
   our @EXPORT_SUB   = qw( &ReadObservationRinexHeader
                           &ReadNavigationRinexHeader
                           &ReadObservationRinexV3
-                          &ReadNavigationRinex
-                          &ReadPreciseOrbitIGS
-                          &ReadPreciseClockIGS
-                          &CheckRinexHeaderMandatory
-                          &CheckRinexHeaderOptional );
+                          &ReadNavigationRinex );
 
   # Merge constants and subroutines:
   our @EXPORT_OK = (@EXPORT_CONST, @EXPORT_SUB);
@@ -135,34 +127,6 @@ use constant {
   ION_ALPHA_V3 => 'GPSA',
   ION_BETA_V3  => 'GPSB',
 };
-
-# RINEX hash parameters constants:
-use constant
-  OBS_MANDATORY_HEADER_PARAMETERS => qw( VERSION
-                                         TYPE
-                                         MARKER_NAME
-                                         APX_POSITION
-                                         ANTENNA_HNE
-                                         SYS_OBS_TYPES
-                                         TIME_FIRST_OBS
-                                         END_OF_HEADER );
-
-use constant
-  OBS_OPTIONAL_HEADER_PARAMETERS => qw( INTERVAL
-                                        LEAP_SECONDS
-                                        TIME_LAST_OBS
-                                        NUM_OF_SV );
-
-use constant
-  NAV_MANDATORY_HEADER_PARAMETERS => qw( VERSION
-                                         TYPE
-                                         END_OF_HEADER );
-
-use constant
-  NAV_OPTIONAL_HEADER_PARAMETERS => qw( ION_ALPHA
-                                        ION_BETA
-                                        DELTA_UTC
-                                        LEAP_SECONDS );
 
 # Observation properties:
 use constant {
@@ -809,9 +773,7 @@ sub ReadNavigationRinex {
   return \%nav_hash;
 }
 
-# TODO:
-sub ReadHeaderPreciseOrbitIGS {}
-
+# TODO: review this sub
 sub ReadPreciseOrbitIGS {
   my ($file_path, $fh_log) = @_;
 
@@ -867,70 +829,6 @@ sub ReadPreciseOrbitIGS {
 
   # Return filled hash:
   return $ref_precise_orbit;
-}
-
-# TODO:
-sub ReadHeaderPreciseClockIGS {}
-
-# TODO:
-sub ReadPreciseClockIGS {
-  my ($file_path, $fh_log) = @_;
-
-  # Init hash to store IGS product information:
-  my $ref_precise_clock = {};
-
-
-  return $ref_precise_clock;
-}
-
-# TODO: review this sub!
-sub CheckRinexHeaderMandatory {
-  my ($ref_rinex_header, $fh_log) = @_;
-
-  # Init status:
-  my $status = TRUE;
-
-  # Check that all mandatory parameters are defined:
-  for my $parameter ( keys %{$ref_rinex_header} ) {
-    unless (defined $ref_rinex_header->{$parameter}) {
-      # Raise warning into log file:
-      $status = FALSE;
-      RaiseWarning($fh_log, WARN_MISSING_MANDATORY_HEADER,
-      "Mandatory parameter: \'$parameter\' in RINEX header was not defined");
-    }
-  }
-
-  # Return the status of the check:
-  return $status;
-}
-
-# TODO: review this sub!
-sub CheckRinexHeaderOptional {
-  my ($ref_rinex_header, $fh_log) = @_;
-
-  # Determine parameters to check based on the Rinex type:
-  my @parameters;
-  if ($ref_rinex_header->{TYPE} eq OBSERVATION_RINEX) {
-    @parameters = OBS_OPTIONAL_HEADER_PARAMETERS;
-  } elsif ($ref_rinex_header->{TYPE} eq NAVIGATION_RINEX ) {
-    @parameters = NAV_OPTIONAL_HEADER_PARAMETERS;
-  }
-
-  # Init status:
-  my $status = TRUE;
-
-  # Check that optional parameters exist:
-  for my $parameter ( @parameters ) {
-    unless (exists $ref_rinex_header->{$parameter}) {
-      $status = FALSE;
-      # Raise warning into log file:
-      RaiseWarning($fh_log, WARN_MISSING_OPTIONAL_HEADER,
-        "Optional parameter: \'$parameter\' in RINEX header was not read");
-    }
-  }
-
-  # Return the status of the check:
-  return $status;
 }
 
 # ---------------------------------------------------------------------------- #
