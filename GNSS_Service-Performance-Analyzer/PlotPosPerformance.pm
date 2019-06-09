@@ -102,6 +102,9 @@ sub PlotReceiverPosition {
   my $ini_epoch = min($pdl_epochs);
   my $end_epoch = max($pdl_epochs);
 
+  # Get number of epochs:
+  my ($num_epochs, undef) = dims($pdl_epochs->flat);
+
   # Retrieve days's 00:00:00 in GPS epoch format:
   my $ini_day_epoch = Date2GPS( (GPS2Date($ini_epoch))[0..2], 0, 0, 0 );
   my $pdl_epoch_day_hour = ($pdl_epochs - $ini_day_epoch)/SECONDS_IN_HOUR;
@@ -392,6 +395,17 @@ sub PlotReceiverPosition {
       fill => { density => 0.8 },
     );
 
+  # Reference dataset for ENU multiplot:
+  my $rec_ref_dataset =
+    Chart::Gnuplot::DataSet->new(
+      xdata => unpdl($pdl_epochs->flat),
+      ydata => unpdl(zeros($num_epochs)->flat),
+      style => "lines",
+      color => "#888A85",
+      width => 2,
+      timefmt => "%s",
+    );
+
   # Build receiver E positions dataset:
   my $rec_e_dataset =
     Chart::Gnuplot::DataSet->new(
@@ -443,12 +457,11 @@ sub PlotReceiverPosition {
     );
 
   # Plot the datasets on their respectives graphs:
-  # TODO: add grey lines in each component for indicating reference position
     # ENU multiplot:
       # Add datasets to their respective charts:
-      $chart_e->add2d( $rec_e_dataset );
-      $chart_n->add2d( $rec_n_dataset );
-      $chart_u->add2d( $rec_u_dataset );
+      $chart_e->add2d( $rec_ref_dataset, $rec_e_dataset );
+      $chart_n->add2d( $rec_ref_dataset, $rec_n_dataset );
+      $chart_u->add2d( $rec_ref_dataset, $rec_u_dataset );
 
       # And set plot matrix in parent chart object:
       $chart_enu->multiplot([ [$chart_e],
@@ -489,8 +502,6 @@ sub PlotAccuracyPerformance {
   my $pdl_sigma_t = $pdl_sigma_info($ref_file_layout->{ITEMS}{SigmaT}{INDEX});
   my $pdl_sigma_h = $pdl_sigma_info($ref_file_layout->{ITEMS}{SigmaH}{INDEX});
   my $pdl_sigma_v = $pdl_sigma_info($ref_file_layout->{ITEMS}{SigmaV}{INDEX});
-
-  # TODO: consider adding sigma scale factor for standard deviations indicators
 
   # Set chart's titles:
   my $chart_ecef_title =
@@ -550,7 +561,7 @@ sub PlotAccuracyPerformance {
       style => "points pointtype 7 ps 0.3",
       width => 3,
       timefmt => "%s",
-      title => "Geometric Sigma",
+      title => "Geometric Sigma*1",
     );
   my $sigma_p_dataset =
     Chart::Gnuplot::DataSet->new(
@@ -559,7 +570,7 @@ sub PlotAccuracyPerformance {
       style => "points pointtype 7 ps 0.3",
       width => 3,
       timefmt => "%s",
-      title => "Position Sigma",
+      title => "Position Sigma*1",
     );
   my $sigma_t_dataset =
     Chart::Gnuplot::DataSet->new(
@@ -568,7 +579,7 @@ sub PlotAccuracyPerformance {
       style => "points pointtype 7 ps 0.3",
       width => 3,
       timefmt => "%s",
-      title => "Time Sigma",
+      title => "Time Sigma*1",
     );
   my $sigma_h_dataset =
     Chart::Gnuplot::DataSet->new(
@@ -577,7 +588,7 @@ sub PlotAccuracyPerformance {
       style => "points pointtype 7 ps 0.3",
       width => 3,
       timefmt => "%s",
-      title => "Horizontal Sigma",
+      title => "Horizontal Sigma*1",
     );
   my $sigma_v_dataset =
     Chart::Gnuplot::DataSet->new(
@@ -586,7 +597,7 @@ sub PlotAccuracyPerformance {
       style => "points pointtype 7 ps 0.3",
       width => 3,
       timefmt => "%s",
-      title => "Vertical Sigma",
+      title => "Vertical Sigma*1",
     );
 
   # Plot datasets on their respective chart:
@@ -596,9 +607,9 @@ sub PlotAccuracyPerformance {
                           $sigma_t_dataset
                         ));
   $chart_enu  -> plot2d((
-                          $sigma_h_dataset,
+                          $sigma_p_dataset,
                           $sigma_v_dataset,
-                          $sigma_t_dataset
+                          $sigma_h_dataset,
                         ));
 
   return TRUE;
@@ -889,21 +900,25 @@ sub PlotIntegrityPerformance {
   # Plot arrangement: #
   # ***************** #
 
-  $chart_v->plot2d( $v_st_dataset,
+  $chart_v->plot2d(
+                    $v_st_dataset,
+                    $v_sa_dataset,
+                    $v_mi_dataset,
+                    $v_hmi_dataset,
                     $v_al_dataset,
                     $v_err_dataset,
                     $v_acc_dataset,
-                    $v_mi_dataset,
-                    $v_hmi_dataset,
-                    $v_sa_dataset );
+                  );
 
-  $chart_h->plot2d( $h_st_dataset,
+  $chart_h->plot2d(
+                    $h_st_dataset,
+                    $h_sa_dataset,
+                    $h_mi_dataset,
+                    $h_hmi_dataset,
                     $h_al_dataset,
                     $h_err_dataset,
                     $h_acc_dataset,
-                    $h_mi_dataset,
-                    $h_hmi_dataset,
-                    $h_sa_dataset );
+                  );
 
   return TRUE;
 }
