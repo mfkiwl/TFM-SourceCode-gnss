@@ -109,11 +109,6 @@
   EPOCH_FORMAT   => $epoch_format,
   ANGLE_FORMAT   => $angle_format,
   SIGMA_FACTOR   => $sigma_confidence_level_scale_factor,
-  SAT_SYS_OBS_NAME      => $file_base_name, # TODO!
-  REC_POSITION_NAME     => $file_base_name, # TODO!
-  LSQ_REPORT_INFO_NAME  => $file_base_name, # TODO!
-  SAT_SYS_POSITION_NAME => $file_base_name, # TODO!
-  REC_SAT_LOS_DATA_NAME => $file_base_name, # TODO!
 );
 
 
