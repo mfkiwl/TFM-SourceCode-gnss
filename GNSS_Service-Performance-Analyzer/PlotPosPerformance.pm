@@ -123,7 +123,6 @@ sub PlotReceiverPosition {
   my $max_abs_upping = max( pdl [abs($max_upping), abs($min_upping)] );
 
   # Retrieve standard deviations for ENU coordinates:
-  # TODO: consider applying configured sigma scale factor
   my $pdl_std_easting =
      $pdl_rec_xyz($ref_file_layout->{ITEMS}{Sigma_E}{INDEX});
   my $pdl_std_northing =
