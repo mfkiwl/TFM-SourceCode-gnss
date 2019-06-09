@@ -327,7 +327,7 @@ sub PlotReportingRoutine {
     }
 
     $status *=
-      PlotSigmaAccuracy( $ref_gen_conf, $inp_path, $out_path, $marker );
+      PlotAccuracyPerformance( $ref_gen_conf, $inp_path, $out_path, $marker );
 
     for (@streams) {
       print $_ "\n" x 1;
@@ -339,7 +339,8 @@ sub PlotReportingRoutine {
     if ( $ref_gen_conf->{STATIC}{STATUS} &&
          $ref_gen_conf->{INTEGRITY}{STATUS} ) {
 
-      # TODO: sub
+      $status *=
+        PlotIntegrityPerformance($ref_gen_conf, $inp_path, $out_path, $marker);
 
     } else {
       for (*STDOUT, $fh_log) {
