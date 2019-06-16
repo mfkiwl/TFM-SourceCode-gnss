@@ -359,7 +359,7 @@ sub PlotSatelliteSkyPath {
     border => undef,
     xtics  => undef,
     ytics  => undef,
-    cbtics => 0.25,
+    # cbtics => 0.25,
     legend => {
       position => "top left",
     },
