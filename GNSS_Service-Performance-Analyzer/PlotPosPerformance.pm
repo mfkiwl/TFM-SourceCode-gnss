@@ -235,7 +235,7 @@ sub PlotReceiverPosition {
       rtics  => "1",
       ttics  => 'add ("N" 0, "NE" 45, "E" 90, "SE" 135, '.
                      '"S" 180, "SW" 225, "W" 270, "NW" 315)',
-      cbtics => 0.25,
+      # cbtics => 0.25,
       colorbox => "",
     );
   # Set point style properties:
@@ -778,7 +778,7 @@ sub PlotIntegrityPerformance {
       xdata => unpdl($pdl_epochs->flat),
       ydata => unpdl($pdl_v_err->flat),
       style => "lines",
-      color => "#EF2929",
+      color => "#CE5C00",
       timefmt => "%s",
       title => "Error",
     );
@@ -850,7 +850,7 @@ sub PlotIntegrityPerformance {
       xdata => unpdl($pdl_epochs->flat),
       ydata => unpdl($pdl_h_err->flat),
       style => "lines",
-      color => "#EF2929",
+      color => "#CE5C00",
       timefmt => "%s",
       title => "Error",
     );
