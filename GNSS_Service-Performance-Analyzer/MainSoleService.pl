@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl -X
 
 # TODO: SCRIPT DESCRIPTION GOES HERE:
 
@@ -65,13 +65,19 @@ my $ini_script_time = [gettimeofday];
 # ---------------------------------------------------------------------------- #
 # 1. Read script input arguments and check them
 
-  my ( $input_status,
-       $inp_path,
-       $out_path,
-       $ref_gen_conf, $ref_obs_data, $cfg_file ) = CheckInputArguments(@ARGV);
+  my ( $ref_gen_conf, $cfg_file, $input_status ) = CheckInputArguments(@ARGV);
 
   # Exit script if inputs were not correctly provided:
   unless ($input_status) { croak "Wrong provision of inputs"; }
+
+  # Set GSPA input and output paths:
+  # NOTE: GSPA is fed with GRPP outputs
+  my $inp_path = $ref_gen_conf->{OUTPUT_PATH}{GRPP};
+  my $out_path = $ref_gen_conf->{OUTPUT_PATH}{GSPA};
+
+  # Check input and output paths:
+  my $status_inp_out = CheckDirectories($inp_path, $out_path);
+  unless ($status_inp_out) { croak "Wrong input/output directory"; }
 
   # Open existing log file for appending GSPA events log:
   my $fh_log; open($fh_log, '>>', $ref_gen_conf->{LOG_FILE_PATH}) or croak $!;
@@ -83,15 +89,13 @@ my $ini_script_time = [gettimeofday];
 # 2. Data plotting routine:
 
   my ($plot_status) =
-    PlotReportingRoutine( $ref_gen_conf, $ref_obs_data,
-                          $inp_path, $out_path, $fh_log );
+    PlotReportingRoutine( $ref_gen_conf, $inp_path, $out_path, $fh_log );
 
 # ---------------------------------------------------------------------------- #
 # 3. Performance reporting routine:
 
   my ($perfo_status) =
-    PerformanceReportingRoutine( $ref_gen_conf, $ref_obs_data,
-                                 $inp_path, $out_path, $fh_log );
+    PerformanceReportingRoutine( $ref_gen_conf, $inp_path, $out_path, $fh_log );
 
 # ---------------------------------------------------------------------------- #
 # Termination:
@@ -112,80 +116,39 @@ sub CheckInputArguments {
   # Init subroutine status:
   my $status = FALSE;
 
-  # Init variable to hold input path, outpu path and reference to
-  # configuration:
+  # Init variables to hold reference to configuration:
   my $ref_gen_conf = {};
-  my $ref_obs_data = {};
-  my ($inp_path, $out_path, $cfg_file);
+  my ($cfg_file);
 
   # Check the number of inputs provided:
-  # Case 1: 2 inputs -> input_path and output_path:
-  # Case 2: 3 inputs -> "" + configuration file path
   given (scalar(@script_inputs))
   {
-    when ($_ == 2) {
-
-      # Input and output are directly read:
-      ($inp_path, $out_path) = @script_inputs;
-
-      # Check input and output directories:
-      $status = CheckDirectories($inp_path, $out_path);
-
-      # General configuration is loaded from raw hash stored in input path:
-      $cfg_file = join('/', ($inp_path, "ref_gen_conf.hash"));
-      $ref_gen_conf = retrieve($cfg_file);
-
-      # Observation data is loaded from raw hash:
-      my $obs_data_raw = join('/', ($inp_path, "ref_obs_data.hash"));
-      $ref_obs_data = retrieve($obs_data_raw);
-
+    when ($_ == 1) {
+      # Retrieve configuration path:
+      ($cfg_file) = @script_inputs;
       # Update sub status:
-      $status *= TRUE;
-
+      $status += TRUE;
     }
-
-    when ($_ == 3)
-    {
-      # Input and output are directly read:
-      ($inp_path, $out_path, $cfg_file) = @script_inputs;
-
-      # Check input and output directories:
-      $status = CheckDirectories($inp_path, $out_path);
-
-      # Observation data is loaded from raw hash:
-      my $obs_data_raw = join('/', ($inp_path, "ref_obs_data.hash"));
-      $ref_obs_data = retrieve($obs_data_raw);
-
-      # Check provided file:
-      $status *= CheckConfigurationFile($cfg_file);
-
-      # General configuration is loaded from provided file:
-      $ref_gen_conf = LoadConfiguration( $cfg_file );
-
-      # Update sub's status:
-      $status *= ($ref_gen_conf != KILLED) ? TRUE : FALSE;
-
-    } # end when 3
-
     default {
-
       RaiseError(*STDOUT, ERR_WRONG_INPUTS,
         "Script was fed with an invalid number of inputs.",
-        "Number of inputs should be among 2 and 3.",
-        "Number of inputs = $_ : '".join(', ', @script_inputs)."'");
-      $status *= FALSE;
-
+        "Valid GSPA input cases are :",
+        '$GSPA "path_to_configuration_fil"');
+      return FALSE;
     } # end default
-
   } # end given
 
-  return( $status,
-          $inp_path, $out_path,
-          $ref_gen_conf, $ref_obs_data, $cfg_file );
+  # Check configuration file:
+  $status *= CheckConfigurationFile($cfg_file);
+
+  # Load configuration file:
+  $ref_gen_conf = LoadConfiguration($cfg_file);
+
+  return( $ref_gen_conf, $cfg_file, $status );
 }
 
 sub PlotReportingRoutine {
-  my ($ref_gen_conf, $ref_obs_data, $inp_path, $out_path, $fh_log) = @_;
+  my ($ref_gen_conf, $inp_path, $out_path, $fh_log) = @_;
 
   # Init subroutine status:
   my $status = TRUE;
@@ -197,7 +160,7 @@ sub PlotReportingRoutine {
   my $sat_sys;
 
   # Retrieve station marker name from observation hash:
-  my $marker = $ref_obs_data->{HEAD}{MARKER_NAME};
+  my $marker = $ref_gen_conf->{TAG};
 
   # Info message:
   for (@streams) {
@@ -363,14 +326,13 @@ sub PlotReportingRoutine {
                        "ploting LSQ estimation information   = ", $_ );
     ReportElapsedTime( $ini_pos_perfo, $end_pos_perfo,
                        "ploting positioning performance data = ", $_ );
-    print $_ "\n" x 1;
   }
 
   return ($status);
 }
 
 sub PerformanceReportingRoutine {
-  my ( $ref_gen_conf, $ref_obs_data, $inp_path, $out_path, $fh_log ) = @_;
+  my ( $ref_gen_conf, $inp_path, $out_path, $fh_log ) = @_;
 
   # Init subroutine status:
   my $status = TRUE;
@@ -379,7 +341,7 @@ sub PerformanceReportingRoutine {
   my @streams = (*STDOUT, $fh_log);
 
   # Retrieve station marker name from observation hash:
-  my $marker = $ref_obs_data->{HEAD}{MARKER_NAME};
+  my $marker = $ref_gen_conf->{TAG};
 
   # Info message:
   for (@streams) {
@@ -459,7 +421,6 @@ sub PerformanceReportingRoutine {
                        "reporting error performance      = ", $_ );
     ReportElapsedTime( $ini_int_perfo, $end_int_perfo,
                        "reporting integrity performance  = ", $_ );
-    print $_ "\n" x 1;
   }
 
   return $status;
@@ -469,8 +430,8 @@ sub PerformanceReportingRoutine {
 sub PrintWelcomeMessage {
   my ($inp_path, $cfg_file, @streams) = @_;
 
-  my $msg1 = "Welcome to GNSS Rinex Service Performance Analyzer tool";
-  my $msg2 = "Script was called from    : '".abs_path($0)."'";
+  my $msg1 = "Welcome to GNSS Service Performance Analyzer tool";
+  my $msg2 = "Script was called from    : '".$0."'";
   my $msg3 = "GRPP data loaded from     : '".abs_path($inp_path)."'";
   my $msg4 = "Configuration loaded from : '".abs_path($cfg_file)."'";
 
@@ -480,7 +441,6 @@ sub PrintWelcomeMessage {
     PrintComment ($_, $msg2);
     PrintComment ($_, $msg3);
     PrintComment ($_, $msg4);
-    print $_ "\n" x 1;
   }
 
   return TRUE;
