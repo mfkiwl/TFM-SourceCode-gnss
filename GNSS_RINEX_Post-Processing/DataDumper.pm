@@ -785,7 +785,7 @@ sub DumpRecPosition {
 
   # 1. Open dumper file at output path:
     my $rec_name = $ref_obs_data->{HEAD}{MARKER_NAME};
-    my $file_path = join('/', ($output_path, "$rec_name-xyz.out"));
+    my $file_path = join('/', ($output_path, "receiver-xyz.out"));
     my $fh; open($fh, '>', $file_path) or die "Could not create $!";
 
   # 2.a. Write title line:

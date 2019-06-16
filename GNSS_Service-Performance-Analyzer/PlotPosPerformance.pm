@@ -89,7 +89,7 @@ sub PlotReceiverPosition {
 
   # Select receiver position dumper file:
   my $ref_file_layout =
-     GetFileLayout($inp_path."/$marker_name-xyz.out", 8,
+     GetFileLayout($inp_path."/receiver-xyz.out", 8,
                    $ref_gen_conf->{DATA_DUMPER}{DELIMITER});
 
   my $pdl_rec_xyz = pdl( LoadFileByLayout($ref_file_layout) );
@@ -158,7 +158,7 @@ sub PlotReceiverPosition {
   my $chart_en_polar_sigma_h =
     Chart::Gnuplot->new(
       terminal => 'pngcairo size 874,874',
-      output => $out_path."/$marker_name-rec-EN-SigmaH-polar.png",
+      output => $out_path."/Receiver-EN-SigmaH-polar.png",
       title  => {
         text => $chart_en_polar_sigma_h_title,
         font => ':Bold',
@@ -205,7 +205,7 @@ sub PlotReceiverPosition {
   my $chart_en_epoch_polar =
     Chart::Gnuplot->new(
       terminal => 'pngcairo size 874,874',
-      output => $out_path."/$marker_name-rec-EN-Epoch-polar.png",
+      output => $out_path."/Receiver-EN-Epoch-polar.png",
       title  => {
         text => $chart_en_epoch_polar_title,
         font => ':Bold',
@@ -255,7 +255,7 @@ sub PlotReceiverPosition {
   my $chart_enu_polar =
     Chart::Gnuplot->new(
       terminal => 'pngcairo size 874,874',
-      output => $out_path."/$marker_name-rec-EN-Upping-polar.png",
+      output => $out_path."/Receiver-EN-Upping-polar.png",
       title  => {
         text => $chart_enu_polar_title,
         font => ':Bold',
@@ -302,7 +302,7 @@ sub PlotReceiverPosition {
   my $chart_enu =
     Chart::Gnuplot->new(
       terminal => 'pngcairo size 874,540',
-      output => $out_path."/$marker_name-rec-ENU-plot.png",
+      output => $out_path."/Receiver-ENU-plot.png",
       title => $chart_enu_title,
       # NOTE: this does not works properly
       timestamp => "on",
@@ -348,7 +348,7 @@ sub PlotReceiverPosition {
     Chart::Gnuplot->new(
       terminal => 'pngcairo size 874,540',
       grid => "on",
-      output => $out_path."/$marker_name-rec-clk-bias-plot.png",
+      output => $out_path."/Receiver-clk-bias-plot.png",
       title  => {
         text => $chart_clk_bias_title,
         font => ':Bold',

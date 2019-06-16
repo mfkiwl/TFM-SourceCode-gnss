@@ -236,7 +236,7 @@ sub ReportPositionError {
   # Retrieve data from GRPP files:
   # Load dumper file:
   my $ref_file_layout =
-     GetFileLayout( join('/', ($inp_path, "$marker_name-xyz.out")),
+     GetFileLayout( join('/', ($inp_path, "receiver-xyz.out")),
                     8, $ref_gen_conf->{DATA_DUMPER}{DELIMITER} );
 
   # Make piddle from loaded file:
