@@ -215,6 +215,9 @@ sub DataDumpingRoutine {
     push(@{ $ref_selected_obs }, $ref_gen_conf->{SELECTED_SIGNALS}{$_})
   }
 
+  # Retrieve configured GRPP output path:
+  my $grpp_output_path = $ref_gen_conf->{OUTPUT_PATH}{GRPP};
+
   for (*STDOUT, $fh_log) {
     print $_ "\n" x 2;
     PrintTitle1($_, "Data Dumping routine has started");
@@ -230,19 +233,19 @@ sub DataDumpingRoutine {
     $sub_status = DumpSatObsData( $ref_gen_conf,
                                   $ref_obs_data,
                                   $ref_selected_obs,
-                                  $ref_gen_conf->{OUTPUT_PATH}, $fh_log );
+                                  $grpp_output_path, $fh_log );
     # Update status:
     $status += ($sub_status != KILLED) ? TRUE : FALSE;
 
     $sub_status = DumpNumValidSat( $ref_gen_conf,
                                    $ref_obs_data,
-                                   $ref_gen_conf->{OUTPUT_PATH}, $fh_log );
+                                   $grpp_output_path, $fh_log );
     # Update status:
     $status *= ($sub_status != KILLED) ? TRUE : FALSE;
 
     $sub_status = DumpSatPosition( $ref_gen_conf,
                                    $ref_obs_data,
-                                   $ref_gen_conf->{OUTPUT_PATH}, $fh_log );
+                                   $grpp_output_path, $fh_log );
     # Update status:
     $status *= ($sub_status != KILLED) ? TRUE : FALSE;
 
@@ -261,19 +264,19 @@ sub DataDumpingRoutine {
 
     $sub_status = DumpElevationBySat( $ref_gen_conf,
                                       $ref_obs_data,
-                                      $ref_gen_conf->{OUTPUT_PATH}, $fh_log );
+                                      $grpp_output_path, $fh_log );
     # Update status:
     $status *= ($sub_status != KILLED) ? TRUE : FALSE;
 
     $sub_status = DumpAzimutBySat( $ref_gen_conf,
                                    $ref_obs_data,
-                                   $ref_gen_conf->{OUTPUT_PATH}, $fh_log );
+                                   $grpp_output_path, $fh_log );
     # Update status:
     $status *= ($sub_status != KILLED) ? TRUE : FALSE;
 
     $sub_status = DumpRecSatLoSData( $ref_gen_conf,
                                      $ref_obs_data,
-                                     $ref_gen_conf->{OUTPUT_PATH}, $fh_log );
+                                     $grpp_output_path, $fh_log );
     # Update status:
     $status *= ($sub_status != KILLED) ? TRUE : FALSE;
 
@@ -292,26 +295,26 @@ sub DataDumpingRoutine {
 
     $sub_status = DumpClockBiasBySat( $ref_gen_conf,
                                       $ref_obs_data,
-                                      $ref_gen_conf->{OUTPUT_PATH}, $fh_log );
+                                      $grpp_output_path, $fh_log );
 
     # Update status:
     $status *= ($sub_status != KILLED) ? TRUE : FALSE;
 
     $sub_status = DumpIonoCorrBySat( $ref_gen_conf,
                                      $ref_obs_data,
-                                     $ref_gen_conf->{OUTPUT_PATH}, $fh_log );
+                                     $grpp_output_path, $fh_log );
     # Update status:
     $status *= ($sub_status != KILLED) ? TRUE : FALSE;
 
     $sub_status = DumpTropoCorrBySat( $ref_gen_conf,
                                       $ref_obs_data,
-                                      $ref_gen_conf->{OUTPUT_PATH}, $fh_log );
+                                      $grpp_output_path, $fh_log );
     # Update status:
     $status *= ($sub_status != KILLED) ? TRUE : FALSE;
 
     $sub_status = DumpResidualsBySat( $ref_gen_conf,
                                       $ref_obs_data,
-                                      $ref_gen_conf->{OUTPUT_PATH}, $fh_log );
+                                      $grpp_output_path, $fh_log );
     # Update status:
     $status *= ($sub_status != KILLED) ? TRUE : FALSE;
 
@@ -330,13 +333,13 @@ sub DataDumpingRoutine {
 
     $sub_status = DumpLSQReportByIter( $ref_gen_conf,
                                        $ref_obs_data,
-                                       $ref_gen_conf->{OUTPUT_PATH}, $fh_log );
+                                       $grpp_output_path, $fh_log );
     # Update status:
     $status *= ($sub_status != KILLED) ? TRUE : FALSE;
 
     $sub_status = DumpLSQReportByEpoch( $ref_gen_conf,
                                         $ref_obs_data,
-                                        $ref_gen_conf->{OUTPUT_PATH}, $fh_log );
+                                        $grpp_output_path, $fh_log );
     # Update status:
     $status *= ($sub_status != KILLED) ? TRUE : FALSE;
 
@@ -354,13 +357,13 @@ sub DataDumpingRoutine {
 
     $sub_status = DumpRecPosition( $ref_gen_conf,
                                    $ref_obs_data,
-                                   $ref_gen_conf->{OUTPUT_PATH}, $fh_log );
+                                   $grpp_output_path, $fh_log );
     # Update status:
     $status *= ($sub_status != KILLED) ? TRUE : FALSE;
 
     $sub_status = DumpEpochSigma( $ref_gen_conf,
                                   $ref_obs_data,
-                                  $ref_gen_conf->{OUTPUT_PATH}, $fh_log );
+                                  $grpp_output_path, $fh_log );
     # Update status:
     $status *= ($sub_status != KILLED) ? TRUE : FALSE;
 
@@ -384,7 +387,7 @@ sub DataDumpingRoutine {
     $sub_status =
       DumpVerticalIntegrityInfo( $ref_gen_conf,
                                  $ref_obs_data,
-                                 $ref_gen_conf->{OUTPUT_PATH}, $fh_log );
+                                 $grpp_output_path, $fh_log );
 
     # Update status:
     $status *= ($sub_status != KILLED) ? TRUE : FALSE;
@@ -392,7 +395,7 @@ sub DataDumpingRoutine {
     $sub_status =
       DumpHorizontalIntegrityInfo( $ref_gen_conf,
                                    $ref_obs_data,
-                                   $ref_gen_conf->{OUTPUT_PATH}, $fh_log );
+                                   $grpp_output_path, $fh_log );
 
     # Update status:
     $status *= ($sub_status != KILLED) ? TRUE : FALSE;
@@ -418,14 +421,14 @@ sub DataDumpingRoutine {
 
     # General configuration hash:
     $sub_status =
-      store($ref_gen_conf, $ref_gen_conf->{OUTPUT_PATH}."/ref_gen_conf.hash");
+      store($ref_gen_conf, $grpp_output_path."/ref_gen_conf.hash");
 
     # Update status:
     $status *= (undef $sub_status) ? FALSE : TRUE;
 
     # Observation data:
     $sub_status =
-      store($ref_obs_data, $ref_gen_conf->{OUTPUT_PATH}."/ref_obs_data.hash");
+      store($ref_obs_data, $grpp_output_path."/ref_obs_data.hash");
 
     # Update status:
     $status *= (undef $sub_status) ? FALSE : TRUE;
@@ -484,7 +487,11 @@ sub PrintBasicConfiguration {
 
   # Contens:
   # Header:
-  my $head = "Configuration brief:";
+  my $head = "Configuration brief";
+
+  # Processing tag:
+  my $proc_tag = $ref_gen_conf->{TAG};
+  my $s0; $s0 = "'$proc_tag'" if $proc_tag;
 
   # Satellite system configuration:
   my $s1 = "Selected Satellyte Systems and Observation";
@@ -579,7 +586,7 @@ sub PrintBasicConfiguration {
   # Report batch information:
   for (@streams) {
     print $_ "\n" x 2;
-    PrintTitle1  ($_, $head);
+    PrintTitle1  ($_, "$head of $s0");
     PrintTitle3  ($_, $s1);
     PrintBulletedInfo ($_, "\t- ", @sat_sys_info);
     print $_ "\n" x 1;
@@ -668,11 +675,14 @@ sub PrintSolutionExtract {
 sub PrintGoodbyeMessage {
   my ($ref_gen_conf, $fh_log, $ini_time, $end_time) = @_;
 
+  my $proc_tag = $ref_gen_conf->{TAG};
+  my $s0; $s0 = "for '$proc_tag'" if $proc_tag;
+
   for (*STDOUT, $fh_log) {
     print $_ "\n" x 2;
-    PrintTitle1  ($_, "GNSS Rinex Post-Processing routine is over");
+    PrintTitle1  ($_, "GNSS Rinex Post-Processing routine is over $s0");
     PrintComment ($_, "Results are available at : ".
-                  $ref_gen_conf->{OUTPUT_PATH});
+                  $ref_gen_conf->{OUTPUT_PATH}{GRPP});
     PrintComment ($_, "Log file is available at : ".
                   $ref_gen_conf->{LOG_FILE_PATH});
     print $_ "\n" x 1;
@@ -688,7 +698,8 @@ sub PrintGoodbyeMessage {
 sub CopyConfigurationFile {
   my ($cfg_file_path, $ref_gen_conf) = @_;
 
-  my $destination = join('/', ($ref_gen_conf->{OUTPUT_PATH}, "grpp_config.cfg"));
+  my $destination =
+    join('/', ($ref_gen_conf->{OUTPUT_PATH}{GRPP}, "grpp_config.cfg"));
   copy($cfg_file_path, $destination);
 
   return TRUE;
