@@ -86,9 +86,6 @@ use TimeGNSS qq(:ALL); # GNSS time transforming utilities...
 
 # Import dependent modules:
 use lib GRPP_ROOT_PATH;
-use RinexReader qq(:ALL);
-use ErrorSource qq(:ALL);
-use SatPosition qq(:ALL);
 use RecPosition qq(:ALL);
 
 # ---------------------------------------------------------------------------- #
