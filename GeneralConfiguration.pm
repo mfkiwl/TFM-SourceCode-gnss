@@ -78,7 +78,7 @@ use Enviroments qq(:CONSTANTS);
 # ---------------------------------------------------------------------------- #
 # Import Modules:
 
-use Carp;
+use Carp; # advanced exception raise...
 use strict; # enables strict syntax...
 
 use feature qq(say);    # same as print.$text.'\n'...
@@ -90,10 +90,10 @@ use Scalar::Util qq(looks_like_number); # scalar utility...
 
 # Import dedicated libraries:
 use lib LIB_ROOT_PATH;
-use MyUtil   qq(:ALL); # useful subs and constants...
+use MyUtil   qq(:ALL);
 use MyMath   qq(:ALL);
-use MyPrint  qq(:ALL); # error and warning utilities...
-use TimeGNSS qq(:ALL); # GNSS time transforming utilities...
+use MyPrint  qq(:ALL);
+use TimeGNSS qq(:ALL);
 use Geodetic qq(:ALL);
 
 # ---------------------------------------------------------------------------- #
@@ -346,6 +346,12 @@ sub LoadConfiguration {
       }
     }
 
+    # Processing tag:
+    if ($config_content =~ /^Processing Tag +: +"(.+)"$/im) {
+      my $tag = eval "qq#$1#"; # NOTE: be aware of eval usage
+      $ref_config_hash->{TAG} = $tag;
+    }
+
     # Satellite systems to process:
     if ( $config_content =~ /^Satellite Systems +: +(.+)$/im ) {
       my @sel_sat_sys;
@@ -401,10 +407,21 @@ sub LoadConfiguration {
     }
 
     # Output sub-section:
-    if ( $config_content =~ /^Output path +: +(.+)$/im ) {
+    if ( $config_content =~ /^GRPP Output path +: +(.+)$/im ) {
       my $output_path = $1;
       if (-w $output_path) {
-        $ref_config_hash->{OUTPUT_PATH} = $output_path;
+        $ref_config_hash->{OUTPUT_PATH}{GRPP} = $output_path;
+      } else {
+        RaiseError(*STDOUT, ERR_CANNOT_WRITE_FILE,
+          "Current user ".$ENV{USER}." does not have write permissions at ".
+          "\'$output_path\' or the provided path does not exist.");
+        return KILLED;
+      }
+    }
+    if ( $config_content =~ /^GSPA Output path +: +(.+)$/im ) {
+      my $output_path = $1;
+      if (-w $output_path) {
+        $ref_config_hash->{OUTPUT_PATH}{GSPA} = $output_path;
       } else {
         RaiseError(*STDOUT, ERR_CANNOT_WRITE_FILE,
           "Current user ".$ENV{USER}." does not have write permissions at ".

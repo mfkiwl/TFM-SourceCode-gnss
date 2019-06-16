@@ -20,4 +20,5 @@ my ($config_file_path) = @ARGV;
 # Test configuration:
 my $ref_config_hash = LoadConfiguration($config_file_path);
 
-print Dumper $ref_config_hash->{INTEGRITY};
+print Dumper $ref_config_hash->{TAG};
+print Dumper $ref_config_hash->{OUTPUT_PATH};

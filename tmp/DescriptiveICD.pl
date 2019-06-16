@@ -6,10 +6,14 @@
 %gen_conf_hash = (
   # Input/Output configuration:
   VERBOSITY        => $verbosity_configuration,
+  TAG              => $processing_tag,
   SELECTED_SAT_SYS => \@selected_sat_sys,
   RINEX_OBS_PATH   => $path_to_obs_file,
   RINEX_NAV_PATH   => \%nav_rinex_paths,
-  OUTPUT_PATH      => $path_to_output_directory,
+  OUTPUT_PATH      => {
+    GRPP => $path_to_grpp_output_directory,
+    GSPA => $path_to_gspa_output_directory,
+  },
   LOG_FILE_PATH    => $path_to_execution_log_file,
 
   # Time selection:
