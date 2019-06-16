@@ -76,16 +76,19 @@ use GeneralConfiguration qq(:ALL);
 # ---------------------------------------------------------------------------- #
 # Constants: #
 
-
+# TODO: include common configuration e.g. plot terminal, plot colors
 
 # ---------------------------------------------------------------------------- #
 # Public Subroutines: #
 
 sub SetReportTitle {
-  my ($title_body, $ref_gen_conf, $marker, $gps_epoch) = @_;
+  my ($title_body, $ref_gen_conf, $tag, $gps_epoch) = @_;
 
   # Init title string:
   my $title = '';
+
+  # Tag string is only introduced if is not empty:
+  $tag = "of $tag" if $tag;
 
   # Retrieve date in 'yyyy/mo/dd' format:
   my $date = ( split(' ', BuildDateString(GPS2Date($gps_epoch))) )[0];
@@ -109,7 +112,7 @@ sub SetReportTitle {
 
   # Set title:
   $title =
-    "$title_body from $marker on $date using $signal_used_string";
+    "$title_body $tag on $date using $signal_used_string";
 
   # Return the title:
   return $title;
