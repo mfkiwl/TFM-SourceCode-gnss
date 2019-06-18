@@ -91,17 +91,14 @@ for my $station (@station_list) {
         join( '/', $stdout_root_path,
           join('_', 'gspa', $station, $date, $signal).".stdout" );
 
-      # Set input path and output path for GSPA tool:
-      my $inp_path =
-        join('/', $rpt_root_path, $station, $date, $signal, 'GRPP');
-      my $out_path =
-        join('/', $rpt_root_path, $station, $date, $signal, 'GSPA');
+      # Retrieve configuration file:
+      my $gspa_config = $ref_cmp_cfg->{$station}{$date}{CFG_PATH}{$signal};
 
       # Launch command:
-      say "Launching : $gspa_launch_command $inp_path $out_path";
+      say "Launching : $gspa_launch_command $gspa_config";
       say "   STDOUT : $stdout_file";
       say "";
-      qx{ $gspa_launch_command $inp_path $out_path 1> $stdout_file 2>&1 };
+      qx{ $gspa_launch_command $gspa_config 1> $stdout_file 2>&1 };
 
     } # end for $signal
   } # end for $date
