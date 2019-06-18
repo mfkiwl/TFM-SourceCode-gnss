@@ -91,6 +91,12 @@ for my $station (keys %{ $ref_cmp_cfg }) {
     my $gps_nav_file_path =
       qx{ls $station_date_data_path/*GN.rnx}; chomp $gps_nav_file_path;
 
+    # Try to link rinex V2 navigation file:
+    unless (-e $gps_nav_file_path) {
+      $gps_nav_file_path =
+        qx{ls $station_date_data_path/*.*n}; chomp $gps_nav_file_path;
+    }
+
     # Find GAL navigation file:
     my $gal_nav_file_path =
       qx{ls $station_date_data_path/*EN.rnx}; chomp $gal_nav_file_path;
