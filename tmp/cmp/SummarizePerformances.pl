@@ -143,13 +143,12 @@ for my $sta (sort(keys %{$ref_cmp_cfg})) {
 
       say $fh join(";", @line);
 
-      # exit 0; # by the moment
-    }
-  }
-}
+    } # end for $signal
+  } # end for $date
+} # end for $sta
 
 # Close file:
 close($fh);
 
-# ---------------------------------------------------------------------------- #
 # END OF SCRIPT
+# ---------------------------------------------------------------------------- #
