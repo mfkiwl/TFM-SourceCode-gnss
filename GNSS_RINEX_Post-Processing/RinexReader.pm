@@ -424,13 +424,13 @@ sub ReadNavigationRinexHeader {
     {
       # Ion Alpha parameters:
       if (index($line, ION_ALPHA_V2) == RINEX_LABEL_PLACEMENT) {
-        my ($empty, $ref_parameters)    = ReadIonParameters($line, $version);
+        my ($empty, $ref_parameters)  = ReadIonParameters($line, $version);
         $rinex_header_hash{ION_ALPHA} = $ref_parameters;
       }
 
       # Ion Beta parameters:
       if (index($line, ION_BETA_V2) == RINEX_LABEL_PLACEMENT) {
-        my ($empty, $ref_parameters)   = ReadIonParameters($line, $version);
+        my ($empty, $ref_parameters) = ReadIonParameters($line, $version);
         $rinex_header_hash{ION_BETA} = $ref_parameters;
       }
 
@@ -1017,6 +1017,9 @@ sub ReadGPSNavigationBlock {
   # Determine satellite PRN:
   if (looks_like_number($sat)) { $sat = sprintf("%s%02d", RINEX_GPS_ID, $sat); }
 
+  # Consistent satellite PRN ID:
+  $sat = ConsistentSatID($sat);
+
   # Determine epoch in GPS time format:
   if (length($yyyy) == 2) { $yyyy += ($yyyy < 80) ? 2000 : 1900; }
   my $epoch = Date2GPS($yyyy, $mm, $dd, $hh, $mi, $ss );
@@ -1067,6 +1070,9 @@ sub ReadGALNavigationBlock {
 
   # Determine satellite PRN if sat ID is not provided:
   if (looks_like_number($sat)) { $sat = sprintf("%s%02d", RINEX_GAL_ID, $sat); }
+
+  # Consistent satellite PRN ID:
+  $sat = ConsistentSatID($sat);
 
   # Determine epoch in GPS time format:
   if (length($yyyy) == 2) { $yyyy += ($yyyy < 80) ? 2000 : 1900; }
