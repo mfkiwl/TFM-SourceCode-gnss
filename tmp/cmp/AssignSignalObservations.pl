@@ -105,6 +105,13 @@ for $station (qw(OWMG)) {
   }
 }
 
+# Change L2C obs code specifically for OWMG in date 2:
+for $station (qw(OWMG)) {
+  for $date  (qw(DATE_2)) {
+    $ref_cmp_cfg->{$station}{$date}{SIGNAL_OBS}{ L2C } = 'C2W';
+  }
+}
+
 # KOKV:
 for $station (qw(KOKV)) {
   for $date  (qw(DATE_1 DATE_2 DATE_3)) {
