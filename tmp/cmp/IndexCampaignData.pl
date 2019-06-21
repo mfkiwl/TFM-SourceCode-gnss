@@ -101,6 +101,12 @@ for my $station (keys %{ $ref_cmp_cfg }) {
     my $gal_nav_file_path =
       qx{ls $station_date_data_path/*EN.rnx}; chomp $gal_nav_file_path;
 
+    # Try to link BRDM navigation file:
+    unless (-e $gal_nav_file_path) {
+      $gps_nav_file_path =
+        qx{ls $station_date_data_path/BRDM*EN.rnx}; chomp $gps_nav_file_path;
+    }
+
     # Build synbolic links in index path:
     my $obs_link_name     = join('_', $station, $date, "OBS");
     my $gps_nav_link_name = join('_', $station, $date, "GPS-NAV");
