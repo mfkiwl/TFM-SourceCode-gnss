@@ -988,13 +988,14 @@ sub GetIntegrityInfo {
   $h_mi_flag  = ( ($h_error >  $h_precision) &&
                   ($h_error <= $h_alert_limit) ) ? TRUE : FALSE;
 
-  # Error is greater than the precision and error falls outside the alert
-  # limit bounds:
-  $h_hmi_flag = ( ($h_error >  $h_precision) &&
-                  ($h_error >  $h_alert_limit) ) ? TRUE : FALSE;
-
   # Precision is greater than the alert limit:
   $h_avail_flag = ( $h_precision <= $h_alert_limit ) ? TRUE : FALSE;
+
+  # Error is greater than the precision and error falls outside the alert
+  # limit bounds:
+  $h_hmi_flag = ( $h_avail_flag &&
+                 ($h_error > $h_precision) &&
+                 ($h_error > $h_alert_limit) ) ? TRUE : FALSE;
 
   # For vertical component:
   my ($v_error, $v_precision);
@@ -1009,10 +1010,11 @@ sub GetIntegrityInfo {
   $v_mi_flag  = ( ($v_error >  $v_precision) &&
                   ($v_error <= $v_alert_limit) ) ? TRUE : FALSE;
 
-  $v_hmi_flag = ( ($v_error >  $v_precision) &&
-                  ($v_error >  $v_alert_limit) ) ? TRUE : FALSE;
-
   $v_avail_flag = ( $v_precision <= $v_alert_limit ) ? TRUE : FALSE;
+
+  $v_hmi_flag = ( $v_avail_flag &&
+                 ($v_error > $v_precision) &&
+                 ($v_error > $v_alert_limit) ) ? TRUE : FALSE;
 
   # Return integrity parameters:
   return ( $h_error, $v_error,
